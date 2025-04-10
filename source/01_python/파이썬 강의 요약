@@ -1,0 +1,41 @@
+과정 정리
+
+[K-디지털트레이닝] 기업맞춤형 AI-X 융복합 인재 양성과정
+ - 강사 : 이소영
+   e-mail : yisy0703@naver.com, 
+   github주소 : https://github.com/comlec/ai_x,
+   강의자료 : (WAN) https://lrl,kr/eiHQS, (lan) \\192.168.0.3
+   
+0. 시스템 폴더 관리
+   ai_x\download : 개발환경을 위한 다운로드 파일
+   ai_x\source : 수업시간 개발 소스
+   ai_x\letNote : 교안 노트
+   ai_x\note : 그날 그날 수업한 내용을 10~20 줄로 요약한 파일
+   ai_x\취업 : 취업에 관련된 정보 및 이력서 포트폴리오
+
+0. 시스템 설치
+   1. Chrome 브라우저 https://www.google.com/chrome/browser
+   2. Git https://git scm.com
+   3. 파이썬
+
+0. 깃허브의 레파지터리 (원격저장소) 생성하고 올리기
+    1.http://www.github.com com에가입하기(sign up) 후코드가포함된메일확인
+    2.Sign in
+    3.Create repository(올릴공간명)
+    4.소스를 내컴퓨터에서 github 인터넷으로 올리고 git 명령어를 사용하기 위해 git-scm을 다운받고 install (https://git-scm.com/downloads)
+    5.Git Bash Bash에서 git 환경 설정
+        > git config --global user.name "comlec0703"
+        > git config --global user.email "comlec0703@gmail.com”
+        > git config --list (확인)
+    6.내 pc의 repository 폴더에 다음의 파일 추가
+        ①README.md (git소개)
+        ②.gitignore (git 공간에 올리지 않을 파일과 폴더리스트 ex (d:/ai-x/.gitignore)
+    7.git 공간에 자료 올리기
+        > git init (초기화
+        > git add . (공유 추가할 파일 더하기)
+        > git status (상태 확인 - 선택)
+        > git commit -m “first commit” (히스토리 버전 이름)
+        > git branch -M main (branch 생성 - branch 생성을 하지 않을 경우 master 로)
+        > git remote add origin 본인깃주소 (연결고리)
+        > git remote -v (확인 - 선택)
+        > git push -u origin main (branch 에 올리기 branch 를 생성하지 않았다면 master)
