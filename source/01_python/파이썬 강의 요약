@@ -34,8 +34,121 @@
         > git init (초기화
         > git add . (공유 추가할 파일 더하기)
         > git status (상태 확인 - 선택)
-        > git commit -m “first commit” (히스토리 버전 이름)
+        > git commit -m “1st commit” (히스토리 버전 이름)
         > git branch -M main (branch 생성 - branch 생성을 하지 않을 경우 master 로)
         > git remote add origin 본인깃주소 (연결고리)
         > git remote -v (확인 - 선택)
         > git push -u origin main (branch 에 올리기 branch 를 생성하지 않았다면 master)
+    8.내pc와 git이 동기화된 거 확인 후, 추가 파일 만든 후 추가 올리기
+        > git add .
+        > git commit -m "2nd"
+        > git push -u origin main
+    9.추가한 파일 수정
+        > git add .
+        > git commit -m “3rd"
+        > git push -u origin main
+    10.협업 (웹에서 수정하거나 다른 장소에서 수정 후 pull 필수)
+        >  git clone 주소 폴더이름 다른 pc에 git 내용 그대 로받기)
+        >  git pull origin main (git 저장소와 내 PC간 동기화
+
+        수정 후
+
+        > git add
+        > git commit -m “4th"
+        > git push origin main        
+
+
+
+
+
+
+
+
+2장 자료형과 연산자
+
+1절 변수
+    선언이 필요없고 할당과 동시에 타입이 셋팅
+    문자, 숫자, _로 변수명작성/숫자로 시작하거나 예약어는 사용불가
+    다중 변수할당시 일괄 할당
+        ex. a, b = 10, 20
+        
+2절 화면 i/o
+    input()은 입력된 값을 문자로 반환
+    print(출력 내용, sep=' ', end='\n')
+        
+3절 기본 자료형
+    숫자형 : int, float, complex
+            int값/int값=>실수
+            지수형 표현(큰수, 작은수)은 => 실수
+    문자형 : str
+            문자열 연산 : +(연결) *(반복)
+
+
+4절 Formatting
+    f"{age}살 {name}님 반갑습니다."
+    "{}살 {}님 반갑습니다.".format(age, name)"
+    "{[인덱스]:[공백대체문자][정렬방법][자릿수][타입]}".format(변수)
+    
+    ★ 정규표현식
+        (마크업
+        1. 참조 : 위키백과
+        2. 간략한 문법 :
+           \d (숫자와 매치, [0-9]와 동일
+           \D (숫자가 아닌것)
+           \w (영문자나 숫자, [a-zA-Z0-9]
+           \W (영문자난 숫자가 아닌 문자)
+           .  (문자)
+           \. (.의미)
+           \- (-의미)
+           {2, 4} (2~4번 반복)
+           {4}    (4번 반복)
+           {2,}   (2번 이상 반복)
+           +      (1번 이상 반복)
+           *      (0번 이상 반복)
+           ?      (0번이나 1번 반복)
+           3. 정규표현식 연습장(https://regexr.com/)
+               ex1. 전화번호 : 010-9999-9999 02-7777-8888 01099997777 0277778888
+                              02)714-5656 010 1234 1234 010.1234.1234
+                              tel_pattern = r'\d{2,3}[\-) .]?\d{3,4}[\- .]?\d{4}'
+               ex2. 이메일 : abc12@naver.com / abc123@0to7.co.kr abc@한국.com
+                              email_pattern = r'\w{3,}@[a-zA-Z0-9가-힣]+\.[a-zA-Z]+(\.[a-zA-Z])?'
+                              email_pattern = r'\w{3,}@[a-zA-Z0-9가-힣]+(\.[a-zA-Z]+){1,2}'
+           4. 소스 구현
+           
+5절 연산자
+    - 산술연산 : + - * / ?? % **
+    - 할당연산 : = += -= *= /= //= %=
+    - 논리연산 : & and | or not
+    - 비트연산 : & | ^
+    - &와 |은 비교연산자보다우선순위가 높다   
+
+6절. 문자열 다루기
+    - 문자열 슬라이싱 변수[form:stop:step]
+    - len(문자열변수) : 문자갯수
+    - upper() : 대문자로
+    - lower() : 소문자로
+    - title() : 각 어절의 첫글자만 대문자로
+    - capitalize() : 첫문자만 대문자로
+    - count('찾을문자열') : '찾을문자열'이 몇개 들어있는지 갯수 반환
+    - find('찾을문자열') : '찾을문자열'이 왼쪽부터 시작하여 몇번째에 있는지 인덱스를 반환
+    - rfind('찾을문자열') : '찾을문자열'이 오른쪽부터 시작하여 몇번째에 있는지 인덱스를 반환
+      **찾을문자열이 없으면 -1을 반환**
+        cf) index('찾을문자열') : '찾을문자열'의 인덱스를 반환, 찾을문자열이 없으면 오류
+
+    - startswith('특정문자열') : '특정문자열'로 시작하는지 여부
+    - endswith('특정문자열') : '특정문자열'로 끝나는지 여부
+    - strip() : 좌우 공백 제거
+    - rstrip() : 오른쪽 공백 제거
+    - lstrip() : 왼쪽 공백 제거
+    - isdigit() : 문자열이 숫자문자열인지 여부
+    - islower() : 소문자 문자열인지 여부
+    - isupper() : 대문자 문자열인지 여부
+    - replace(oldStr, newStr) : oldStr을 nweStr로 변경
+    - split(구분자) : 구분자를 이용해 문자 분리(리스트 반환)
+    - join(리스트) : 리스트를 연결
+           
+7절 날짜시간
+    특정시점: datetime(년,월,일,시,분,초)
+    지금시점: datetime.now()
+    date(년,월,일) / datetime.now().date()
+    time(시,분,초) / datetime.now().time()
