@@ -57,7 +57,13 @@
         > git commit -m “4th"
         > git push origin main        
 
+0. 아나콘다
+    GPU 를 사용하려면 , Anaconda3-2023.03-1-Windows-x86_64.exe
+    다운로드 : https://repo.anaconda.com/archive
 
+0. 주피터 노트북
+    주피터 노트북에서 코드 작성 및 실행 : Jupyter Notebook
+        아이콘을 바탕화면에 끌어 놓고 오른쪽 마우스 클릭후 , 속성정보에 들어가 수정
 
 
 
@@ -152,3 +158,85 @@
     지금시점: datetime.now()
     date(년,월,일) / datetime.now().date()
     time(시,분,초) / datetime.now().time()
+    
+
+3장 데이터구조
+
+1절. 리스트 : lst = [타입과 관련없는 0개 이상의 데이터들]
+    len(lst) : 요수 갯수
+    min(lst), max(lst), sum(lst),sorted(lst,reverse=True) : 최소, 최대, 합, 정렬
+    data in lst : lst안의 data 요소가 있는지 여부
+    lst[idx], lst[from:stop:step] 인덱싱과 슬라이싱
+    추가 : lst.append(value), lst.insert(idx, value), lst.extend(another_lst)
+    삭제 : lst.pop(), lst.pop(idx), lst.remove(data), del 변수[idx]
+    찾기 : lst.index(data), lst.count(data), 컴프리헨션
+    정렬 : lst.sort(reverse=Type)
+    역순 : lst.reverse()
+    복제 : 얕은복사(할당), 깊은복사(복제) : copy(), clear(): 리스트 요소를 모두 삭제
+    
+2절 튜플 : tup = (data,) 수정 불가
+    len(tup) : 요수 갯수
+    min(tup), max(tup), sum(tup),sorted(tup,reverse=True) : 최소, 최대, 합, 정렬
+    data in tup : tup안의 data 요소가 있는지 여부
+    tup[idx], tup[from:stop:step] 인덱싱과 슬라이싱
+
+    찾기 : tup.index(data), tup.count(data)
+
+3절 딕셔너리 : dic = {key1:value1, key2:value2, ...}
+    일기 : dic[key1], dic.get(key1)
+    수정 : key에 의 할당(수정, 추가)
+    제거 : pop(key)
+    추가 : 새로운 key에 대해 value 추가
+    dic.keys() / dic.values() / dic.items()
+    복제 : 얕은복사(할당), 깊은복사(복제) : copy()
+
+4절 셋 : s = {data1, data2, data1} => {data1, data2} 중복허용안함, 순서없음 (인덱스 없음)
+    중복을 허용하지 않는 집합(순서 없음 == 인덱스 없음)
+    중괄({})나 set()함수를 이용해서 셋 생성
+    추가 :  add(스칼라데이터), update(데이터구조)
+    집합연산자, 논리연산자, 비트연산자 : &, |, -
+    삭제 : remove(삭제할 데이터)
+
+ch04. 제어문
+
+    조건문 : if문
+    반복문 : for문, while문, 중첩가능
+
+1절. 조건문(if)
+    if 조건1:
+        조건이 참일 경우 수행할 명령어들
+    elif 조건2:
+        조건1이 거짓이고, 조건 2가 참일 경우 수행할 명령어들
+    else
+        모든 조건을 만족하지 않을 때 수행할 명령어들
+
+2절. 반복문
+    2.1 for-in문
+    for 임시변수 in 나열가능한자료:
+        반복할명령어1
+        반복할명령어2
+    #   if 조건:
+    #        break
+    else:
+        나열가능한 자료가 다 소요하여 for블럭을 다 수행한 후 최종 한번 수행할 명령어
+        for문 안에 break를 수행할 경우 else블록은 수행되지 않음
+
+    2.2 while문
+    while 조건:
+        조건이 참일 경우 반복할 문장들
+    else:
+        조건이 거짓일 경우 한번 실행할 문장 (else 구문 선택사항)
+
+    2.3 break, continue
+
+3절. 중첩루프
+    (반복문 안의 반복문)
+
+4절. 중첨루프 탈출
+
+
+
+    
+    
+    
+    

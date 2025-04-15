@@ -1,0 +1,43 @@
+NVidia 그래픽카드가 있을 경우
+ 2000번대 이상일 경우(그 이하는 Google Colab이 더 빠르나 유료)
+ https://www.tensorflow.org/install/pip?hl=ko#windows-native에 소프트웨어 요구사항 있음
+
+1. 그래픽카드 드라이버 설치(아마도 설치되어 있을 것임)
+https://www.tensorflow.org/install/gpu?hl=ko
+
+2. CUDA Toolkit 다운로드 후 설치 - 11.2버전
+https://developer.nvidia.com/cuda-toolkit-archive (cuda_11.2.0_460.89_win10.exe)
+
+3. NVIDIA의 cuDNN 라이브러리(SDK) 다운로드 후 압출풀기 - 8.1버전
+https://developer.nvidia.com/rdp/cudnn-archive (nvidia 아이디 필요. cudnn-11.2-windows-x64-v8.1.1.33.zip 강사배포)
+ => bin, include, lib 폴더의 내용을 CUDA Toolkit 설치 경로의 동일한 폴더에 덮어쓰기
+	(예: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v11.2).
+
+4. 아나콘다 설치 
+https://repo.anaconda.com/archive/에서 아나콘다 다운로드 및 설치
+GPU를 사용하려면, Anaconda3-2023.03-1-Windows-x86_64.exe
+ (파이썬 개발 인터프리터, 주피터노트북 개발환경, 머신러닝 및 딥러닝을 위한 일부 패키지가 설치됨)
+
+5. 아나콘다 설치 후, Anaconda prompt를 관리자권한으로 실행하여 패키지 설치
+-  pip install tensorflow==2.10
+
+6. jyputer notebook 확인
+import tensorflow as tf
+print(tf.__version__)
+tf.config.list_physical_devices('GPU')
+
+
+7. 팀프로젝트 기간에 GPU를 비활성화 하려면
+import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+
+import tensorflow as tf
+print(tf.__version__)
+tf.config.list_physical_devices('GPU')
+
+
+NVIDIA의 CUDA Toolkit 아카이브에서 적합한 버전을 다운로드하고 설치합니다.
+설치 시, 설치 경로를 기록해 두는 것이 좋습니다.
+
+
+you already have a newer version of the NVIDA framework SDK installed라는 메세지가 나오면 NVIDIA FrameView SDK를 uninstall
