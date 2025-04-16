@@ -64,11 +64,55 @@
 0. 주피터 노트북
     주피터 노트북에서 코드 작성 및 실행 : Jupyter Notebook
         아이콘을 바탕화면에 끌어 놓고 오른쪽 마우스 클릭후 , 속성정보에 들어가 수정
+    Jupyter Notebook 파일의 속성 정보에 들어가 대상 정보 수정 ("%USERPROFILE%/" 삭제)
+    cmd 창에서 다음 명령을 수행시켜 Jupyter Notebook 의 설정
+        jupyter notebook --generate-config
+    jupyter notebook config.py 파일에서 notebook dir 항목을 찾아 주석을 해제하고 '자기폴더위치'를 작성
 
+※ 편리한 소스 코딩을 위해 첫 셀에 항상 추가할 내용
 
+from IPython.display import display, HTML 
+display(HTML("""
+<style>
+div.container{width:86% !important;}
+div.cell.code_cell.rendered{width:100%;}
+div.CodeMirror {font-family:Consolas; font-size:15pt;}
+div.output {font-size:15pt; font-weight:bold;}
+div.input {font-family:Consolas; font-size:15pt;}
+div.prompt {min-width:70px;}
+div#toc-wrapper{padding-top:120px;}
+div.text_cell_render ul li{font-size:12pt;padding:5px;}
+table.dataframe{font-size:15px;}
+</style>
+"""))
 
+ch01 파이썬 개요 및 환경 설정
 
+1. 주피터 노트북 사용법
+    shitf+enter : 선택된 셀이 실행되고, 다음셀로 이동
+    alt+enter : 포커스된 셀이 실행되고 다음셀리 생성된 후 다음셀로 이동
+    ctrl+enter : 선택된 셀이 실행되고, 해당셀에 있음
+    enter(셀 클릭) : 다시 편집상태로 돌아감
 
+2. ESC키 누루고 (핫키)
+    dd : 삭제
+    a : 윗셀 추가
+    b : 아래셀 추가
+    m : 마크다운셀(문서셀)로 변경
+    y : 코드셀로 변경
+    o : 실행결과 접기/펴기 (토글기능)
+    
+3. 마크다운이란?
+    코드와 함께 문서화할 수 있음.
+    다양한 문서화 문법 ex. README.md
+
+# 주피터 노트북에서 cmd명령을 실행하는 방법
+    >! dir
+    >%ls
+    
+    
+# VS(visual studio) code 
+    추헌 Extension : korean, python, jupyter
 
 2장 자료형과 연산자
 
@@ -164,7 +208,7 @@
 
 1절. 리스트 : lst = [타입과 관련없는 0개 이상의 데이터들]
     len(lst) : 요수 갯수
-    min(lst), max(lst), sum(lst),sorted(lst,reverse=True) : 최소, 최대, 합, 정렬
+    min(lst), max(lst), sum(lst), sorted(lst,reverse=True) : 최소, 최대, 합, 정렬
     data in lst : lst안의 data 요소가 있는지 여부
     lst[idx], lst[from:stop:step] 인덱싱과 슬라이싱
     추가 : lst.append(value), lst.insert(idx, value), lst.extend(another_lst)
@@ -235,8 +279,28 @@ ch04. 제어문
 4절. 중첨루프 탈출
 
 
+5장 함수
 
+1절. 함수 정의 및 사용
+    def 함수명(매개변수, ....):
+        명령어들
+        return 반환값
+    변수명 = 함수명 # 함수명 변경
     
+2절. return
+
+3절. 함수의 매개변수
+    - 매개변수에 기본값을 가질 때: 호출시 선택적으로 명시
+        . 매개변수의 기본값이 스칼라 변수일 때 : 기본값이 함수 정의 시점
+        . 매개변수의 기본값이 객체일 때 : 기본값이 함수 호출 시점
+    - 키워드 인수 : 기본값을 갖고, 호출시 매개변수 명을 반드시 기입해야하는 경우
+    - 튜플매개변수 : 가변인수를 구현 *args (함수 정의)
+    - 딕셔너리 매개변수 : **kwargs(함수 정의, 함수 호출시 자동 매칭
+    - 튜플인수 언패킹 : 함수 호출시 변수 앞에 *
+    - 딕셔너리인수 언패킹 : 함수 호출시 변수 앞에 **
+
+    * 함수 정의시 매개변수 순서 *
+        순서인수 > 튜플인수 > 키워드인수 > 딕셔너리인수
     
     
     
