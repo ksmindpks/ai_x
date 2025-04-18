@@ -311,4 +311,31 @@ ch04. 제어문
     ex1. map(func, 가공할vector)
     ex2. filter(func, 추출할vector)
     ex3. sort(key=소트될 데이터를 return할 함수, reverse=T/F)
+
+5절. 파이썬 내장 함수
+
+
+
+6장 모듈과 패키지
+
+1절. 패키지 및 모듈 사용
+
+import A : A 모듈을 load
+import A : A패키지 및의 __init__ 모듈을 load
+from A import B : A 패키지 안의 B 모듈 load
+from A import B : A 모듈 안의 B 함수 load
+from A.B import C : A 패키지 밑의 B 모듈 안의 C함수 load
+
+import A as L : A 모듈을 L이름으로 load
+import A as L : A패키를 L이름으로  __init__ 모듈을 load
+from A import B as L : A 패키지 안의 B 모듈을 L이름으로 load
+from A import B as L : A 모듈 안의 B 함수를 L이름으로 load
+from A.B import C as L : A 패키지 밑의 B 모듈 안의 C함수를 L이름으로 load
+
+2절. 패키지 설치 및 삭제
+pip install 패키지명 / conda install 패키지명
+pip show 패키지명 / conda list 패키지명
+pip uninstall 패키지명 / conda remove 패키지명
+
+* 패키지 아래 __ini__.py에 패키지 설정 내용이 추가 *
     
