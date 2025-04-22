@@ -1,0 +1,440 @@
+과정 정리
+
+[K-디지털트레이닝] 기업맞춤형 AI-X 융복합 인재 양성과정
+ - 강사 : 이소영
+   e-mail : yisy0703@naver.com, 
+   github주소 : https://github.com/comlec/ai_x,
+   강의자료 : (WAN) https://lrl,kr/eiHQS, (lan) \\192.168.0.3
+   
+0. 시스템 폴더 관리
+   ai_x\download : 개발환경을 위한 다운로드 파일
+   ai_x\source : 수업시간 개발 소스
+   ai_x\letNote : 교안 노트
+   ai_x\note : 그날 그날 수업한 내용을 10~20 줄로 요약한 파일
+   ai_x\취업 : 취업에 관련된 정보 및 이력서 포트폴리오
+
+0. 시스템 설치
+   1. Chrome 브라우저 https://www.google.com/chrome/browser
+   2. Git https://git scm.com
+   3. 파이썬
+
+0. 깃허브의 레파지터리 (원격저장소) 생성하고 올리기
+    1.http://www.github.com com에가입하기(sign up) 후코드가포함된메일확인
+    2.Sign in
+    3.Create repository(올릴공간명)
+    4.소스를 내컴퓨터에서 github 인터넷으로 올리고 git 명령어를 사용하기 위해 git-scm을 다운받고 install (https://git-scm.com/downloads)
+    5.Git Bash Bash에서 git 환경 설정
+        > git config --global user.name "comlec0703"
+        > git config --global user.email "comlec0703@gmail.com”
+        > git config --list (확인)
+    6.내 pc의 repository 폴더에 다음의 파일 추가
+        ①README.md (git소개)
+        ②.gitignore (git 공간에 올리지 않을 파일과 폴더리스트 ex (d:/ai-x/.gitignore)
+    7.git 공간에 자료 올리기
+        > git init (초기화
+        > git add . (공유 추가할 파일 더하기)
+        > git status (상태 확인 - 선택)
+        > git commit -m “1st commit” (히스토리 버전 이름)
+        > git branch -M main (branch 생성 - branch 생성을 하지 않을 경우 master 로)
+        > git remote add origin 본인깃주소 (연결고리)
+        > git remote -v (확인 - 선택)
+        > git push -u origin main (branch 에 올리기 branch 를 생성하지 않았다면 master)
+    8.내pc와 git이 동기화된 거 확인 후, 추가 파일 만든 후 추가 올리기
+        > git add .
+        > git commit -m "2nd"
+        > git push -u origin main
+    9.추가한 파일 수정
+        > git add .
+        > git commit -m “3rd"
+        > git push -u origin main
+    10.협업 (웹에서 수정하거나 다른 장소에서 수정 후 pull 필수)
+        >  git clone 주소 폴더이름 다른 pc에 git 내용 그대 로받기)
+        >  git pull origin main (git 저장소와 내 PC간 동기화
+
+        수정 후
+
+        > git add .
+        > git commit -m “4th"
+        > git push origin main        
+
+0. 아나콘다
+    GPU 를 사용하려면 , Anaconda3-2023.03-1-Windows-x86_64.exe
+    다운로드 : https://repo.anaconda.com/archive
+
+0. 주피터 노트북
+    주피터 노트북에서 코드 작성 및 실행 : Jupyter Notebook
+        아이콘을 바탕화면에 끌어 놓고 오른쪽 마우스 클릭후 , 속성정보에 들어가 수정
+    Jupyter Notebook 파일의 속성 정보에 들어가 대상 정보 수정 ("%USERPROFILE%/" 삭제)
+    cmd 창에서 다음 명령을 수행시켜 Jupyter Notebook 의 설정
+        jupyter notebook --generate-config
+    jupyter notebook config.py 파일에서 notebook dir 항목을 찾아 주석을 해제하고 '자기폴더위치'를 작성
+
+※ 편리한 소스 코딩을 위해 첫 셀에 항상 추가할 내용
+
+from IPython.display import display, HTML 
+display(HTML("""
+<style>
+div.container{width:86% !important;}
+div.cell.code_cell.rendered{width:100%;}
+div.CodeMirror {font-family:Consolas; font-size:15pt;}
+div.output {font-size:15pt; font-weight:bold;}
+div.input {font-family:Consolas; font-size:15pt;}
+div.prompt {min-width:70px;}
+div#toc-wrapper{padding-top:120px;}
+div.text_cell_render ul li{font-size:12pt;padding:5px;}
+table.dataframe{font-size:15px;}
+</style>
+"""))
+
+ch01 파이썬 개요 및 환경 설정
+
+1. 주피터 노트북 사용법
+    shitf+enter : 선택된 셀이 실행되고, 다음셀로 이동
+    alt+enter : 포커스된 셀이 실행되고 다음셀리 생성된 후 다음셀로 이동
+    ctrl+enter : 선택된 셀이 실행되고, 해당셀에 있음
+    enter(셀 클릭) : 다시 편집상태로 돌아감
+
+2. ESC키 누루고 (핫키)
+    dd : 삭제
+    a : 윗셀 추가
+    b : 아래셀 추가
+    m : 마크다운셀(문서셀)로 변경
+    y : 코드셀로 변경
+    o : 실행결과 접기/펴기 (토글기능)
+    
+3. 마크다운이란?
+    코드와 함께 문서화할 수 있음.
+    다양한 문서화 문법 ex. README.md
+
+# 주피터 노트북에서 cmd명령을 실행하는 방법
+    >! dir
+    >%ls
+    
+    
+# VS(visual studio) code 
+    추헌 Extension : korean, python, jupyter
+
+2장 자료형과 연산자
+
+1절 변수
+    선언이 필요없고 할당과 동시에 타입이 셋팅
+    문자, 숫자, _로 변수명작성/숫자로 시작하거나 예약어는 사용불가
+    다중 변수할당시 일괄 할당
+        ex. a, b = 10, 20
+        
+2절 화면 i/o
+    input()은 입력된 값을 문자로 반환
+    print(출력 내용, sep=' ', end='\n')
+        
+3절 기본 자료형
+    숫자형 : int, float, complex
+            int값/int값=>실수
+            지수형 표현(큰수, 작은수)은 => 실수
+    문자형 : str
+            문자열 연산 : +(연결) *(반복)
+
+
+4절 Formatting
+    f"{age}살 {name}님 반갑습니다."
+    "{}살 {}님 반갑습니다.".format(age, name)"
+    "{[인덱스]:[공백대체문자][정렬방법][자릿수][타입]}".format(변수)
+    
+    ★ 정규표현식
+        (마크업
+        1. 참조 : 위키백과
+        2. 간략한 문법 :
+           \d (숫자와 매치, [0-9]와 동일
+           \D (숫자가 아닌것)
+           \w (영문자나 숫자, [a-zA-Z0-9]
+           \W (영문자난 숫자가 아닌 문자)
+           .  (문자)
+           \. (.의미)
+           \- (-의미)
+           {2, 4} (2~4번 반복)
+           {4}    (4번 반복)
+           {2,}   (2번 이상 반복)
+           +      (1번 이상 반복)
+           *      (0번 이상 반복)
+           ?      (0번이나 1번 반복)
+           3. 정규표현식 연습장(https://regexr.com/)
+               ex1. 전화번호 : 010-9999-9999 02-7777-8888 01099997777 0277778888
+                              02)714-5656 010 1234 1234 010.1234.1234
+                              tel_pattern = r'\d{2,3}[\-) .]?\d{3,4}[\- .]?\d{4}'
+               ex2. 이메일 : abc12@naver.com / abc123@0to7.co.kr abc@한국.com
+                              email_pattern = r'\w{3,}@[a-zA-Z0-9가-힣]+\.[a-zA-Z]+(\.[a-zA-Z])?'
+                              email_pattern = r'\w{3,}@[a-zA-Z0-9가-힣]+(\.[a-zA-Z]+){1,2}'
+           4. 소스 구현
+           
+5절 연산자
+    - 산술연산 : + - * / ?? % **
+    - 할당연산 : = += -= *= /= //= %=
+    - 논리연산 : & and | or not
+    - 비트연산 : & | ^
+    - &와 |은 비교연산자보다우선순위가 높다   
+
+6절. 문자열 다루기
+    - 문자열 슬라이싱 변수[form:stop:step]
+    - len(문자열변수) : 문자갯수
+    - upper() : 대문자로
+    - lower() : 소문자로
+    - title() : 각 어절의 첫글자만 대문자로
+    - capitalize() : 첫문자만 대문자로
+    - count('찾을문자열') : '찾을문자열'이 몇개 들어있는지 갯수 반환
+    - find('찾을문자열') : '찾을문자열'이 왼쪽부터 시작하여 몇번째에 있는지 인덱스를 반환
+    - rfind('찾을문자열') : '찾을문자열'이 오른쪽부터 시작하여 몇번째에 있는지 인덱스를 반환
+      **찾을문자열이 없으면 -1을 반환**
+        cf) index('찾을문자열') : '찾을문자열'의 인덱스를 반환, 찾을문자열이 없으면 오류
+
+    - startswith('특정문자열') : '특정문자열'로 시작하는지 여부
+    - endswith('특정문자열') : '특정문자열'로 끝나는지 여부
+    - strip() : 좌우 공백 제거
+    - rstrip() : 오른쪽 공백 제거
+    - lstrip() : 왼쪽 공백 제거
+    - isdigit() : 문자열이 숫자문자열인지 여부
+    - islower() : 소문자 문자열인지 여부
+    - isupper() : 대문자 문자열인지 여부
+    - replace(oldStr, newStr) : oldStr을 nweStr로 변경
+    - split(구분자) : 구분자를 이용해 문자 분리(리스트 반환)
+    - join(리스트) : 리스트를 연결
+           
+7절 날짜시간
+    특정시점: datetime(년,월,일,시,분,초)
+    지금시점: datetime.now()
+    date(년,월,일) / datetime.now().date()
+    time(시,분,초) / datetime.now().time()
+    
+
+3장 데이터구조
+
+1절. 리스트 : lst = [타입과 관련없는 0개 이상의 데이터들]
+    len(lst) : 요수 갯수
+    min(lst), max(lst), sum(lst), sorted(lst,reverse=True) : 최소, 최대, 합, 정렬
+    data in lst : lst안의 data 요소가 있는지 여부
+    lst[idx], lst[from:stop:step] 인덱싱과 슬라이싱
+    추가 : lst.append(value), lst.insert(idx, value), lst.extend(another_lst)
+    삭제 : lst.pop(), lst.pop(idx), lst.remove(data), del 변수[idx]
+    찾기 : lst.index(data), lst.count(data), 컴프리헨션
+    정렬 : lst.sort(reverse=Type)
+    역순 : lst.reverse()
+    복제 : 얕은복사(할당), 깊은복사(복제) : copy(), clear(): 리스트 요소를 모두 삭제
+    
+2절 튜플 : tup = (data,) 수정 불가
+    len(tup) : 요수 갯수
+    min(tup), max(tup), sum(tup),sorted(tup,reverse=True) : 최소, 최대, 합, 정렬
+    data in tup : tup안의 data 요소가 있는지 여부
+    tup[idx], tup[from:stop:step] 인덱싱과 슬라이싱
+
+    찾기 : tup.index(data), tup.count(data)
+
+3절 딕셔너리 : dic = {key1:value1, key2:value2, ...}
+    일기 : dic[key1], dic.get(key1)
+    수정 : key에 의 할당(수정, 추가)
+    제거 : pop(key)
+    추가 : 새로운 key에 대해 value 추가
+    dic.keys() / dic.values() / dic.items()
+    복제 : 얕은복사(할당), 깊은복사(복제) : copy()
+
+4절 셋 : s = {data1, data2, data1} => {data1, data2} 중복허용안함, 순서없음 (인덱스 없음)
+    중복을 허용하지 않는 집합(순서 없음 == 인덱스 없음)
+    중괄({})나 set()함수를 이용해서 셋 생성
+    추가 :  add(스칼라데이터), update(데이터구조)
+    집합연산자, 논리연산자, 비트연산자 : &, |, -
+    삭제 : remove(삭제할 데이터)
+
+ch04. 제어문
+
+    조건문 : if문
+    반복문 : for문, while문, 중첩가능
+
+1절. 조건문(if)
+    if 조건1:
+        조건이 참일 경우 수행할 명령어들
+    elif 조건2:
+        조건1이 거짓이고, 조건 2가 참일 경우 수행할 명령어들
+    else
+        모든 조건을 만족하지 않을 때 수행할 명령어들
+
+2절. 반복문
+    2.1 for-in문
+    for 임시변수 in 나열가능한자료:
+        반복할명령어1
+        반복할명령어2
+    #   if 조건:
+    #        break
+    else:
+        나열가능한 자료가 다 소요하여 for블럭을 다 수행한 후 최종 한번 수행할 명령어
+        for문 안에 break를 수행할 경우 else블록은 수행되지 않음
+
+    2.2 while문
+    while 조건:
+        조건이 참일 경우 반복할 문장들
+    else:
+        조건이 거짓일 경우 한번 실행할 문장 (else 구문 선택사항)
+
+    2.3 break, continue
+
+3절. 중첩루프
+    (반복문 안의 반복문)
+
+4절. 중첨루프 탈출
+
+
+5장 함수
+
+1절. 함수 정의 및 사용
+    def 함수명(매개변수, ....):
+        명령어들
+        return 반환값
+    변수명 = 함수명 # 함수명 변경
+    
+2절. return
+
+3절. 함수의 매개변수
+    - 매개변수에 기본값을 가질 때: 호출시 선택적으로 명시
+        . 매개변수의 기본값이 스칼라 변수일 때 : 기본값이 함수 정의 시점
+        . 매개변수의 기본값이 객체일 때 : 기본값이 함수 호출 시점
+    - 키워드 인수 : 기본값을 갖고, 호출시 매개변수 명을 반드시 기입해야하는 경우
+    - 튜플매개변수 : 가변인수를 구현 *args (함수 정의)
+    - 딕셔너리 매개변수 : **kwargs(함수 정의, 함수 호출시 자동 매칭
+    - 튜플인수 언패킹 : 함수 호출시 변수 앞에 *
+    - 딕셔너리인수 언패킹 : 함수 호출시 변수 앞에 **
+
+    * 함수 정의시 매개변수 순서 *
+        순서인수 > 튜플인수 > 키워드인수 > 딕셔너리인수
+    
+4절. 람다식
+    funcname = lambda 매개변수들 : 리턴값
+    funcname(매개변수들)
+    (lambda 매개변수들 : 리턴값)(매개변수들)
+    
+    용도 = (1) 함수의 매개변수 (2) 함수의 return값
+    ex1. map(func, 가공할vector)
+    ex2. filter(func, 추출할vector)
+    ex3. sort(key=소트될 데이터를 return할 함수, reverse=T/F)
+
+5절. 파이썬 내장 함수
+
+
+
+6장 모듈과 패키지
+
+1절. 패키지 및 모듈 사용
+
+import A : A 모듈을 load
+import A : A패키지 및의 __init__ 모듈을 load
+from A import B : A 패키지 안의 B 모듈 load
+from A import B : A 모듈 안의 B 함수 load
+from A.B import C : A 패키지 밑의 B 모듈 안의 C함수 load
+
+import A as L : A 모듈을 L이름으로 load
+import A as L : A패키를 L이름으로  __init__ 모듈을 load
+from A import B as L : A 패키지 안의 B 모듈을 L이름으로 load
+from A import B as L : A 모듈 안의 B 함수를 L이름으로 load
+from A.B import C as L : A 패키지 밑의 B 모듈 안의 C함수를 L이름으로 load
+
+2절. 패키지 설치 및 삭제
+pip install 패키지명 / conda install 패키지명
+pip show 패키지명 / conda list 패키지명
+pip uninstall 패키지명 / conda remove 패키지명
+
+* 패키지 아래 __ini__.py에 패키지 설정 내용이 추가 *
+
+7장. 객체 지향 프로그래밍
+
+1절. 객체와 클래스
+    class 클래스명(상속받을 클래스명): 변수나 함수들 선언
+
+2절. 생성자와 소멸자
+    생성자 : __init__(self, 매개변수, ..) - 객체가 생성될 때 자동 생성
+        객체 생성시 필요한 인스턴스 변수 초기화를 포함
+    소멸자 : __del__(self) - 객체가 소멸될 때 자동 실행
+        인스턴스 객체의 레퍼런스 카운트가 0이 될 때 실행
+
+3절. 변수와 메소드(함수)
+    인스턴스 변수 vs 클래스 변수
+    인스턴스 메소드(self) vs 클래스 메소드(clz) vs static 메소드()
+    
+4절. 상속과 재정의
+    클래스를 재사용
+    상속을 이용하면 부모클래스의 모든 속성을 자식클래스로 물려줄 수 있음
+    문법: class 자식클래스명(부모클래스명):
+    
+ *정적변수(static변수): 여러 객체들 사이에 데이터를 공유하고 싶을 때 사용
+    static 변수 앞에 under score 2개(__)를 붙이면 클래스명._클래스명__static 변수명으로 참조
+    클래스변수는 외부에서 바로 접근 가능.
+    static 변수는 외부에서 바로 접근하는 것을 방지
+    static 변수는 클래스 내부에서만 접근하도록 하려는 의도.
+    
+5절. 연습문제
+    실습형, 서술형
+    
+    
+ch08. 예외처리
+
+1절. 예외처리
+    예외가 날 가능성이 있는 부분에 대해 미리 예상하고, 그에 대한 처리를 프로그래밍하는 것(이유: 좀 더 안정적으로 실행)
+    ex. 파일을 다룰 때 : 파일이 없거나, 쓰기 금지로 인한 오류
+    ex. 데이터베이스 프로그래밍 시 제약조건 등으로 CRUD (Create, Read, Update, Delete) 오류
+    ex. 네트워크 프로그래밍 시 일시적인 네트워크 장애시 연결 실패 오류
+    ex. 리스트나 튜플의 인덱스를 벗어난 오류
+        * 한글 완성형 (euc-kr, 2,350 글자) => 확장된 한글완성형 (cp949), -한글 조합형 (utf-8)
+        
+2절. try~except로 예외 처리
+    2.1 try~except
+        try:
+            예외가 발생할 가능성이 있는 명령어들
+        except:
+            예외가 발생했을 경우 실행할 명령어들
+
+    2.2 예외를 지정한 처리
+        try:
+            예외가 발생할 수도 있는 문장들
+        except 예외타입1:
+            해당 예외가 발생할 경우 실행할 명령어들
+        except 예외타입2:
+            해당 예외가 발생할 경우 실행할 명령어들
+            
+    2.3 예외 메세지(예외인수)  
+
+3절. raise
+    강제 예외 발생
+    
+4절. 추상클래스
+    추상클래스 : 객체를 생성할 수 없는 클래스. 상속받을 클래스의 포멧 제공
+    추상메소드 : 호출할 수 없는 메소드
+    
+5절. 파일 정리 작업(with 절 이용)
+
+
+
+ch09. 파일 입/출력 프로그래밍
+
+국가 공공 data 포털 : data.go.kr
+한글 완성형 (euc-kr, 2,350 글자) => 확장된 한글완성형 (cp949), -한글 조합형 (utf-8) 코드
+
+1. *.txt
+    김회원, 33, 아무동9
+    이회원, 22, 무시기동8
+2. pickle파일(*.data) : 객체 리스트 저장, (머신러닝 모델 저장용)
+3. *.csv [헤더가 없을 수 있음]
+    name,age,address
+    '김회원',33,'아무동9'
+    '이회원',22,'무시기동8'
+4. *.json
+    [{'name':'김회원','age':33, 'address':'아무동9'},
+     {'name':'이회원','age':22, 'address':'무시기동8'}
+     
+5. *.h5이나 *.hdf5 (=> 딥러닝 모델 저장
+    HDVview로 읽을 수 있음
+    
+6. *.xml  => web cralling에서 사용 예정
+<custoemr>
+    <name>김회원<name>
+    <age>33<age>    
+    <address>아무동9<address>
+</customer>
+<custoemr>
+    <name>이회원<name>
+    <age>22<age>    
+    <address>무시기동8<address>
+</customer>
