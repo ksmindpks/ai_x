@@ -559,7 +559,11 @@ Numpy 패키지 함수와 속성
 
 
 
-
+    - member['열이름'] : 특정열
+    - member[조건]
+    - member.loc[행이름, 열이름:열이름]
+    - member.loc[:, 이름:주소]
+    - member.iloc[행번호, 열번호]
 
 
 
