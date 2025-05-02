@@ -494,9 +494,85 @@ encoding
 
 ch10. N차원 배열 다루기
 
-1절. 넘파이 패키지
+    numpy
+    numpy_API
+    N차원 배열 객체
+    2차원 배열은 행렬개념
+    numpy 패키지는 c언어로 구현되어 고성능 수치 계산 패키지
 
-Numpy 패키지 함수와 속성
+1절. 넘파이 패키지
+1.1 배열 속성
+1.2 배열 변경 (구조, 타입)
+1.3 배열 저장
+2절. 넘파이 배열
+    array()함수를 이용한 다른 파이썬 데이터 구조를 배열로 변환
+    arrange(), ones(), zeros(), empty()
+    랜덤값은 갖는 함수들...
+2.1 array()함수로 넘파이 배열 만들기
+    array(리스트나 튜플, dtype=np.xxx, copy=T/F)
+2.2 기본값이 있는 배열 만들기
+    np.zeros( tup ) : 요소들이 다 0
+    np.ones( tup ) : 요소들이 다 1
+    np.full( tup, 기본값) : 요소들이 다 기본값
+    np.empty(tup) : 요소들이 임의의 값(메모리 상태에 따라 달라짐) ※ 위의 함수를 이용해서 생성된 배열은 기본 dtype이 float64, dtype속성 따라 지정 가능
+2.3 랜덤값을 갖는 배열 만들기
+    np.random.random(tup) : 0부터 1미만의 균등 분포, 0<= 난수 <1
+    np.random.uniform(low=0, high=1.0, size=tup) : low부터 high미만의 균등분포를 갖는 랜덤값
+    np.random.normal(loc=0, scale=1.0, size=tup) : 평균loc과 표준편차scale을 갖는 정규분포 랜덤값
+    np.random.rand(n) : 균등분포의 1차원 난수 배열 발생 (난수 n개)
+    np.random.randn(n) : 표준정규분포(평균0, 표준편차1인 정규분포)의 1차원 난수 배열 발생 (난수 n개)
+    cf. np.random.randint(n) : 0qnxj n미만의 정수 난수 1개 발생
+2.4 연속된 값을 갖는 배열 만들기
+    np.arange(from, stop, by, dtype) : from부터 stop까지 by씩 증감하는 정수 배열
+    np.linspace(from, to, count) : from부터 to까지 (to포함) count개 숫자를 1차원 배열
+2.5 배열의 차원 변경하기
+    reshape([면수,] 행수, 열수) : -1이 올 수도
+    resize([면수,] 행수, 열수) : -1 불가
+    T : 전치행열로 변환
+    transpose() : 전치행렬로 변환 ※ 실행결과가 출력되면 배열이 수정되지 않고, 실행결과가 없으면 배열 수정됨
+2.6 배열 인쇄
+2.7 기본 연산 동작¶
+    1) 배열의 요소별 연산
+    2) 행렬(2차원 배열)의 곱(@, dot함수)
+        cf * (요소별 곱)
+    3) 복합 대입연산자 사용
+        배열에서는 a=a+b와 a+=b 다르게 작동
+    4) 배열 요소별 집계
+        sum, min, max, mean, var(분산), std(표준편차)
+    5) 배열 축별 집계
+        sum, min, max, mean, var, std, argmax(최대값의 인덱스)
+2.8 그외 요소별 계산하는 범용함수들
+    메모리나 시간을 효율적으로 사용할 수 있음
+    np.add(A, B, C) ; C=np.add(A,B) ; C=A+B
+    np.subtract(A, B, C) ; C=np.subtract(A,B) ; C=A-B
+    np.multiply(A, B, C) ; C=np.multiply(A,B) ; C=A*B
+    np.sqrt(배열) ; 요소별 제곱근 cf. math.sqrt(스칼라값)
+2.9 브로드캐스팅
+    서로 다른 크기의 배열 간 연산을 수행할 수 있도록 해주는 강력한 기능
+3절. 배열 합치기 / 분리하기
+    슬라이싱
+    두배열을 합치는 함수
+    r_, c_
+    두배열로 분리하는 함수
+3.1 인덱싱과 슬라이싱
+    인덱싱에는 없는 인덱스 사용시 에러
+    슬라이싱에는 없는 인덱스 사용시 끝까지
+    음수 인덱스는 끝에서부터
+3.2 두 배열을 합치는 함수
+    vstack(tup) : 아래로 추가하는 방식
+    hstack(tup) : 옆으로 추가하는 방식
+    dstack(tup) : 마지막 축(열)을 쌓아 합침(차원증가)
+3.3 r_, c_
+3.4 배열 분리하는 함수
+    vsplit(ary, 정수나 벡터) : 첫번째 축을 따라 분할
+    hsplit(ary, 정수나 벡터) : 두번째 축을 따라 분할
+    dsplit(ary, 정수나 벡터) : depth 따라 나눔 (3차원 이상에서만 동작)
+    정수 n : n개 분리
+    [n] : n번째 인덱스를 기점으로 분리
+    [m,n] : m번째, n번째 인덱스를 기점으로 분리
+    
+    
+    Numpy 패키지 함수와 속성
     - 배열 속성
         dtype: 요소들의 type
         itemsize: 한 요소의 bytesize
@@ -547,16 +623,11 @@ Numpy 패키지 함수와 속성
         np.vsplit(ary, 정수나 인덱스벡터) == np.split(ary, 정수나 인덱스벡터, axis=0)
         np.hsplit(ary, 정수나 인덱스벡터) == np.split(ary, 정수나 인덱스벡터, axis=1)
         np.dsplit(ary, 정수나 인덱스벡터) == np.split(ary, 정수나 인덱스벡터, axis=-1)
-        np.array_split(ary, 정수나 인덱스벡터, axis) : 나눠지지 않는 정수로도 split 가능
-        
-        
+        np.array_split(ary, 정수나 인덱스벡터, axis) : 나눠지지 않는 정수로도 split 가능 
 
     - 배열 저장: pkl, npy
     - 딥러닝모델 저장: h5, keras
     - 머신러닝모델 저장: pkl, joblib
-
-
-
 
 
     - member['열이름'] : 특정열
@@ -564,6 +635,130 @@ Numpy 패키지 함수와 속성
     - member.loc[행이름, 열이름:열이름]
     - member.loc[:, 이름:주소]
     - member.iloc[행번호, 열번호]
+    
+    
+4절. 복사와 뷰
+4.1 할당
+4.2 뷰(view)
+    슬라이싱 할 경우 자동 view 생성
+4.3 깊은 복사
+5절. 고급인덱싱
+5.1 인덱스 배열로 인덱싱
+5.2 논리 배열을 이용한 인덱싱
+6절. 선형대수
+    2차원 넘파이배열을 행렬
+    행렬 곱 : @, dot(), 단위행렬
+    역행렬 : np.linalg.inv(행렬) : 역행렬@행렬 = 단위행렬
+    전치행렬 : 행렬.T / 행렬.transpose()
+6.1 선형 연립 방정식 풀기 (독립변수1, 데이터2)
+6.2 선형연립 방정식 풀기(회귀분석): 독립변수 1개, 데이터 n개
+
+
+
+ch11. 데이터프레임(Pandas)
+
+    pip install pandas / conda install pandas (아나콘다 프롬프트)
+    
+1절. 판다스 패키지
+    데이터 분석을 위해 반드시 알아야 할 패키지. 넘파이 기반으로 다른 많은 라이브러리와 잘 통합되도록 설계
+    1차원 구조를 갖는 시리즈, 2차원 구조를 갖는 데이터프레임(excel의 스프레드시트)을 제공
+    판다스 장점 : 파일io, 부분 데이터 추출, 크기변경, 데이터 분할, 병합, 정렬, 결측치 처리, 피벗과 업피벗(와이드포맷과 롱포맷)에 용이
+    Pandas API Reference
+    Pandas docs
+2절. 데이터 프레임 만들기
+2.1 딕셔너리를 이용해서 데이터 프레임 만들기
+2.2 리스트를 이용해서 데이터 프레임 만들기
+2.3 데이터프레임 파일 읽기: read_csv
+2.4 패키지에서 가져오기: iris 데이터
+    iris 가져오기 방법1: sklearn (머신러닝 패키지)
+    iris 가져오기 방법2: statsmodels (R 데이터) * 인터넷이 되어야만 이용 가능
+    iris 가져오기 방법3: seaborn(시각화 패키지), * matplotlib이 1세대, seaborn이 2세대
+3절. 이름(열, 행) 지정하기
+3.1 열이름 지정하기
+3.2 행이름 지정하기
+3.3 레벨 이름 지정하기
+4절. 부분 데이터 조회
+4.1 열조회
+4.2 loc을 이용하는 조회
+    df.loc[행이름, 열이름] : 행이름과 열이름으로 조회
+    행이름과 열이름 자리에 list ex.['Name', 'Email']
+    행이름과 열이름 자리에 슬라이싱 from:to(from부터 to까지, to 포함) 만 가능
+    , 열이름 생략시 모든 열
+4.3 iloc을 이용하는 조회
+    df.iloc[행이름, 열이름] : 행이름과 열이름으로 조회
+    행번호와 열번호 자리에 list ex.[0,2]
+    행번호와 열번호 자리에 슬라이싱 from:to:by(from부터 by씩 증감하면서 to앞까지, to 미포함)
+    , 열이름 생략시 모든 열
+4.4 조건으로 조회
+    df[조건] : 조건에 맞는 행(모든 열)
+    df.loc[조건, 열이름] 또는 df[조건][열이름] : 조건에 맞는 행의 특정 열
+
+※ 데이타프레임의 부분 데이터조회 방법
+    - df[열이름] : 특정열 모든 행 조회
+    - df[조건] : 조건에 맞는 모든 행 조회
+    - df.loc[헹이름, 열이름] : 이름조회, 조건(행이름자리)으로 조회 가능
+        * 열이름을 생략하면 모든 열
+        * 행이름, 열이름 자리에 list, 슬라이싱
+    - df.iloc[헹번호, 열번호] : 번호 조회
+        * 열번호를 생략하면 모든 열
+        * 행번호, 열번호 자리에 list, 슬라이싱
+5절. 데이터 추가 및 삭제
+5.1 데이터 프레임의 요소 삭제
+    df.drop(행이름이나 열이름, axis) : axis=0 : 행삭제 / axis=1 : 열삭제
+5.2 데이터 프레임의 요소 추가
+6절. 병합과 연결
+6.1 merge()를 이용한 병합
+6.2 concat()을 이용한 연결
+    pd.concat([df1,df2],axis)
+    axis=0(기본값) : 위아래로 연결
+    axis=1 : 좌우로 연결
+7절. 정렬(행이름, 열이름, 값에 의한 정렬)
+    문자열은 '100' < '9'
+    df.sort_index(axis) : 헹(axis=0) 또는 열(axis=1) 이름으로 정렬
+    df.sort_values(by=정렬기준이 될 열이름, ascending=T/F, inplace=T/F) : 값에 의한 정렬
+7.1 행이름으로 정렬
+7.2 열이름으로 정렬
+7.3 값에 의한 정렬
+8절. 기초 통계 분석
+    * 판다스 기초통계 / statsmodels : 난이도 있는 통계
+    count : NaN을 제외한 갯수
+    min
+    max
+    sum
+    cumsum : 누적합
+    cumprod : 누적곱
+    mean
+    rolling(n).mean() : 데이터 변동(노이즈)이 다소 있을 때, 추세(패턴)을 부드럽게 보고 싶을 때
+    var : 분산
+    std : 표준편차
+    median : 중위수 (50% 지점)
+    quantile : 분위수 - 0사분위수, 1사분위수(25%), 2사분위수(50%), 3사분위수(75%), 4사분위수(100%) IQR = Q3 - Q1 Q1-1.5IQR ~ Q3+1.5IQR 이 외 값은 이상치 max Q3 Q2 Q1 min
+    describe : 요약통계량
+    corr : 상관관계 (계수)
+8.1 min, max, mean, std...
+8.2 요약통계량
+8.3 공분산, 상관계수
+9절. 데이터 그룹화 및 집계
+9.1 Groupby
+    cf. pivot_table
+    # 1) 그룹화 방법1
+    #     df.groupby(by=[그룹핑할열])[함수적용해서 출력할 열들].기초통계함수()
+    #              [함수적용해서 출력할 열들] 생략시 그룹핑할 열을 제외한 모든 열 적용
+    #iris_grouped = iris.groupby(iris.Species)
+    # 2) 그룹화 방법2
+    #    df.pivot_table(index=[그룹핑할열],
+    #                   values=[함수적용해서 출력할 열들],
+    #                   aggfunc=함수(기본값:mean))
+    다중열로 그룹화
+        # iris로 다중열로 그룹화하기 위해 데이터 걸럼 추가(num 필드)
+        # 각 열의 임의의 데이터에 결측치를 할당
+9.2 레이블 인코딩
+10절. 데이터 구조 변경
+    와이드 포맷 <--> 롤 포맷
+    판단스 공식 문서의 melt : https://pandas.pydata.org/docs/user_guide/reshaping.html#reshaping-by-melt
+    Tidy Data (7Page) : https://vita.had.co.nz/papers/tidy-data.pdf
+10.1 melt를 이용한 언피벗팅(와이드포맷 -> 롱포맷)
+10.2 pivot_table을 이용한 피벗팅(롱포맷->와이드포맷)
 
 
 
@@ -574,13 +769,22 @@ Numpy 패키지 함수와 속성
 
 
 
+1) 데이터 준비
+2) 미적 속성 설정 - sns.set(style='darkgrid',
+                    context='notebook', 배율
+                    set.style ....
+3) 그래프 함수
+ⓐ 관계형 그래프: scatterplot, lineplot => relplot(서브 플롯
 
-
-
-
-
-
-
+ⓑ 범주형 그래프
+    stripplot (무작위 흩뿌림), swarmplot(겹치지 않는 산점도)
+    barplot, barhplot(y의 평균으로 막대 그래프), pointplot(y의 평균으로 line)
+    countplot(count는 x의 빈도수가 높이)
+    boxplot, violinplot, boxenplot
+         => catplot(서브플롯)
+ⓒ 쌍관계 그래프: 모든 수치형 변수에 대해 산점도
+ⓓ 밀도그래프: histplot, displot
+ⓔ 회귀그래프:regplot = lmplot(서브플롯)
 
 
 
