@@ -774,7 +774,7 @@ ch11. 데이터프레임(Pandas)
                     context='notebook', 배율
                     set.style ....
 3) 그래프 함수
-ⓐ 관계형 그래프: scatterplot, lineplot => relplot(서브 플롯
+ⓐ 관계형 그래프: scatterplot, lineplot => relplot(서브 플롯)
 
 ⓑ 범주형 그래프
     stripplot (무작위 흩뿌림), swarmplot(겹치지 않는 산점도)
@@ -785,6 +785,7 @@ ch11. 데이터프레임(Pandas)
 ⓒ 쌍관계 그래프: 모든 수치형 변수에 대해 산점도
 ⓓ 밀도그래프: histplot, displot
 ⓔ 회귀그래프:regplot = lmplot(서브플롯)
+ⓕ 다중 그래프를 위한 FacetGrid
 
 
 
