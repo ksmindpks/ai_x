@@ -4,7 +4,7 @@
  - 강사 : 이소영
    e-mail : yisy0703@naver.com, 
    github주소 : https://github.com/comlec/ai_x,
-   강의자료 : (WAN) https://lrl,kr/eiHQS, (lan) \\192.168.0.3
+   강의자료 : (WAN) git, (lan) \\192.168.0.3
    
 0. 시스템 폴더 관리
    ai_x\download : 개발환경을 위한 다운로드 파일
@@ -784,7 +784,7 @@ ch11. 데이터프레임(Pandas)
          => catplot(서브플롯)
 ⓒ 쌍관계 그래프: 모든 수치형 변수에 대해 산점도
 ⓓ 밀도그래프: histplot, displot
-ⓔ 회귀그래프:regplot = lmplot(서브플롯)
+ⓔ 회귀그래프:regplot => lmplot(서브플롯)
 ⓕ 다중 그래프를 위한 FacetGrid
 
 
