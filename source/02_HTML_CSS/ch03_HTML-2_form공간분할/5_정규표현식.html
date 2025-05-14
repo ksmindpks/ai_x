@@ -15,6 +15,7 @@
         }
 
         p {
+            text-align: center; /* 글씨 가운데 정렬 */
             color: gray;
         }
 
@@ -69,7 +70,8 @@
                     <tr>
                         <td><label for="name">이&nbsp;름<b>*</b></label></td>
                         <td>
-                            <input type="name" name="name" id="name"
+                            <input type="text" name="name" id="name"
+                                   autofocus="autofocus"
                                    placeholder="이름은 2글자 이상"
                                    pattern="[a-zA-Z가-힣]{2,}"
                                    title="이름 형식에 맞지 않습니다(2글자 이상)"
@@ -79,9 +81,9 @@
                     <tr>
                         <td><label for="id">아이디<b>*</b></label></td>
                         <td>
-                            <input type="id" name="id" id="id"
+                            <input type="text" name="id" id="id"
                                    placeholder="아이디는 6글자 이상"
-                                   pattern="[a-zA-Z0-9]{6,9}"
+                                   pattern="[a-zA-Z][a-zA-Z0-9]{6,9}"
                                    title="아이디 형식에 맞지 않습니다(영어숫자 조합 6~9글자)"
                                    required="required" />
                         </td>
@@ -159,10 +161,8 @@
                 </table>
             </fieldset>
             <p>
-                <center>
                     <input type="submit" value="입력완료" />
                     <input type="reset" value="입력취소" />
-                </center>
             </p>
         </form>
     </section>
