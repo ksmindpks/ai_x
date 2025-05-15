@@ -17,6 +17,7 @@
         }
         #content > div{height:300px;}
 
+        /* round 처리 */
         #header .left{border-radius:30px 0 30px 0;}
         #header .center{border-radius:0 0 30px 30px;}
         #header .right{border-radius:0 30px 0 30px;}
@@ -27,8 +28,9 @@
         #footer .center{border-radius:30px 30px 0 0;}
         #footer .right{border-radius:30px 0 30px 0;}
 
-        #content .center #nav ul{overflow:hidden; padding-left:0;}
-        #content .center #nav ul li{
+        /* nav 메뉴 위치, 색 조정 */
+        #nav ul{overflow:hidden; padding-left:0;}
+        #nav ul li{
             float: left;
             list-style: none;
             font-size: 2em;
@@ -36,10 +38,13 @@
             width:231px;
             text-align:center;
         }
-        #content .center #nav ul li a{text-decoration: none; color: black;}
-        #content .center #academy h1{text-align:center; padding:20px;}
-        #content .center #academy p{padding:20px;}
+        #nav ul li a{text-decoration: none; color: black;}
 
+        /* title, 문장 위치 */
+        #academy h1{text-align:center; padding:20px;}
+        #academy p{padding:20px;}
+
+        /* 오른쪽 세 태그 색 조정 */
         #content .right ol li:nth-child(9) ~ li{color: darkred;}
     </style>
 </head>

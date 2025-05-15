@@ -1,0 +1,60 @@
+﻿<!DOCTYPE html>
+
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="utf-8" />
+    <title></title>
+    <style>
+        #wrap{
+            width:600px; margin:0 auto;
+            border:1px solid gray;
+            text-align:justify;
+            padding: 10px;
+        }
+        #wrap p:nth-child(2n){background-color:lightblue}
+        /* em(원 글씨 크기의 배수), %(글씨 크기 및 width, height,...) px, pt(3pt가 4px) 
+            pxtoem(https://pxtoem.com.au/)
+            pxtopt(https://pixelsconverter.com/px-to-pt)
+        */
+        #wrap p > span{
+            display:block; /* display 속성을 block으로 수정하면 block형 태그로 전환 */
+            color:gray;
+            font-size:.5em;
+        }
+        #wrap p:nth-child(1){
+            font-size: .6em; /* 원래 사이즈의 0.6배 */
+        }
+        #wrap p:nth-child(2){
+            font-size: 100%; /* 문자의 경우 원래 사이즈의 몇 % */
+            /* width, height, padding, margin, ... 등 길의의 경우 :  부모 길이의 몇 % */
+        }
+        #wrap p:nth-child(3){
+            font-size: 32px; /* p태그 기본 사이즈가 16px */
+        }
+        #wrap p:nth-child(4){
+            font-size:24pt; /* 3pt(글씨 포인트 단위)가 4px */
+        }
+    </style>
+</head>
+<body>
+    <div id="wrap">
+        <p>
+            통신·방송의 시설기준과 신문의 기능을 보장하기 위하여 필요한 사항은 법률로 정한다. 모든 국민은 신체의 자유를 가진다. 누구든지 법률에 의하지 아니하고는 체포·구속·압수·수색 또는 심문을 받지 아니하며, 법률과 적법한 절차에 의하지 아니하고는 처벌·보안처분 또는 강제노역을 받지 아니한다.
+            <span>입력2025.05.15. 오전 9:37  수정2025.05.15. 오전 9:38</span>
+        </p>
+        <p>
+            통신·방송의 시설기준과 신문의 기능을 보장하기 위하여 필요한 사항은 법률로 정한다. 모든 국민은 신체의 자유를 가진다. 누구든지 법률에 의하지 아니하고는 체포·구속·압수·수색 또는 심문을 받지 아니하며, 법률과 적법한 절차에 의하지 아니하고는 처벌·보안처분 또는 강제노역을 받지 아니한다.
+            <span>입력2025.05.15. 오전 9:37  수정2025.05.15. 오전 9:38</span>
+        </p>
+        <p>
+            정당은 그 목적·조직과 활동이 민주적이어야 하며, 국민의 정치적 의사형성에 참여하는데 필요한 조직을 가져야 한다. 국회가 재적의원 과반수의 찬성으로 계엄의 해제를 요구한 때에는 대통령은 이를 해제하여야 한다.
+            <span>입력2025.05.15. 오전 9:37  수정2025.05.15. 오전 9:38</span>
+        </p>
+        <p>
+            정당은 그 목적·조직과 활동이 민주적이어야 하며, 국민의 정치적 의사형성에 참여하는데 필요한 조직을 가져야 한다. 국회가 재적의원 과반수의 찬성으로 계엄의 해제를 요구한 때에는 대통령은 이를 해제하여야 한다.
+            <span>입력2025.05.15. 오전 9:37  수정2025.05.15. 오전 9:38</span>
+        </p>
+    </div>
+
+</body>
+</html>

@@ -6,18 +6,3 @@
 6. 웹페이지 실전예제 - 쇼핑몰
 7. 스마트폰 레이아웃과 테블릿 레이아웃
 8. CSS3 반응형 웹
-
-
-Visual Studio : "Visual Studio 확장 개발", ".NET 데스크톱 개발" 추가 설치
-iiexpress_amd64_kr_KR.msi (웹서버) 설치
-
-ch02
-글자관련테그: h1~h6, p, del, i, b, strong, ins, pre, a
-목록태그      : ul-li, ol-li
-표               : table - tr - td/th
-이미지태그   : img의 src속성, alt속성
-오디오태그
-
-ch03
-form태그
-공간분할태그
