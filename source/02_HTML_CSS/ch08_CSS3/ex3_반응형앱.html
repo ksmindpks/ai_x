@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0" />
+    <title></title>
+    <style>
+        /* 페이지 초기화 */
+        *{margin: 0; padding: 0;}
+        li{list-style: none;}
+        a{text-decoration: none; color: black; font-weight: bold; display: block;        }
+        /* 공통         */
+        #wrap{
+            border: 1px solid gray;            box-sizing: border-box;
+            text-align: justify;
+        }
+        #wrap #header{
+            height: 100px; line-height: 100px; text-align: center;
+            border: 1px solid gray;            box-sizing: border-box;
+        }
+        #wrap #nav ul{overflow: hidden;}
+        #wrap #nav ul li{
+            float: left;
+            height: 60px; line-height: 60px; text-align: center;
+            border: 1px solid gray;            box-sizing: border-box;
+        }
+        #content{padding: 10px;}
+        #footer{line-height: 100px; text-align: center; background-color: lightgray;}
+        /* pc용         */
+        @media screen and (min-width: 1501px){
+            #wrap{width: 700px; margin: 0 auto;}
+            #wrap #nav ul li{width: 20%;}
+        }
+        /* tab용         */
+        @media screen and (min-width: 1001px) and (max-width:1500px){
+            #wrap{width: 99%; margin: 0.5%; background-color: lightgreen;}
+            #wrap #nav ul li{width: 25%;}
+            #wrap #nav ul li:nth-child(4){display: none;}
+        }
+        /* phone용         */      
+        @media screen and (max-width:1000px){
+            #wrap{background-color: lightpink;font-size: 1.2em;            }
+            #wrap #nav ul li{width: 33.33%;}
+            #wrap #nav ul li:nth-child(2), #wrap #nav ul li:nth-child(4){display: none;}
+        }
+    </style>
+</head>
+<body>
+    <div id="wrap">
+        <div id="header"><h1>반응형 웹</h1></div>
+        <div id="nav">
+            <ul>
+                <li><a href="#">memu1</a></li>
+                <li><a href="#">memu2</a></li>
+                <li><a href="#">memu3</a></li>
+                <li><a href="#">memu4</a></li>
+                <li><a href="#">memu5</a></li>
+            </ul>
+        </div>
+        <div id="content">
+            <h2>What is today's hot news?</h2>
+            <p>
+                이날 이주호 대통령 권한대행 부총리 겸 교육부 장관은 이창용 한국은행 총재, 김병환 금융위원장과 조찬 간담회를 열고 미국 국가신용등급 하향 조정에 따른 시장 상황을 점검했다. 이 권한대행은 미국과 주요국의 관세 협상 전개, 신용등급 강등에 따른 미국 경제 동향 등 대외 불확실성이 여전한 만큼 금융·외환시장 상황을 끝까지 면밀히 점검하고 대응해 달라고 당부했다.
+
+                금융 전문가들은 단기적으로 투자심리 위축과 차익 실현, 금융·외환시장 변동성 확대 등이 뒤따를 가능성이 크다고 지적한다. 실제 이번 신용등급 강등 직후 미 채권금리는 상승했고 달러화는 하락 압력을 받았다
+            </p>
+        </div>
+        <div id="footer">홍길동 주식회사</div>
+    </div>
+</body>
+</html>
