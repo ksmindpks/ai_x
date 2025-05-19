@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<!-- saved from url=(0038)http://localhost:7078/toggle_test.html -->
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    
+    <title></title>
+    <style>
+        body{background-color: orange;}
+        div{
+            background-color: red;
+            display: none; /* 공간도 화면에서 사라짐 */
+        }
+        #toggle:checked ~ div {display: block;}
+        #toggle{display:none;}
+    </style>
+    
+</head>
+<body>
+    <input type="checkbox" id="toggle">
+    <p>
+        중간에 아무 내용이 없어도 상관없어요!!!
+    </p>
+    <label for="toggle">
+        <img src="./toggle_test_files/menu.png">
+    </label>
+    <p>
+        중간에 아무 내용이 없어도 상관없어요!!!
+    </p>
+    <div>토클부분(메뉴가 나타났다 사라졌다 하는 부분</div>
+
+
+</body></html>

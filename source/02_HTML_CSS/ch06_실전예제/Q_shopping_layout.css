@@ -1,0 +1,65 @@
+﻿/* Q_shopping_layout.css */
+@font-face { /* 폰트 설정 */
+    font-family: 'Merriweather-Light';
+    src: url('font/Merriweather-Light.ttf');
+}
+
+@font-face {
+    font-family: 'Merriweather-Regular';
+    src: url('font/Merriweather-Regular.ttf');
+}
+* {margin: 0; padding: 0;}
+a {text-decoration: none;    color: black;    display: block;}
+li{list-style:none;}
+
+#header {font-family: 'Merriweather-Regular';}
+#header .gnb{min-width:1000px; background-color: black; overflow:hidden;}
+#header .gnb ul{width: 1000px; margin:0 auto;}
+#header .gnb ul li{float:left; width: 8%; margin: 0 1%;
+                   text-align: center; line-height: 30px;
+}
+#header .gnb ul li a{color: white;}
+#header .logo {
+    width: 400px; margin: 30px auto; border: 1px solid gray;
+    text-align: center; font-size: 2em; font-family: "Pacifico", cursive;
+    font-weight: 400; padding: 15px 30px;
+}
+
+#header .hitmenu ul {width: 1000px; margin: 0 auto 3px; overflow: hidden;}
+#header .hitmenu ul li {float: right; border: 1px solid black;}
+#header .hitmenu ul li a{padding: 10px 30px;}
+#header .hitmenu ul li:first-child {border-radius: 0 10px 10px 0;}
+#header .hitmenu ul li:last-child {border-radius: 10px 0 0 10px;}
+
+#header .lnb{border-top: 1px dashed black; border-bottom: 1px dashed black;}
+#header .lnb ul {width: 1000px; margin: 0 auto; overflow: hidden;}
+#header .lnb ul li {
+    float: left; width: 10.5%; margin: 0 1%;
+    line-height:30px; text-align: center;}
+
+#content { width: 1000px; margin: 0 auto;}
+#content .section1 { overflow: hidden;}
+#content .section1 > div{
+    float: left; height: 400px; line-height: 400px;
+    text-align: center; border: 1px solid gray; box-sizing: border-box;
+}
+.slide_banner { width: 700px;}
+.side_banner { width: 300px;}
+
+#content .section2 > div{border: 1px solid gray;}
+#content .section2 ul { overflow: hidden;}
+#content .section2 ul li {
+    float: left; width: 24%; margin-right: 0.8%;
+    border: 1px solid gray; box-sizing: border-box;
+    line-height: 400px; text-align: center;
+}
+#content .section2 ul li:first-child{margin-left: 0.8%;}
+#content .section2 .hit_prduct{margin: 10px 0;}
+
+#footer {width: 1000px; margin: 10px auto 0;}
+.company {overflow: hidden;}
+.company div {
+    float:left;  width:33.3%; border:1px solid gray;
+    box-sizing:border-box; height:100px; margin-bottom:10px;}
+.copyright{ color:white; background-color:black;text-align:center;
+            height:50px; line-height:50px;}
