@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0" />
+    <title></title>
+    <style>
+
+        p{text-align: center;}
+    </style>
+    <script>
+        function chk(){
+            if(!frm.id1.value){
+                alert('첫번째 수를 입력하시오');
+                frm.id1.focus();
+                return false;
+            }if(!frm.id2.value){
+                alert('두번째 수를 입력하시오');
+                frm.id2.focus();
+                return false;
+            }
+
+            let num1 = Number(frm.id1.value);
+            let num2 = Number(frm.id2.value);
+            let gap = num1 > num2 ? num1-num2 : num2-num1;
+            let dec = num1 > num2 ? 1 : (num2>num1 ? -1: 0);
+            let rslt_msg;
+            switch(dec){
+                case 1: rslt_msg = '<p>첫번째 수가 '+gap+'만큼 큽니다</p>'; break;
+                case 0: rslt_msg = '<p>두 수가 같습니다</p>'; break;
+                case -1: rslt_msg = '<p>두번째 수가'+gap+'만큼 큽니다</p>'; break;
+            }
+        }
+        alt_msg = rslt_msg.replace('<p>', '').replace('</p>','')
+
+        document.body.innerHTML += rslt_msg;
+        frm.id1.value = num1;
+        frm.su2.value = num2;
+        alert(rslt_msg)
+    </script>
+</head>
+<body>
+    <form name="frm" onsubmit="return chk()">
+        <fieldset>
+            <p>
+                <label for="id1">첫번째 수</label>
+                <input type="text" name="id1" id="id1">
+            </p>
+            <p>
+                <label for="id2">두번째 수</label>
+                <input type="text" name="id2" id="id2">
+            </p>
+            <p>
+                <input type="submit" value="결과">
+            </p>
+        </fieldset>
+    </form>
+</body>
+</html>

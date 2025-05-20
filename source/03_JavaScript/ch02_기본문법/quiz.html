@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0" />
+    <title></title>
+    <style>
+        
+    </style>
+    <script>
+        // 사용자로부터 prompt를 이용해서 국어와 영어점수(0~100)를 입력받아
+        // 국어, 영어, 평균출력. 유효하지 않은 점수를 입력할 경우 다시 입력 받음
+        // do~ while, prompt(), Number(), parseInt(), trim(): 문자의 양쪽 space 제외 (strip함수)
+        var score, kor, eng;
+        do{
+            score = prompt('국어?', '0<kor<100');
+            kor = Number(score);
+        }while(isNaN(kor) || score.trim()=='' || kor < 0 || kor > 100);
+        do{
+            score = prompt('영어?', '0<eng<100');
+            eng = parseInt(score);
+        }while(isNaN(eng) || score.trim()=='' || eng < 0 || eng > 100);
+        document.write(' 국어 = ',kor, ', 영어 = ',eng, ', 평균 = ',(kor+eng)/2);
+    </script>
+</head>
+<body>
+    
+</body>
+</html>

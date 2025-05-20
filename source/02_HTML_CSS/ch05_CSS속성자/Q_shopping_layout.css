@@ -1,0 +1,112 @@
+﻿/* Q_shopping_layout.css */
+* {margin: 0; padding: 0;}
+
+#wrap {
+    width: 1000px; text-align: center;
+    align-items:center; margin: 0 auto;
+}
+
+a {text-decoration: none;    color: black;    height: 30px;
+}
+
+#header a {font-family: 'Times New Roman', Times, serif;
+}
+
+#header {    height: 250px;}
+#footer {    height: 100px;}
+
+
+.gnb ul {    overflow: hidden;    margin: auto;}
+    .gnb ul li {
+        list-style: none;        float: left;        width: 10%;
+        box-sizing: border-box;        background-color: black;
+        font-weight: bold;
+    }
+    .gnb ul li a{color: white;}
+
+.logo {
+    height: 150px;    position: relative; /* 상대좌표 */
+    top: 40px; left: 350px;
+}
+    .logo h1 {
+        width: 300px;        height: 80px;
+        line-height: 80px;        font-family: serif;
+        font-size: 2em;        border: 1px solid gray;
+    }
+
+.hitmenu ul {overflow: hidden;    margin: auto;
+}
+    .hitmenu ul li {
+        list-style: none;        float: right;
+        width: 8%;        height: 40px;
+        line-height: 40px;        border: 1px solid gray;
+    }
+        .hitmenu ul li:first-child {
+            border-radius: 0 10px 10px 0;
+        }
+        .hitmenu ul li:last-child {
+            border-radius: 10px 0 0 10px;
+        }
+
+.lnb ul {
+    overflow: hidden;    margin: auto;
+    border: dashed;    border-left-color: white;
+    border-right-color: white;    height: 30px;
+    line-height: 30px;
+}
+    .lnb ul li {
+        list-style: none;        float: left;
+        width: 12.5%;        box-sizing: border-box;
+        font-weight:bold;    }
+    .inb ul li:first-child{}
+    .inb ul li:last-child{}
+
+.section1 {
+    height: 400px;    line-height: 400px;
+    overflow: hidden;
+}
+.slide_banner {
+    width: 70%;    float: left;
+    border: 1px solid gray;    box-sizing: border-box
+}
+.side_banner {
+    width: 30%;    float: right;
+    border: 1px solid gray;    box-sizing: border-box
+}
+
+
+.hit_product ul {
+    overflow: hidden;    margin: 0 0 5px 0;
+    border: 1px solid gray;
+}
+
+    .hit_product ul li {
+        list-style: none;        float: left;
+        width: 240px;        height: 400px;
+        line-height: 400px;        margin: 0 0.4% 0 0.4%;
+        border: 1px solid gray;
+    }
+
+.md_product ul {
+    overflow: hidden;    margin: 5px 0 0 0;
+    border: 1px solid gray;
+}
+
+    .md_product ul li {
+        list-style: none;        float: left;
+        width: 240px;        height: 400px;
+        line-height: 400px;        margin: 0 0.4% 0 0.4%;
+        border: 1px solid gray;
+    }
+
+.company {
+    height: 60px;    overflow: hidden;
+    text-align:left;
+}
+    .company div {
+        float: left;        width: 33.1%;
+        height: 60px;        border: 1px solid gray;
+    }
+.copyright{
+    color:white;    background-color:black;
+}
