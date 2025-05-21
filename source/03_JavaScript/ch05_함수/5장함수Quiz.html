@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0" />
+    <title></title>
+    <style>   
+
+    </style>
+    <script>
+        /*힌트 : 배열 이용하면 소스가 효율적 */
+        tictactoc = 0;
+        textColor = ['yellow', 'white', 'green'];
+        // 1000밀리세컨드 마다 콜백함수 수행
+        var id =setInterval(() => {
+            document.body.style.backgroundImage = 'url(ch05_img/img0'+(tictactoc%3+1)+'.png)';
+            document.body.style.backgroundSize = '100%';
+            document.body.style.fontSize = '3em';
+            document.body.style.color = textColor[tictactoc%3];
+            document.body.innerHTML = [];
+            document.body.innerHTML = new Date()+'<br>'+(tictactoc+1)+'초 지남<br>';
+
+            tictactoc++;
+        }, 1000);
+        // 일정시간(10초) 후, 타이머(id) 중지
+        setTimeout(()=>{
+            clearInterval(id);
+        }, 10000);
+    </script>
+</head>
+<body>
+
+</body>
+</html>
