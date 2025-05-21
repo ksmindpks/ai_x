@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0" />
     <title></title>
     <style>
-
+        fieldset{width: 300px; margin: 0 auto;}
         p{text-align: center;}
     </style>
     <script>
@@ -30,24 +30,24 @@
                 case 0: rslt_msg = '<p>두 수가 같습니다</p>'; break;
                 case -1: rslt_msg = '<p>두번째 수가'+gap+'만큼 큽니다</p>'; break;
             }
-        }
-        alt_msg = rslt_msg.replace('<p>', '').replace('</p>','')
+            alt_msg = rslt_msg.replace('<p>', '').replace('</p>','')
 
-        document.body.innerHTML += rslt_msg;
-        frm.id1.value = num1;
-        frm.su2.value = num2;
-        alert(rslt_msg)
+            document.body.innerHTML += rslt_msg;
+            frm.id1.value = num1;
+            frm.id2.value = num2;
+            alert(alt_msg);
+        }
     </script>
 </head>
 <body>
     <form name="frm" onsubmit="return chk()">
         <fieldset>
             <p>
-                <label for="id1">첫번째 수</label>
-                <input type="text" name="id1" id="id1">
+                <label for="id1">첫번째 수</label> 
+                <input type="number" name="id1" id="id1">
             </p>
             <p>
-                <label for="id2">두번째 수</label>
+                <label for="id2">두번째 수</label> 
                 <input type="text" name="id2" id="id2">
             </p>
             <p>

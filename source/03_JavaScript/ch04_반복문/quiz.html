@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0" />
+    <title></title>
+    <style>
+        
+    </style>
+    <script>
+        let cnt = 0; // 누적 횟수
+        let r_cnt = 0; // 유효점수 입력 횟수
+        let w_cnt = 0;  // 비유효점수 입력 횟수
+        let cum_scr = 0; // 점수 누적
+
+        while(confirm('누적 할래?')){
+            scrStr=prompt('누적할 점수? (0~100)');
+            scr = Number(scrStr);
+            
+            cnt++;
+            if(!scrStr||!scrStr.trim()||isNaN(scr)||scr<0||scr>100||scrStr!=String(scr)){
+                w_cnt++;
+            }else{
+                r_cnt++;
+                cum_scr += scr;45
+            }
+        }
+        document.write(cnt+'번 전체 입력 <br>'+'누적점수='+cum_scr+'<br>');
+        document.write('제대로 입력 횟수 = '+r_cnt+'<br>잘못입력 횟수 ='+w_cnt+'<br>');
+    </script>
+</head>
+<body>
+    
+</body>
+</html>
