@@ -25,7 +25,7 @@
         const joinCheck = ()=>{
         let name = frm.name.value.trim();
         let mail = frm.mail.value.trim();
-        let pw   = frm.pswd.value.trim();
+        let pw   = frm.pw.value.trim();
         var pwchk = frm.pwChk.value.trim();
         // if(!name.match(patternName)){
         //   alert('이름을 확인하세요. 2글자 이상의 한글이나 영문이 와야 합니다');
@@ -78,32 +78,34 @@
     </script>
 </head>
 <body>
-    <form action="#" name="frm" onsubmit="return joinCheck()">
-        <table>
-            <tr>
-                <th>이름</th>
-                <td><input type="text" name="name" placeholder="특수문자와 숫자 불가" autofocus="autofocus"/></td>
-            </tr>
-            <tr>
-                <th>메일</th>
-                <td><input type="text" name="mail" placeholder="메일 형식에 맞아야"/></td>
-            </tr>
-            <tr>
-                <th>비밀번호</th>
-                <td><input type="password" name="pswd" placeholder="특수문자,알파벳,숫자 포함 4자리 이상"/></td>
-            </tr>
-            <tr>
-                <th>비밀번호다시</th>
-                <td><input type="password" name="pwChk"/></td>
-            </tr>
-            <tr>
-                <td colspan="2">
-                    <input type="submit" value="회원가입"/>
-                    <input type="reset" value="취소"/>
-                    <input type="button" value="로그인"/>
-                </td>
-            </tr>
-        </table>
-    </form>
+<form action="#" name="frm" onsubmit="return joinCheck()">
+    <table>
+        <tr>
+            <th>이름</th>
+            <td>
+            <input type="text" name="name" placeholder="특수문자와 숫자 못 와" autofocus="autofocus"/>
+            </td>
+        </tr>
+        <tr>
+            <th>메일</th>
+            <td><input type="text" name="mail" placeholder="메일 형식에 맞추세요" /></td>
+        </tr>
+        <tr>
+            <th>비밀번호</th>
+            <td><input type="password" name="pw" placeholder="특수문자,알파벳,숫자 포함" /></td>
+        </tr>
+        <tr>
+            <th>비밀번호</th>
+            <td><input type="password" name="pwChk" /></td>
+        </tr>
+        <tr>
+            <td colspan="2">
+            <input type="submit" value="회원가입" />
+            <input type="reset" value="취소" />
+            <input type="button" value="로그인" />
+            </td>
+        </tr>
+    </table>
+</form>
 </body>
 </html>

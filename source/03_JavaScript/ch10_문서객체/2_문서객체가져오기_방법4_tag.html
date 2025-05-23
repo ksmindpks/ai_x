@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0" />
+    <title></title>
+    <style>
+        
+    </style>
+    <script>
+        window.onload = () => {
+            var header = document.getElementsByTagName('h1'); //배열
+            // for(let idx=0; idx<header.length; idx++){
+            //     header[idx].innerHTML = '바꿔 # ' + idx;
+            // }
+            // for(let idx in header){
+            //     header[idx].innerHTML = '바꿔 ## ' + idx;
+            // }
+            for(let element of header){
+                element.innerHTML = '바꿔 ### ';
+            }
+            // forEACH 사용 불가
+        };
+    </script>
+</head>
+<body>
+    <h1>HeadeR</h1>
+    <h1>HeAdeR</h1>
+    <h1>HeaDeR</h1>
+    <h1>HeadER</h1>
+</body>
+</html>

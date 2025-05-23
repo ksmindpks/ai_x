@@ -14,25 +14,26 @@
     </style>
     <script>
         /*힌트 : 배열 이용하면 소스가 효율적 */
-        tictactoc = 0;
-        textColor = ['yellow', 'white', 'green'];
+        let tictactoc = 0;
+        let textColor = ['yellow', 'white', 'green'];
+        let bg_img = ['url(ch05_img/img01.png)',
+                    'url(ch05_img/img02.png)',
+                    'url(ch05_img/img03.png)']
 
         document.writeln(new Date().toLocaleString());
 
         // 1000밀리세컨드 마다 콜백함수 수행
-        var id =setInterval(() => {
-            document.body.style.backgroundImage = 'url(ch05_img/img0'+(tictactoc%3+1)+'.png)';
-            document.body.style.backgroundSize = '100%';
-            document.body.style.fontSize = '3em';
-            document.body.style.color = textColor[tictactoc%3];
-            document.body.innerHTML = [];
-            document.body.innerHTML = new Date().toLocaleString()+'<br>'+(tictactoc+1)+'초 지남<br>';
-
+        var timerId = setInterval(() => {
+            document.body.innerHTML = new Date().toLocaleString();
             tictactoc++;
+            document.body.innerHTML += '<p>' + tictactoc + '초 지남</p>';
+
+            document.body.style.backgroundImage = bg_img[tictactoc%bg_img.length];
+            document.body.style.color = textColor[tictactoc%bg_img.length];
         }, 1000);
         // 일정시간(10초) 후, 타이머(id) 중지
         setTimeout(()=>{
-            clearInterval(id);
+            clearInterval(timerId);
         }, 10000);
     </script>
 </head>
