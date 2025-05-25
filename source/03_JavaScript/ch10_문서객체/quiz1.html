@@ -9,22 +9,22 @@
     </style>
 
     <script>
-        var color7 = ['red','orange','yellow','green','blue','navy','purple', 'white'];
+        var color7P = ['red','orange','yellow','green','blue','navy','violet', 'white'];
         window.onload = ()=>{
-            var tds = document.getElementsByTagName(td);
-            var tr = document.getElementsByTagName(tr);
-            for(idx=0; idx<color7.length; idx++){
-                td[idx]
+            // let tds = document.getElementsByTagName('td');
+            let tds = document.querySelectorAll('td');
+            for(idx=0; idx<tds.length; idx++){
+                // tds[idx].style.backgroundColor = color7P[idx];
+                tds[idx].style = 'background-color:' + color7P[idx];
             }
-            
-            bgColorChange
         };
+        const bgColorChange = n => document.body.style.backgroundColor = color7P[n];
     </script>
 </head>
 <body>
-    <h3>quiz1: 마우스를 올리면 바타화면도 해당 색상으로로</h3>
+    <h3>quiz1: 마우스를 올리면 바탕화면도 해당 색상으로</h3>
     <table>
-        <tr onmouseover="bgColorChange(7)">
+        <tr onmouseout="bgColorChange(7)">
             <td onmouseover="bgColorChange(0)"></td>
             <td onmouseover="bgColorChange(1)"></td>
             <td onmouseover="bgColorChange(2)"></td>

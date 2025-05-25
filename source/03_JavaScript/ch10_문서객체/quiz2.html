@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0" />
+    <title></title>
+    <style>
+        div{width:300px; margin:0 auto; border:1px solid blue; text-align:center; padding: 10px;}
+    </style>
+    <script>
+        let snsS = ['https://www.naver.com','https://www.daum.net',
+                    'https://www.google.com','https://www.youtube.com']
+        const openSns = (n)=>{
+            open(snsS[n], '', 'width=800,height=500');
+        };
+    </script>
+</head>
+<body>
+    <div>
+        quiz2. 메뉴
+        <p>
+            <button onclick="openSns(0)" name="sns">네이버</button>
+            <button onclick="openSns(1)" name="sns">다음</button>
+            <button onclick="openSns(2)" name="sns">구글</button>
+            <button onclick="openSns(3)" name="sns">유투버</button>
+        </p>
+    </div>
+</body>
+</html>
