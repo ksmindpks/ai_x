@@ -10,19 +10,24 @@
     <script>
         let snsS = ['https://www.naver.com','https://www.daum.net',
                     'https://www.google.com','https://www.youtube.com']
-        const openSns = (n)=>{
-            open(snsS[n], '', 'width=800,height=500');
+        window.onload = ()=>{
+            const btns =  document.getElementsByTagName('button');
+            for(let idx=0 ; idx<btns.length ; idx++){
+                btns[idx].onclick = function(){
+                    location.href = snsS[idx];
+                };
+            }
         };
     </script>
 </head>
 <body>
     <div>
-        quiz2. 메뉴
+        <h3>quiz4. 메뉴</h3>
         <p>
-            <button onclick="openSns(0)" name="sns">네이버</button>
-            <button onclick="openSns(1)" name="sns">다음</button>
-            <button onclick="openSns(2)" name="sns">구글</button>
-            <button onclick="openSns(3)" name="sns">유투버</button>
+            <button name="sns">네이버</button>
+            <button name="sns">다음</button>
+            <button name="sns">구글</button>
+            <button name="sns">유투버</button>
         </p>
     </div>
 </body>

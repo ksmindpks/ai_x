@@ -5,8 +5,7 @@
     <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0" />
     <title></title>
     <style>
-        
-        fieldset{width: 300px;}
+        fieldset{width: 300px; margin: 0 auto;}
         p{text-align: center;}
     </style>
     <script>
@@ -14,17 +13,12 @@
         function chk(){
             gap = parseInt(frm.id1.value) - parseInt(frm.id2.value);
             dec = gap >= 0 ? 1 : -1;
-            document.write(gap, dec);
+
             switch(dec){
                 case 1: result = '첫번째 수가'; break;
                 case -1: result = '두번째 수가'; break;
-                default: 
             }
-            alert(result+gap+'더 큽니다');
-        }
-
-        window.onload = function chk(){
-            document.body.innerHTML += result;
+            alert(result+Math.abs(gap)+'더 큽니다');
         }
         
     </script>

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta charset="UTF-8" />
+  <style>
+    table{width:500px; margin: 10px auto; background-color: darkgreen;}
+    td{background-color: white; padding: 50px; text-align: center;}
+  </style>
+  <script>
+    var keyN;
+    window.onload = ()=>{
+        keyN = document.querySelectorAll('td');
+    };
+
+    window.onkeyup = () => {
+        for(i=0; i<keyN.length; i++){
+            keyN[i].style.backgroundColor = 'white';
+        }
+        // 입력된 키보드를 숫자태그 색을 변환
+        let key = event.keyCode;
+        // 우측숫자: 0(96) ~ 9(105)
+        // 윗숫자: 0(48) ~ 9(57)
+        // a(65) ~ z(90)
+
+        if(96<=key && key<=105){
+            key=key-96;
+            keyN[key].style.backgroundColor = 'red';
+        }else if(48<=key && key<=57){
+            key=key-48;
+            keyN[key].style.backgroundColor = 'yellow';
+        }
+    };
+
+  </script>
+</head>
+<body>
+  <table>
+    <tr><td>0</td><td>1</td><td>2</td></tr>
+    <tr><td>3</td><td>4</td><td>5</td></tr>
+    <tr><td>6</td><td>7</td><td>8</td></tr>
+  </table>
+</body>
+</html>

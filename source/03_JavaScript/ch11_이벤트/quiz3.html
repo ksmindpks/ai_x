@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0" />
+    <title></title>
+    <style>
+        
+    </style>
+    <script>
+        window.onload = ()=>{
+            var img = document.getElementsByTagName('img')[0];
+            img.onmouseup  = function(){
+                this.src = 'img/but1.gif';
+                this.alt = 'mouse up';
+            };
+            img.onmousedown = function(){
+                this.src = 'img/but2.gif';
+                this.alt = 'mouse down';
+            };
+        };  
+    </script>
+</head>
+<body>
+  <img src="img/but1.gif" alt="mouse up" />
+</body>
+
+</html>
