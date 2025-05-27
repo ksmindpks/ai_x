@@ -23,7 +23,11 @@
         window.onload = ()=>{
             document.getElementsByTagName('h1')[0].onclick = function(){
                 this.innerHTML += '<span>♥</span>';
-                '<style>span:nth-child('+cnt+'){color:colors['+cnt%7+'];}</style>';
+                let spans = document.getElementsByTagName('span');
+                for(let idx=0; idx<spans.length; idx++){
+                    spans[idx].style.color = colors[idx%7];
+                }
+
                 // click이벤트는 7번만 가능하도록 : 7번째 click이벤트 발생시 click이벤트 제거
                 cnt++;
                 if(cnt>=14){

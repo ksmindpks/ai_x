@@ -24,6 +24,7 @@
                 this.innerHTML += '<span>♥</span>';
                 // click이벤트는 7번만 가능하도록 : 7번째 click이벤트 발생시 click이벤트 제거
                 cnt++;
+                temp = this.onclick;
                 if(cnt>=14){
                     this.onclick = null; // 이벤트 제거
                 }

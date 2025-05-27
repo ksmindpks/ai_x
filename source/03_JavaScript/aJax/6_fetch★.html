@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0" />
+    <title></title>
+    <style>
+        
+    </style>
+    <script>
+        // window.addEventListener('load', ()=>{});
+        document.addEventListener('DOMContentLoaded',()=>{
+            document.querySelector('button').addEventListener('click', ()=>{
+                let id = document.querySelector('input[name="id"]').value;
+                let params = new URLSearchParams({id:id});
+                console.log('exist.html?id='+id);
+                console.log(`exist.html?id=${id}`);
+                console.log(`exist.html?${params}`);
+                //비동기 작업의 결과를 약속하는 함수 => fetch
+                fetch(`exist.html?${params}`,{method: 'get'})
+                .then(response=>{
+                    if(!response.ok){ // response.ok : 요청경로의 응답이 정상적으로 왔는지 여부
+                        // 요청경로를 정상적으로 응답받지 않을 경우 예외 객체 발생
+                        throw new Error(`${response.status}/${response.statusText}`);
+                    }
+                    return response.text();
+                })
+                .then(data=>{
+                    document.querySelector('span#idConfirm').innerHTML = data.trim();
+                })
+                .catch( error => {
+                    alert(error.message);
+                });
+            }); // click 이벤트
+        }); //DOMContentLoaded 이벤트
+        // Create(추가), POST
+        // Retreve(검색), GET
+        // Update(수정), UPDATE/PUT
+        // Delete(삭제), DELETE
+    </script>
+</head>
+<body>
+    아이디 <input type="text" name="id"><button>중복체크</button>
+    <span id="idConfirm"></span>
+</body>
+</html>
