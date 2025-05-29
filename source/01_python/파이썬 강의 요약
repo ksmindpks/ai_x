@@ -791,8 +791,32 @@ ch11. 데이터프레임(Pandas)
 
 
 
+5.29일 수업
+정적 웹데이터 수집 (~/robots.txt에 사이트마다의 크롤링 허용범위)
+방법1: request 모듈 이용
+    from urllib.request import urlopen
+    
+    headers = ('user-agent':user-agent내용(브라우저에서 복사)'}
+    response = urlopen(url) # url에 특수' ', 한글 등의 문자 포함 가능 or
+    response = requests.get(url, headers=headers) # url에 특수' ', 한글 등의 문자 포함 가능
+    soup = BeautifulSoup(response,  'html.parser')
 
+방법2: urllib.request 모듈 이용
+    from urllib.request import urlopen, Request
+    import urllib.parse
 
+    word = '비트코인'
+    word = urllib.parse.quote('url의 한글부분') 이용
+    
+    request = request.requests.get(url, headers=headers)
+    
+    soup = BeautifulSoup(response, "html.parser")
+
+=> 	soup.select('선택자')나 soup.select_one('선택자')나
+    soup.find('태그',속성(dict, class_)나
+    soup.find_all(태그들 list', 속성)
+
+동적 웹데이터 수집
 
 
 
