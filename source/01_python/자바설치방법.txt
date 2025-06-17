@@ -1,0 +1,2 @@
+Java 17
+자바설치폴더(C:\Program Files\Java\jdk-17)를 시스템변수(JAVA_HOME)로 등록
