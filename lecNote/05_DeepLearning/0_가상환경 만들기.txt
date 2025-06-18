@@ -28,3 +28,4 @@ pip install konlpy #한글자연어처리(java필요)
 pip install python-mecab-ko #한글자연어처리(C++필요)
 
 pip install wordcloud
+pip install gensim
