@@ -31,3 +31,5 @@ pip install wordcloud
 pip install gensim
 pip install python-dotenv # .env 읽어들이기 (강추)
 pip install python-decouple # .env 읽어들이기 (주피터 환경에서 안될 수 있음)
+pip install statsmodels==0.13.5 # 주기적인 데이터 트렌드 추이
+pip install prophet # facebook에서 개발한 시계열 예측 라이브러리
