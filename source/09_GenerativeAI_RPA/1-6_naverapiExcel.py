@@ -7,7 +7,7 @@ def main():
     # 1. genai_rap.xls 파일 열기
     file_path = 'genai_rpa.xlsx'
     wb = xw.Book(file_path)
-    
+   
     # 2~4
     hs.handle_init_sheet(file_path=file_path, wb=wb)
     

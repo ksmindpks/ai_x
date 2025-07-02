@@ -11,4 +11,7 @@ pip install pyinstaller py(파이썬코드)파일을 EXE(실행파일)로 바꾸
 
 pip freeze > requirements.txt 현재 가상환경 라이브러리 목록
 
+실행시
+pip install -r requirements.txt
+
 py파일을 실행화일로 만들기 : pyinstaller --onefile 2-2_naver_Report.py을 실행하면 dist폴더에 exe실행파일을  root로 옮겨 파일명을 'genai_rpa'로 변경
