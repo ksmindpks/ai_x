@@ -112,7 +112,7 @@ ch01 파이썬 개요 및 환경 설정
     
     
 # VS(visual studio) code 
-    추헌 Extension : korean, python, jupyter
+    추천 Extension : korean, python, jupyter
 
 2장 자료형과 연산자
 
@@ -170,7 +170,7 @@ ch01 파이썬 개요 및 환경 설정
     - 할당연산 : = += -= *= /= //= %=
     - 논리연산 : & and | or not
     - 비트연산 : & | ^
-    - &와 |은 비교연산자보다우선순위가 높다   
+    - &와 |은 비교연산자보다우선순위가 높다 => 비교연산자 사용시 ()처리 필요 
 
 6절. 문자열 다루기
     - 문자열 슬라이싱 변수[form:stop:step]
@@ -227,8 +227,8 @@ ch01 파이썬 개요 및 환경 설정
     찾기 : tup.index(data), tup.count(data)
 
 3절 딕셔너리 : dic = {key1:value1, key2:value2, ...}
-    일기 : dic[key1], dic.get(key1)
-    수정 : key에 의 할당(수정, 추가)
+    읽기 : dic[key1], dic.get(key1)
+    수정 : key에 의한 할당(수정, 추가)
     제거 : pop(key)
     추가 : 새로운 key에 대해 value 추가
     dic.keys() / dic.values() / dic.items()
@@ -251,7 +251,7 @@ ch04. 제어문
         조건이 참일 경우 수행할 명령어들
     elif 조건2:
         조건1이 거짓이고, 조건 2가 참일 경우 수행할 명령어들
-    else
+    else:
         모든 조건을 만족하지 않을 때 수행할 명령어들
 
 2절. 반복문
@@ -295,7 +295,7 @@ ch04. 제어문
         . 매개변수의 기본값이 객체일 때 : 기본값이 함수 호출 시점
     - 키워드 인수 : 기본값을 갖고, 호출시 매개변수 명을 반드시 기입해야하는 경우
     - 튜플매개변수 : 가변인수를 구현 *args (함수 정의)
-    - 딕셔너리 매개변수 : **kwargs(함수 정의, 함수 호출시 자동 매칭
+    - 딕셔너리 매개변수 : **kwargs(함수 정의), 함수 호출시 자동 매칭
     - 튜플인수 언패킹 : 함수 호출시 변수 앞에 *
     - 딕셔너리인수 언패킹 : 함수 호출시 변수 앞에 **
 
@@ -321,10 +321,10 @@ ch04. 제어문
 1절. 패키지 및 모듈 사용
 
 import A : A 모듈을 load
-import A : A패키지 및의 __init__ 모듈을 load
+import A : A패키지 아래의 __init__ 모듈을 load
 from A import B : A 패키지 안의 B 모듈 load
 from A import B : A 모듈 안의 B 함수 load
-from A.B import C : A 패키지 밑의 B 모듈 안의 C함수 load
+from A.B import C : A 패키지 아래의 B 모듈 안의 C함수 load
 
 import A as L : A 모듈을 L이름으로 load
 import A as L : A패키를 L이름으로  __init__ 모듈을 load
