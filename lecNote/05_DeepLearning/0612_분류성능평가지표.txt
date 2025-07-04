@@ -1,6 +1,7 @@
        예측0   예측1
-실제0  TN      FP
+실제0  TN      FP (1종 오류)
 실제1  FN      TP
+	(2종오류)
 
 ※ accuracy(정확도) = (TN+TP)/(TN+FP+FN+TP)
 ※ precision(정밀도) = TP / (FP+TP) - 예측값기준
@@ -9,6 +10,10 @@
        precision*recall
    2* ───────
        presision+recall
+※ fbeta score =  recall, precision의 가중치 조정한 score
+※ 위양성율 : FP / (TN+FP)
+※ 특이도 :  TN / (FN+TP)
+		(일반인 중 일반인으로 예측)
 
 - Precision ↑ → Recall ↓  
 - Recall ↑ → Precision ↓

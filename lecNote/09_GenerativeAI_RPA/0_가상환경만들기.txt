@@ -15,3 +15,13 @@ pip freeze > requirements.txt 현재 가상환경 라이브러리 목록
 pip install -r requirements.txt
 
 py파일을 실행화일로 만들기 : pyinstaller --onefile 2-2_naver_Report.py을 실행하면 dist폴더에 exe실행파일을  root로 옮겨 파일명을 'genai_rpa'로 변경
+
+(machine learning 수업중)
+
+conda install -c conda-forge graphviz(의사결정나무 그래프를 생성하는 도구)
+pip install pydot( Graphviz의 .dot 데이터를 이미지로 변환하는 라이브러리)
+dot -V (확인)
+
+(아나콘다 base 환경에서)
+conda install graphviz
+pip install pydot
