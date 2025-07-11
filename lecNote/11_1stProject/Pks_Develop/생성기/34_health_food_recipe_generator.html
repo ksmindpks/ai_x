@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>건강식 상세 레시피 엑셀 생성기 (전체 9개 메뉴)</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #a8e6cf 0%, #88d8c0 50%, #78c2ad 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1300px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #2d5016;
+            margin-bottom: 30px;
+            font-size: 2.5rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .menu-info {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border-left: 5px solid #2d5016;
+        }
+        
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        
+        .menu-card {
+            background: white;
+            padding: 18px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border: 1px solid #e0e0e0;
+            transition: transform 0.3s ease;
+        }
+        
+        .menu-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+        }
+        
+        .menu-card h3 {
+            color: #333;
+            margin: 0 0 12px 0;
+            font-size: 1.2rem;
+            border-bottom: 2px solid #2d5016;
+            padding-bottom: 6px;
+        }
+        
+        .menu-card p {
+            margin: 6px 0;
+            font-size: 0.95rem;
+            line-height: 1.4;
+        }
+        
+        .category-비건 { border-left: 4px solid #27ae60; }
+        .category-헬스식 { border-left: 4px solid #3498db; }
+        
+        .recipe-section {
+            margin-bottom: 30px;
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        
+        .recipe-section h2 {
+            color: #2d5016;
+            border-bottom: 3px solid #2d5016;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .table-container {
+            overflow-x: auto;
+            margin-top: 15px;
+        }
+        
+        table {
+            width: 100%;
+            min-width: 1100px;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            font-size: 0.85rem;
+        }
+        
+        th, td {
+            padding: 10px;
+            text-align: center;
+            border: 1px solid #ddd;
+        }
+        
+        th {
+            background: linear-gradient(135deg, #2d5016 0%, #a8e6cf 100%);
+            color: white;
+            font-weight: bold;
+            font-size: 0.8rem;
+        }
+        
+        tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        
+        tr:hover {
+            background-color: #e8f5e8;
+        }
+        
+        .download-btn {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            display: block;
+            margin: 30px auto;
+            box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+            transition: all 0.3s ease;
+        }
+        
+        .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
+        }
+        
+        .description {
+            background: #e8f5e8;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #27ae60;
+        }
+        
+        .first-col {
+            background-color: #f1f3f4 !important;
+            font-weight: bold;
+            color: #333;
+            text-align: left !important;
+            padding-left: 12px !important;
+        }
+        
+        .menu-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .category-summary {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        
+        .category-summary h3 {
+            margin: 0 0 15px 0;
+            color: #2d5016;
+            font-size: 1.2rem;
+        }
+        
+        .category-summary .count {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #27ae60;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .health-highlight {
+            background: linear-gradient(45deg, #2d5016, #27ae60);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: bold;
+        }
+
+        .nutrition-badge {
+            display: inline-block;
+            background: #27ae60;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            margin: 2px;
+        }
+
+        .vegan-badge {
+            background: #27ae60;
+        }
+
+        .protein-badge {
+            background: #3498db;
+        }
+
+        .feature-list {
+            list-style: none;
+            padding: 0;
+            margin: 10px 0;
+        }
+
+        .feature-list li {
+            padding: 5px 0;
+            border-bottom: 1px solid #eee;
+            font-size: 0.9rem;
+        }
+
+        .feature-list li:last-child {
+            border-bottom: none;
+        }
+
+        .icon {
+            margin-right: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🥗 건강식 상세 레시피 엑셀 생성기 (전체 9개 메뉴)</h1>
+        
+        <div class="description">
+            <p><strong>마라사천 레시피 파일과 동일한 8개 시트 구조로 모든 건강식 메뉴들의 상세 레시피를 생성합니다.</strong></p>
+            <p>총 9개 개별 건강식 메뉴: <span class="health-highlight">비건 5개, 헬스식 4개</span></p>
+        </div>
+
+        <div class="menu-summary">
+            <div class="category-summary">
+                <h3>🌱 비건</h3>
+                <div class="count">5</div>
+                <p>식물성 기반 식단</p>
+            </div>
+            <div class="category-summary">
+                <h3>💪 헬스식</h3>
+                <div class="count">4</div>
+                <p>고단백 저칼로리</p>
+            </div>
+        </div>
+
+        <div class="menu-info">
+            <h2>📋 전체 건강식 메뉴 정보</h2>
+            <div class="menu-grid">
+                <div class="menu-card category-비건">
+                    <h3>🍔 비건버거</h3>
+                    <p><strong>분류:</strong> 비건</p>
+                    <span class="nutrition-badge vegan-badge">식물성</span>
+                    <span class="nutrition-badge vegan-badge">글루텐프리</span>
+                    <ul class="feature-list">
+                        <li><span class="icon">🌾</span>콩 패티 베이스</li>
+                        <li><span class="icon">🥬</span>신선한 채소</li>
+                        <li><span class="icon">🧄</span>비건 소스</li>
+                    </ul>
+                </div>
+                
+                <div class="menu-card category-비건">
+                    <h3>🥩 두부스테이크</h3>
+                    <p><strong>분류:</strong> 비건</p>
+                    <span class="nutrition-badge vegan-badge">고단백</span>
+                    <span class="nutrition-badge vegan-badge">저칼로리</span>
+                    <ul class="feature-list">
+                        <li><span class="icon">🟨</span>단단한 두부</li>
+                        <li><span class="icon">🌿</span>허브 마리네이드</li>
+                        <li><span class="icon">🔥</span>그릴 조리</li>
+                    </ul>
+                </div>
+                
+                <div class="menu-card category-비건">
+                    <h3>🍄 템페</h3>
+                    <p><strong>분류:</strong> 비건</p>
+                    <span class="nutrition-badge vegan-badge">발효식품</span>
+                    <span class="nutrition-badge vegan-badge">프로바이오틱스</span>
+                    <ul class="feature-list">
+                        <li><span class="icon">🫘</span>발효 콩</li>
+                        <li><span class="icon">🦠</span>유익균</li>
+                        <li><span class="icon">🔥</span>구이 요리</li>
+                    </ul>
+                </div>
+                
+                <div class="menu-card category-비건">
+                    <h3>🍰 비건케이크</h3>
+                    <p><strong>분류:</strong> 비건</p>
+                    <span class="nutrition-badge vegan-badge">무유제품</span>
+                    <span class="nutrition-badge vegan-badge">자연감미료</span>
+                    <ul class="feature-list">
+                        <li><span class="icon">🥥</span>코코넛 오일</li>
+                        <li><span class="icon">🍌</span>바나나 감미료</li>
+                        <li><span class="icon">🌾</span>통밀가루</li>
+                    </ul>
+                </div>
+                
+                <div class="menu-card category-비건">
+                    <h3>🍦 두유아이스크림</h3>
+                    <p><strong>분류:</strong> 비건</p>
+                    <span class="nutrition-badge vegan-badge">유제품프리</span>
+                    <span class="nutrition-badge vegan-badge">저당</span>
+                    <ul class="feature-list">
+                        <li><span class="icon">🫛</span>두유 베이스</li>
+                        <li><span class="icon">🥥</span>코코넛 크림</li>
+                        <li><span class="icon">🍓</span>자연 과일향</li>
+                    </ul>
+                </div>
+                
+                <div class="menu-card category-헬스식">
+                    <h3>🥗 닭가슴살샐러드</h3>
+                    <p><strong>분류:</strong> 헬스식</p>
+                    <span class="nutrition-badge protein-badge">고단백</span>
+                    <span class="nutrition-badge protein-badge">저칼로리</span>
+                    <ul class="feature-list">
+                        <li><span class="icon">🐔</span>닭가슴살</li>
+                        <li><span class="icon">🥬</span>믹스 그린</li>
+                        <li><span class="icon">🥑</span>아보카도</li>
+                    </ul>
+                </div>
+                
+                <div class="menu-card category-헬스식">
+                    <h3>🍲 퀴노아볼</h3>
+                    <p><strong>분류:</strong> 헬스식</p>
+                    <span class="nutrition-badge protein-badge">완전단백질</span>
+                    <span class="nutrition-badge protein-badge">슈퍼푸드</span>
+                    <ul class="feature-list">
+                        <li><span class="icon">🌾</span>퀴노아</li>
+                        <li><span class="icon">🥒</span>신선 채소</li>
+                        <li><span class="icon">🫘</span>콩류</li>
+                    </ul>
+                </div>
+                
+                <div class="menu-card category-헬스식">
+                    <h3>⚪ 프로틴볼</h3>
+                    <p><strong>분류:</strong> 헬스식</p>
+                    <span class="nutrition-badge protein-badge">고단백</span>
+                    <span class="nutrition-badge protein-badge">운동식</span>
+                    <ul class="feature-list">
+                        <li><span class="icon">🥜</span>견과류</li>
+                        <li><span class="icon">💊</span>프로틴파우더</li>
+                        <li><span class="icon">🍯</span>자연감미료</li>
+                    </ul>
+                </div>
+                
+                <div class="menu-card category-헬스식">
+                    <h3>🥛 그릭요거트</h3>
+                    <p><strong>분류:</strong> 헬스식</p>
+                    <span class="nutrition-badge protein-badge">프로바이오틱스</span>
+                    <span class="nutrition-badge protein-badge">저지방</span>
+                    <ul class="feature-list">
+                        <li><span class="icon">🥛</span>그릭 요거트</li>
+                        <li><span class="icon">🫐</span>베리류</li>
+                        <li><span class="icon">🌰</span>견과류</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="recipe-section">
+            <h2>🧄 주요식재료</h2>
+            <div class="table-container">
+                <table id="ingredientsTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 120px;">식재료</th>
+                            <th>비건버거</th>
+                            <th>두부스테이크</th>
+                            <th>템페</th>
+                            <th>비건케이크</th>
+                            <th>두유아이스크림</th>
+                            <th>닭가슴살샐러드</th>
+                            <th>퀴노아볼</th>
+                            <th>프로틴볼</th>
+                            <th>그릭요거트</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="recipe-section">
+            <h2>🧂 소스양념</h2>
+            <div class="table-container">
+                <table id="sauceTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 120px;">소스/양념</th>
+                            <th>비건버거</th>
+                            <th>두부스테이크</th>
+                            <th>템페</th>
+                            <th>비건케이크</th>
+                            <th>두유아이스크림</th>
+                            <th>닭가슴살샐러드</th>
+                            <th>퀴노아볼</th>
+                            <th>프로틴볼</th>
+                            <th>그릭요거트</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="recipe-section">
+            <h2>🍞 건강베이스</h2>
+            <div class="table-container">
+                <table id="baseTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 120px;">건강베이스</th>
+                            <th>비건버거</th>
+                            <th>두부스테이크</th>
+                            <th>템페</th>
+                            <th>비건케이크</th>
+                            <th>두유아이스크림</th>
+                            <th>닭가슴살샐러드</th>
+                            <th>퀴노아볼</th>
+                            <th>프로틴볼</th>
+                            <th>그릭요거트</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="recipe-section">
+            <h2>👨‍🍳 조리순서</h2>
+            <div class="table-container">
+                <table id="processTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 120px;">조리순서</th>
+                            <th>비건버거</th>
+                            <th>두부스테이크</th>
+                            <th>템페</th>
+                            <th>비건케이크</th>
+                            <th>두유아이스크림</th>
+                            <th>닭가슴살샐러드</th>
+                            <th>퀴노아볼</th>
+                            <th>프로틴볼</th>
+                            <th>그릭요거트</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="recipe-section">
+            <h2>ℹ️ 조리정보</h2>
+            <div class="table-container">
+                <table id="cookingInfoTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 120px;">조리정보</th>
+                            <th>비건버거</th>
+                            <th>두부스테이크</th>
+                            <th>템페</th>
+                            <th>비건케이크</th>
+                            <th>두유아이스크림</th>
+                            <th>닭가슴살샐러드</th>
+                            <th>퀴노아볼</th>
+                            <th>프로틴볼</th>
+                            <th>그릭요거트</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="recipe-section">
+            <h2>😋 특징맛</h2>
+            <div class="table-container">
+                <table id="tasteTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 120px;">특징/맛</th>
+                            <th>비건버거</th>
+                            <th>두부스테이크</th>
+                            <th>템페</th>
+                            <th>비건케이크</th>
+                            <th>두유아이스크림</th>
+                            <th>닭가슴살샐러드</th>
+                            <th>퀴노아볼</th>
+                            <th>프로틴볼</th>
+                            <th>그릭요거트</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="recipe-section">
+            <h2>📊 영양정보</h2>
+            <div class="table-container">
+                <table id="nutritionTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 120px;">영양정보</th>
+                            <th>비건버거</th>
+                            <th>두부스테이크</th>
+                            <th>템페</th>
+                            <th>비건케이크</th>
+                            <th>두유아이스크림</th>
+                            <th>닭가슴살샐러드</th>
+                            <th>퀴노아볼</th>
+                            <th>프로틴볼</th>
+                            <th>그릭요거트</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="recipe-section">
+            <h2>💡 건강조리팁</h2>
+            <div class="table-container">
+                <table id="tipsTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 120px;">건강/조리팁</th>
+                            <th>비건버거</th>
+                            <th>두부스테이크</th>
+                            <th>템페</th>
+                            <th>비건케이크</th>
+                            <th>두유아이스크림</th>
+                            <th>닭가슴살샐러드</th>
+                            <th>퀴노아볼</th>
+                            <th>프로틴볼</th>
+                            <th>그릭요거트</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <button class="download-btn" onclick="downloadExcel()">📥 건강식 레시피 엑셀 파일 다운로드 (9개 메뉴)</button>
+    </div>
+
+    <script>
+        // 9개 건강식 메뉴 레시피 데이터
+        const healthData = {
+            ingredients: [
+                ['콩패티', '150g', '-', '-', '-', '-', '-', '-', '-', '-'],
+                ['두부', '-', '200g', '-', '-', '-', '-', '100g', '-', '-'],
+                ['템페', '-', '-', '150g', '-', '-', '-', '-', '-', '-'],
+                ['닭가슴살', '-', '-', '-', '-', '-', '150g', '-', '-', '-'],
+                ['퀴노아', '-', '-', '-', '-', '-', '-', '100g', '-', '-'],
+                ['그릭요거트', '-', '-', '-', '-', '-', '-', '-', '-', '200g'],
+                ['버거번(글루텐프리)', '2개', '-', '-', '-', '-', '-', '-', '-', '-'],
+                ['통밀가루', '-', '-', '-', '200g', '-', '-', '-', '-', '-'],
+                ['코코넛오일', '-', '-', '-', '50ml', '30ml', '-', '-', '20ml', '-'],
+                ['두유', '-', '-', '-', '100ml', '500ml', '-', '-', '-', '-'],
+                ['바나나', '-', '-', '-', '2개', '1개', '-', '-', '1개', '-'],
+                ['코코넛크림', '-', '-', '-', '-', '200ml', '-', '-', '-', '-'],
+                ['상추', '50g', '-', '-', '-', '-', '100g', '50g', '-', '-'],
+                ['토마토', '1개', '-', '-', '-', '-', '1개', '1개', '-', '-'],
+                ['아보카도', '1/2개', '-', '-', '-', '-', '1개', '1/2개', '-', '-'],
+                ['오이', '1/2개', '-', '-', '-', '-', '1/2개', '1/2개', '-', '-'],
+                ['당근', '-', '-', '-', '-', '-', '1/2개', '1/2개', '-', '-'],
+                ['견과류', '-', '-', '-', '-', '-', '30g', '30g', '50g', '30g'],
+                ['프로틴파우더', '-', '-', '-', '-', '-', '-', '-', '30g', '-'],
+                ['베리류', '-', '-', '-', '-', '100g', '-', '-', '-', '100g'],
+                ['올리브오일', '1tbsp', '2tbsp', '1tbsp', '-', '-', '1tbsp', '1tbsp', '-', '-'],
+                ['레몬즙', '-', '-', '-', '-', '-', '1tbsp', '1tbsp', '-', '-'],
+                ['마늘', '1쪽', '2쪽', '2쪽', '-', '-', '1쪽', '1쪽', '-', '-'],
+                ['양파', '1/4개', '1/4개', '1/4개', '-', '-', '1/4개', '1/4개', '-', '-']
+            ],
+            sauces: [
+                ['비건마요', '2tbsp', '-', '-', '-', '-', '-', '-', '-', '-'],
+                ['간장', '-', '2tbsp', '2tbsp', '-', '-', '1tbsp', '1tbsp', '-', '-'],
+                ['발사믹식초', '-', '1tbsp', '-', '-', '-', '1tbsp', '1tbsp', '-', '-'],
+                ['허브솔트', '-', '1tsp', '1tsp', '-', '-', '1tsp', '1tsp', '-', '-'],
+                ['바닐라추출물', '-', '-', '-', '1tsp', '1tsp', '-', '-', '1tsp', '-'],
+                ['계피가루', '-', '-', '-', '1tsp', '1/2tsp', '-', '-', '1/2tsp', '1/2tsp'],
+                ['코코아파우더', '-', '-', '-', '2tbsp', '-', '-', '-', '-', '-'],
+                ['스테비아', '-', '-', '-', '2tbsp', '1tbsp', '-', '-', '1tbsp', '1tbsp'],
+                ['해바라기씨오일', '-', '-', '1tbsp', '-', '-', '-', '-', '-', '-'],
+                ['타히니', '-', '-', '-', '-', '-', '-', '-', '2tbsp', '-'],
+                ['아가베시럽', '-', '-', '-', '1tbsp', '1tbsp', '-', '-', '1tbsp', '1tbsp'],
+                ['영양효모', '1tbsp', '1tbsp', '1tbsp', '-', '-', '-', '-', '-', '-'],
+                ['디종머스터드', '1tsp', '-', '-', '-', '-', '1tsp', '1tsp', '-', '-'],
+                ['고추가루', '-', '-', '1tsp', '-', '-', '-', '-', '-', '-']
+            ],
+            bases: [
+                ['비건베이스', '○', '○', '○', '○', '○', '-', '-', '-', '-'],
+                ['식물성단백질', '○', '○', '○', '-', '-', '-', '○', '○', '-'],
+                ['무글루텐', '○', '-', '-', '○', '○', '-', '○', '○', '-'],
+                ['무유제품', '○', '○', '○', '○', '○', '-', '-', '-', '-'],
+                ['고단백질', '-', '○', '○', '-', '-', '○', '○', '○', '○'],
+                ['저칼로리', '-', '○', '-', '-', '○', '○', '○', '-', '○'],
+                ['발효식품', '-', '-', '○', '-', '-', '-', '-', '-', '○'],
+                ['슈퍼푸드', '-', '-', '-', '-', '-', '○', '○', '○', '○']
+            ],
+            process: [
+                ['1단계', '콩패티 준비', '두부 물기제거', '템페 슬라이스', '건조재료 섞기', '두유 데우기', '닭가슴살 삶기', '퀴노아 삶기', '견과류 볶기', '요거트 준비'],
+                ['2단계', '야채 준비', '마리네이드 만들기', '양념장 만들기', '습식재료 섞기', '바나나 으깨기', '야채 썰기', '야채 준비', '재료 섞기', '베리 세척'],
+                ['3단계', '소스 만들기', '두부 재우기', '템페 재우기', '반죽 섞기', '재료 섞어 블렌딩', '샐러드 조립', '퀴노아볼 조립', '볼 모양 만들기', '토핑 준비'],
+                ['4단계', '패티 굽기', '팬에 굽기', '팬에 굽기', '오븐 굽기', '아이스크림메이커 돌리기', '드레싱 뿌리기', '드레싱 뿌리기', '냉장 보관', '요거트볼 완성'],
+                ['5단계', '번 굽기', '완성', '완성', '식히기', '냉동 보관', '완성', '완성', '완성', '완성'],
+                ['6단계', '조립하기', '', '', '완성', '완성', '', '', '', ''],
+                ['7단계', '완성', '', '', '', '', '', '', '', '']
+            ],
+            cookingInfo: [
+                ['조리시간', '25분', '20분', '18분', '60분', '45분', '15분', '20분', '15분', '10분'],
+                ['난이도', '중급', '초급', '초급', '중급', '중급', '초급', '초급', '초급', '초급'],
+                ['칼로리(1인분)', '320kcal', '180kcal', '160kcal', '280kcal', '150kcal', '250kcal', '300kcal', '180kcal', '120kcal'],
+                ['인분', '1인분', '1인분', '1인분', '6조각', '4인분', '1인분', '1인분', '10개', '1인분'],
+                ['보관방법', '냉장2일', '냉장3일', '냉장2일', '냉장5일', '냉동1주일', '당일섭취', '냉장2일', '냉장1주일', '냉장3일'],
+                ['다이어트효과', '높음', '매우높음', '높음', '보통', '높음', '매우높음', '높음', '보통', '높음']
+            ],
+            taste: [
+                ['주요맛', '고소함, 담백', '부드러움, 고소', '견과류향, 고소', '달콤함, 촉촉', '부드러움, 달콤', '담백함, 신선', '고소함, 담백', '달콤함, 고소', '상큼함, 크리미'],
+                ['단맛정도', '0단계', '0단계', '0단계', '3단계', '3단계', '0단계', '0단계', '3단계', '2단계'],
+                ['특징', '식물성버거', '두부그릴', '발효콩요리', '무설탕케이크', '유제품프리', '저칼로리고단백', '완전단백질', '운동후간식', '프로바이오틱스'],
+                ['건강효과', '콜레스테롤제로', '이소플라본', '프로바이오틱스', '항산화성분', '유당불내증OK', '근육증진', '아미노산완전', '에너지보충', '장건강'],
+                ['추천상황', '비건식단', '다이어트', '장건강개선', '건강한디저트', '유제품알레르기', '운동후식사', '다이어트식단', '운동전후', '아침식사']
+            ],
+            nutrition: [
+                ['단백질(g)', '18', '16', '14', '8', '4', '28', '12', '15', '15'],
+                ['탄수화물(g)', '32', '8', '12', '35', '18', '15', '45', '12', '12'],
+                ['지방(g)', '12', '10', '8', '12', '8', '8', '8', '10', '3'],
+                ['나트륨(mg)', '580', '420', '380', '150', '80', '320', '280', '120', '80'],
+                ['식이섬유(g)', '8', '3', '6', '5', '2', '6', '8', '4', '0'],
+                ['당분(g)', '5', '2', '1', '18', '15', '8', '6', '10', '10'],
+                ['비타민C(mg)', '15', '2', '3', '8', '12', '25', '20', '5', '2'],
+                ['칼슘(mg)', '120', '180', '120', '80', '100', '50', '60', '80', '200'],
+                ['철분(mg)', '3', '2', '3', '2', '1', '1', '4', '2', '0'],
+                ['오메가3(mg)', '200', '100', '150', '50', '30', '100', '120', '300', '20'],
+                ['콜레스테롤(mg)', '0', '0', '0', '0', '0', '65', '0', '0', '10']
+            ],
+            tips: [
+                ['건강팁', '식물성단백질풍부', '이소플라본섭취', '발효식품효과', '무정제설탕', '유당프리', '고단백저칼로리', '완전단백질', '운동후30분내', '공복시섭취'],
+                ['조리팁', '패티너무누르지말기', '두부물기완전제거', '템페충분히재우기', '밀가루체쳐서사용', '온도너무높이지말기', '닭가슴살삶기과하지말기', '퀴노아완전히익히기', '냉장고에서굳히기', '차갑게서빙'],
+                ['보관팁', '냉장밀폐보관', '키친타올감싸기', '냉장밀폐보관', '밀폐용기냉장', '냉동실보관', '당일섭취권장', '냉장2일이내', '밀폐용기냉장', '냉장3일이내'],
+                ['다이어트팁', '포만감높음', '저칼로리고단백', '식이섬유풍부', '설탕대신스테비아', '칼로리낮음', '운동과병행', '혈당지수낮음', '간식대용', '아침공복섭취'],
+                ['영양팁', '비타민B12보충필요', '칼슘흡수돕는비타민D', '프로바이오틱스', '항산화비타민E', '비타민D함께섭취', '단백질흡수위해충분한수분', '마그네슘풍부', '필수아미노산', '유산균활성화']
+            ]
+        };
+
+        // 테이블 생성 함수
+        function createTable(tableId, data) {
+            const table = document.getElementById(tableId);
+            const tbody = table.querySelector('tbody');
+            
+            data.forEach(row => {
+                const tr = document.createElement('tr');
+                row.forEach((cell, index) => {
+                    const td = document.createElement('td');
+                    td.textContent = cell;
+                    if (index === 0) {
+                        td.className = 'first-col';
+                    }
+                    tr.appendChild(td);
+                });
+                tbody.appendChild(tr);
+            });
+        }
+
+        // 모든 테이블 생성
+        createTable('ingredientsTable', healthData.ingredients);
+        createTable('sauceTable', healthData.sauces);
+        createTable('baseTable', healthData.bases);
+        createTable('processTable', healthData.process);
+        createTable('cookingInfoTable', healthData.cookingInfo);
+        createTable('tasteTable', healthData.taste);
+        createTable('nutritionTable', healthData.nutrition);
+        createTable('tipsTable', healthData.tips);
+
+        // 엑셀 다운로드 함수
+        function downloadExcel() {
+            const wb = XLSX.utils.book_new();
+            
+            // 헤더 설정
+            const headers = ['항목', '비건버거', '두부스테이크', '템페', '비건케이크', '두유아이스크림', '닭가슴살샐러드', '퀴노아볼', '프로틴볼', '그릭요거트'];
+            
+            // 각 시트 생성
+            const sheets = [
+                { name: '주요식재료', data: healthData.ingredients },
+                { name: '소스양념', data: healthData.sauces },
+                { name: '건강베이스', data: healthData.bases },
+                { name: '조리순서', data: healthData.process },
+                { name: '조리정보', data: healthData.cookingInfo },
+                { name: '특징맛', data: healthData.taste },
+                { name: '영양정보', data: healthData.nutrition },
+                { name: '건강조리팁', data: healthData.tips }
+            ];
+            
+            sheets.forEach(sheet => {
+                const wsData = [headers, ...sheet.data];
+                const ws = XLSX.utils.aoa_to_sheet(wsData);
+                
+                // 컬럼 너비 설정
+                const colWidths = [{ width: 15 }];
+                for (let i = 1; i < headers.length; i++) {
+                    colWidths.push({ width: 12 });
+                }
+                ws['!cols'] = colWidths;
+                
+                XLSX.utils.book_append_sheet(wb, ws, sheet.name);
+            });
+            
+            // 파일 다운로드
+            XLSX.writeFile(wb, '건강식_상세레시피_9개메뉴.xlsx');
+        }
+    </script>
+</body>
+</html>

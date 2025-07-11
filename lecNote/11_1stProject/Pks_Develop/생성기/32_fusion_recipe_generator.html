@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>퓨전 상세 레시피 엑셀 생성기 (전체 10개 메뉴)</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #FF6B6B 0%, #4ECDC4 50%, #45B7D1 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #FF6B6B;
+            margin-bottom: 30px;
+            font-size: 2.5rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .menu-info {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border-left: 5px solid #FF6B6B;
+        }
+        
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        
+        .menu-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border: 1px solid #e0e0e0;
+            transition: transform 0.3s ease;
+        }
+        
+        .menu-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+        }
+        
+        .menu-card h3 {
+            color: #333;
+            margin: 0 0 10px 0;
+            font-size: 1.1rem;
+            border-bottom: 2px solid #FF6B6B;
+            padding-bottom: 5px;
+        }
+        
+        .menu-card p {
+            margin: 5px 0;
+            font-size: 0.9rem;
+        }
+        
+        .category-한양식 { border-left: 4px solid #FF6B6B; }
+        .category-일양식 { border-left: 4px solid #4ECDC4; }
+        
+        .recipe-section {
+            margin-bottom: 30px;
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        
+        .recipe-section h2 {
+            color: #FF6B6B;
+            border-bottom: 3px solid #FF6B6B;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .table-container {
+            overflow-x: auto;
+            margin-top: 15px;
+        }
+        
+        table {
+            width: 100%;
+            min-width: 1200px;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            font-size: 0.85rem;
+        }
+        
+        th, td {
+            padding: 8px;
+            text-align: center;
+            border: 1px solid #ddd;
+        }
+        
+        th {
+            background: linear-gradient(135deg, #FF6B6B 0%, #4ECDC4 100%);
+            color: white;
+            font-weight: bold;
+            font-size: 0.8rem;
+        }
+        
+        tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        
+        tr:hover {
+            background-color: #fff5f5;
+        }
+        
+        .download-btn {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            display: block;
+            margin: 30px auto;
+            box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+            transition: all 0.3s ease;
+        }
+        
+        .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
+        }
+        
+        .description {
+            background: #ffe6e6;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #FF6B6B;
+        }
+        
+        .first-col {
+            background-color: #f1f3f4 !important;
+            font-weight: bold;
+            color: #333;
+            text-align: left !important;
+            padding-left: 12px !important;
+        }
+        
+        .menu-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .category-summary {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .category-summary h3 {
+            margin: 0 0 10px 0;
+            color: #FF6B6B;
+        }
+        
+        .category-summary .count {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #4ECDC4;
+        }
+
+        .fusion-highlight {
+            background: linear-gradient(45deg, #FF6B6B, #4ECDC4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌍 퓨전 상세 레시피 엑셀 생성기 (전체 10개 메뉴)</h1>
+        
+        <div class="description">
+            <p><strong>마라사천 레시피 파일과 동일한 8개 시트 구조로 모든 퓨전 메뉴들의 상세 레시피를 생성합니다.</strong></p>
+            <p>총 10개 개별 퓨전 메뉴: <span class="fusion-highlight">한양식 5개, 일양식 5개</span></p>
+        </div>
+
+        <div class="menu-summary">
+            <div class="category-summary">
+                <h3>🇰🇷 한양식</h3>
+                <div class="count">5</div>
+                <p>한국+서양 퓨전</p>
+            </div>
+            <div class="category-summary">
+                <h3>🇯🇵 일양식</h3>
+                <div class="count">5</div>
+                <p>일본+서양 퓨전</p>
+            </div>
+        </div>
+
+        <div class="menu-info">
+            <h2>📋 전체 퓨전 메뉴 정보</h2>
+            <div class="menu-grid">
+                <div class="menu-card category-한양식">
+                    <h3>🌶️ 마라파스타</h3>
+                    <p><strong>분류:</strong> 한양식</p>
+                    <p><strong>특징:</strong> 중식 마라 + 이탈리안 파스타</p>
+                </div>
+                <div class="menu-card category-한양식">
+                    <h3>🔥 불닭파스타</h3>
+                    <p><strong>분류:</strong> 한양식</p>
+                    <p><strong>특징:</strong> 매운 불닭 + 파스타</p>
+                </div>
+                <div class="menu-card category-한양식">
+                    <h3>🥬 김치파스타</h3>
+                    <p><strong>분류:</strong> 한양식</p>
+                    <p><strong>특징:</strong> 발효 김치 + 파스타</p>
+                </div>
+                <div class="menu-card category-한양식">
+                    <h3>🍚 김치볶음밥</h3>
+                    <p><strong>분류:</strong> 한양식</p>
+                    <p><strong>특징:</strong> 전통 김치볶음밥의 퓨전 스타일</p>
+                </div>
+                <div class="menu-card category-한양식">
+                    <h3>🍱 한식덮밥</h3>
+                    <p><strong>분류:</strong> 한양식</p>
+                    <p><strong>특징:</strong> 한국 반찬 + 덮밥 스타일</p>
+                </div>
+                <div class="menu-card category-일양식">
+                    <h3>🍣 스시버거</h3>
+                    <p><strong>분류:</strong> 일양식</p>
+                    <p><strong>특징:</strong> 스시 재료 + 버거 형태</p>
+                </div>
+                <div class="menu-card category-일양식">
+                    <h3>🍜 라멘버거</h3>
+                    <p><strong>분류:</strong> 일양식</p>
+                    <p><strong>특징:</strong> 라멘 재료 + 버거 번</p>
+                </div>
+                <div class="menu-card category-일양식">
+                    <h3>🍤 돈까스버거</h3>
+                    <p><strong>분류:</strong> 일양식</p>
+                    <p><strong>특징:</strong> 일식 돈까스 + 버거</p>
+                </div>
+                <div class="menu-card category-일양식">
+                    <h3>🍝 일식파스타</h3>
+                    <p><strong>분류:</strong> 일양식</p>
+                    <p><strong>특징:</strong> 일본 재료 + 파스타 면</p>
+                </div>
+                <div class="menu-card category-일양식">
+                    <h3>🍲 우동파스타</h3>
+                    <p><strong>분류:</strong> 일양식</p>
+                    <p><strong>특징:</strong> 우동면 + 서양 소스</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="recipe-section">
+            <h2>🧄 주요식재료</h2>
+            <div class="table-container">
+                <table id="ingredientsTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 120px;">식재료</th>
+                            <th>마라파스타</th>
+                            <th>불닭파스타</th>
+                            <th>김치파스타</th>
+                            <th>김치볶음밥</th>
+                            <th>한식덮밥</th>
+                            <th>스시버거</th>
+                            <th>라멘버거</th>
+                            <th>돈까스버거</th>
+                            <th>일식파스타</th>
+                            <th>우동파스타</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="recipe-section">
+            <h2>🧂 양념소스</h2>
+            <div class="table-container">
+                <table id="sauceTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 120px;">양념/소스</th>
+                            <th>마라파스타</th>
+                            <th>불닭파스타</th>
+                            <th>김치파스타</th>
+                            <th>김치볶음밥</th>
+                            <th>한식덮밥</th>
+                            <th>스시버거</th>
+                            <th>라멘버거</th>
+                            <th>돈까스버거</th>
+                            <th>일식파스타</th>
+                            <th>우동파스타</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="recipe-section">
+            <h2>🍞 베이스</h2>
+            <div class="table-container">
+                <table id="baseTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 120px;">베이스</th>
+                            <th>마라파스타</th>
+                            <th>불닭파스타</th>
+                            <th>김치파스타</th>
+                            <th>김치볶음밥</th>
+                            <th>한식덮밥</th>
+                            <th>스시버거</th>
+                            <th>라멘버거</th>
+                            <th>돈까스버거</th>
+                            <th>일식파스타</th>
+                            <th>우동파스타</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="recipe-section">
+            <h2>👨‍🍳 조리순서</h2>
+            <div class="table-container">
+                <table id="processTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 120px;">조리순서</th>
+                            <th>마라파스타</th>
+                            <th>불닭파스타</th>
+                            <th>김치파스타</th>
+                            <th>김치볶음밥</th>
+                            <th>한식덮밥</th>
+                            <th>스시버거</th>
+                            <th>라멘버거</th>
+                            <th>돈까스버거</th>
+                            <th>일식파스타</th>
+                            <th>우동파스타</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="recipe-section">
+            <h2>ℹ️ 조리정보</h2>
+            <div class="table-container">
+                <table id="cookingInfoTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 120px;">조리정보</th>
+                            <th>마라파스타</th>
+                            <th>불닭파스타</th>
+                            <th>김치파스타</th>
+                            <th>김치볶음밥</th>
+                            <th>한식덮밥</th>
+                            <th>스시버거</th>
+                            <th>라멘버거</th>
+                            <th>돈까스버거</th>
+                            <th>일식파스타</th>
+                            <th>우동파스타</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="recipe-section">
+            <h2>😋 특징맛</h2>
+            <div class="table-container">
+                <table id="tasteTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 120px;">특징/맛</th>
+                            <th>마라파스타</th>
+                            <th>불닭파스타</th>
+                            <th>김치파스타</th>
+                            <th>김치볶음밥</th>
+                            <th>한식덮밥</th>
+                            <th>스시버거</th>
+                            <th>라멘버거</th>
+                            <th>돈까스버거</th>
+                            <th>일식파스타</th>
+                            <th>우동파스타</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="recipe-section">
+            <h2>📊 영양정보</h2>
+            <div class="table-container">
+                <table id="nutritionTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 120px;">영양정보</th>
+                            <th>마라파스타</th>
+                            <th>불닭파스타</th>
+                            <th>김치파스타</th>
+                            <th>김치볶음밥</th>
+                            <th>한식덮밥</th>
+                            <th>스시버거</th>
+                            <th>라멘버거</th>
+                            <th>돈까스버거</th>
+                            <th>일식파스타</th>
+                            <th>우동파스타</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="recipe-section">
+            <h2>💡 서빙조리팁</h2>
+            <div class="table-container">
+                <table id="tipsTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 120px;">서빙/조리팁</th>
+                            <th>마라파스타</th>
+                            <th>불닭파스타</th>
+                            <th>김치파스타</th>
+                            <th>김치볶음밥</th>
+                            <th>한식덮밥</th>
+                            <th>스시버거</th>
+                            <th>라멘버거</th>
+                            <th>돈까스버거</th>
+                            <th>일식파스타</th>
+                            <th>우동파스타</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <button class="download-btn" onclick="downloadExcel()">📥 퓨전 레시피 엑셀 파일 다운로드 (10개 메뉴)</button>
+    </div>
+
+    <script>
+        // 10개 퓨전 메뉴 레시피 데이터
+        const fusionData = {
+            ingredients: [
+                ['파스타면', '200g', '200g', '200g', '-', '-', '-', '-', '-', '200g', '-'],
+                ['우동면', '-', '-', '-', '-', '-', '-', '-', '-', '-', '200g'],
+                ['밥', '-', '-', '-', '200g', '200g', '-', '-', '-', '-', '-'],
+                ['김치', '-', '-', '150g', '150g', '100g', '-', '-', '-', '-', '-'],
+                ['마라소스', '50ml', '-', '-', '-', '-', '-', '-', '-', '-', '-'],
+                ['불닭소스', '-', '60ml', '-', '-', '-', '-', '-', '-', '-', '-'],
+                ['돼지고기', '100g', '150g', '100g', '100g', '150g', '-', '-', '-', '-', '-'],
+                ['닭고기', '-', '-', '-', '-', '-', '-', '-', '150g', '-', '-'],
+                ['연어', '-', '-', '-', '-', '-', '100g', '-', '-', '-', '-'],
+                ['참치', '-', '-', '-', '-', '-', '80g', '-', '-', '-', '-'],
+                ['새우', '-', '-', '-', '-', '-', '60g', '-', '-', '100g', '80g'],
+                ['버거번', '-', '-', '-', '-', '-', '2개', '2개', '2개', '-', '-'],
+                ['돈까스', '-', '-', '-', '-', '-', '-', '-', '1장', '-', '-'],
+                ['차슈', '-', '-', '-', '-', '-', '-', '100g', '-', '-', '-'],
+                ['라멘스프', '-', '-', '-', '-', '-', '-', '100ml', '-', '-', '-'],
+                ['양파', '1/2개', '1/2개', '1/2개', '1/2개', '1개', '1/4개', '1/2개', '1/2개', '1/2개', '1/2개'],
+                ['대파', '1대', '1대', '1대', '1대', '1대', '-', '1/2대', '1/2대', '1/2대', '1대'],
+                ['마늘', '3쪽', '3쪽', '3쪽', '3쪽', '4쪽', '1쪽', '2쪽', '2쪽', '2쪽', '3쪽'],
+                ['계란', '-', '-', '-', '1개', '1개', '-', '1개', '-', '-', '-'],
+                ['치즈', '50g', '50g', '50g', '-', '-', '30g', '50g', '50g', '30g', '30g'],
+                ['김', '-', '-', '-', '1장', '1장', '1장', '-', '-', '1장', '-'],
+                ['와사비', '-', '-', '-', '-', '-', '5g', '-', '-', '5g', '-'],
+                ['생강', '-', '-', '-', '-', '-', '10g', '10g', '-', '10g', '10g'],
+                ['버섯', '50g', '50g', '50g', '50g', '100g', '-', '50g', '-', '80g', '80g']
+            ],
+            sauces: [
+                ['마라소스', '○', '-', '-', '-', '-', '-', '-', '-', '-', '-'],
+                ['불닭소스', '-', '○', '-', '-', '-', '-', '-', '-', '-', '-'],
+                ['김치양념', '-', '-', '○', '○', '○', '-', '-', '-', '-', '-'],
+                ['간장', '1tbsp', '1tbsp', '1tbsp', '2tbsp', '2tbsp', '1tbsp', '1tbsp', '1tbsp', '1tbsp', '1tbsp'],
+                ['설탕', '1tsp', '1tsp', '1tsp', '1tsp', '1tsp', '1tsp', '1tsp', '1tsp', '1tsp', '1tsp'],
+                ['참기름', '1tbsp', '1tbsp', '1tbsp', '1tbsp', '1tbsp', '-', '-', '-', '1tsp', '1tsp'],
+                ['고춧가루', '1tbsp', '2tbsp', '1tbsp', '1tbsp', '1tbsp', '-', '-', '-', '-', '-'],
+                ['마요네즈', '-', '-', '-', '-', '-', '2tbsp', '2tbsp', '2tbsp', '-', '-'],
+                ['와사비마요', '-', '-', '-', '-', '-', '1tbsp', '-', '-', '1tbsp', '-'],
+                ['돈까스소스', '-', '-', '-', '-', '-', '-', '-', '2tbsp', '-', '-'],
+                ['라멘소스', '-', '-', '-', '-', '-', '-', '○', '-', '-', '-'],
+                ['미소', '-', '-', '-', '-', '-', '-', '-', '-', '1tbsp', '1tbsp'],
+                ['올리브오일', '2tbsp', '2tbsp', '2tbsp', '-', '-', '-', '-', '-', '2tbsp', '1tbsp'],
+                ['식용유', '-', '-', '-', '2tbsp', '2tbsp', '-', '-', '-', '-', '-'],
+                ['후추', '적당량', '적당량', '적당량', '적당량', '적당량', '적당량', '적당량', '적당량', '적당량', '적당량']
+            ],
+            bases: [
+                ['파스타베이스', '○', '○', '○', '-', '-', '-', '-', '-', '○', '-'],
+                ['밥베이스', '-', '-', '-', '○', '○', '-', '-', '-', '-', '-'],
+                ['우동베이스', '-', '-', '-', '-', '-', '-', '-', '-', '-', '○'],
+                ['버거베이스', '-', '-', '-', '-', '-', '○', '○', '○', '-', '-'],
+                ['한식베이스', '-', '-', '○', '○', '○', '-', '-', '-', '-', '-'],
+                ['일식베이스', '-', '-', '-', '-', '-', '○', '○', '○', '○', '○'],
+                ['양식베이스', '○', '○', '○', '-', '-', '○', '○', '○', '○', '○']
+            ],
+            process: [
+                ['1단계', '파스타면 삶기', '파스타면 삶기', '파스타면 삶기', '김치 볶기', '재료 준비', '밥 준비', '차슈 준비', '돈까스 튀기기', '파스타면 삶기', '우동면 삶기'],
+                ['2단계', '마라소스 볶기', '불닭소스 볶기', '김치 볶기', '밥 추가', '고기 볶기', '회 썰기', '계란 삶기', '버거번 굽기', '새우 볶기', '다시마육수 끓이기'],
+                ['3단계', '고기 볶기', '닭고기 볶기', '돼지고기 볶기', '계란 추가', '야채 볶기', '버거번 굽기', '라멘스프 끓이기', '야채 준비', '야채 볶기', '미소소스 만들기'],
+                ['4단계', '파스타 추가', '파스타 추가', '파스타 추가', '대파 넣기', '밥 올리기', '재료 쌓기', '재료 쌓기', '재료 쌓기', '파스타 추가', '우동 추가'],
+                ['5단계', '치즈 토핑', '치즈 토핑', '치즈 토핑', '완성', '완성', '완성', '완성', '완성', '김 올리기', '대파 올리기'],
+                ['6단계', '완성', '완성', '완성', '', '', '', '', '', '완성', '완성']
+            ],
+            cookingInfo: [
+                ['조리시간', '20분', '20분', '18분', '15분', '25분', '30분', '35분', '25분', '22분', '18분'],
+                ['난이도', '중급', '중급', '중급', '초급', '중급', '고급', '고급', '중급', '중급', '중급'],
+                ['칼로리(1인분)', '520kcal', '580kcal', '480kcal', '420kcal', '380kcal', '450kcal', '620kcal', '680kcal', '380kcal', '320kcal'],
+                ['인분', '1인분', '1인분', '1인분', '1인분', '1인분', '1인분', '1인분', '1인분', '1인분', '1인분'],
+                ['보관방법', '냉장1일', '냉장1일', '냉장1일', '냉장2일', '냉장2일', '당일섭취', '당일섭취', '당일섭취', '냉장1일', '냉장1일']
+            ],
+            taste: [
+                ['주요맛', '마라향, 매콤', '매운맛, 달콤', '신맛, 감칠맛', '신맛, 고소', '감칠맛, 고소', '신선함, 고소', '진한맛, 고소', '바삭함, 달콤', '바다향, 고소', '구수함, 담백'],
+                ['매운정도', '3단계', '4단계', '2단계', '2단계', '1단계', '0단계', '1단계', '0단계', '0단계', '0단계'],
+                ['특징', '중국+이탈리아', '한국+이탈리아', '발효맛+파스타', '한국전통+볶음밥', '한국반찬+덮밥', '일본+미국', '라멘+버거', '일식+패스트푸드', '바다+이탈리아', '일본면+서양소스'],
+                ['추천상황', '매운음식좋아할때', '자극적인맛원할때', '한국인입맛', '간단한식사', '든든한한끼', '특별한경험', '독특한조합', '든든한식사', '해산물좋아할때', '가벼운식사']
+            ],
+            nutrition: [
+                ['단백질(g)', '18', '22', '16', '12', '20', '25', '28', '30', '20', '15'],
+                ['탄수화물(g)', '65', '68', '58', '55', '45', '35', '45', '50', '48', '42'],
+                ['지방(g)', '15', '18', '12', '8', '10', '12', '25', '28', '8', '6'],
+                ['나트륨(mg)', '1200', '1400', '1100', '980', '850', '720', '1100', '950', '680', '580'],
+                ['식이섬유(g)', '4', '5', '6', '5', '4', '2', '3', '3', '3', '4'],
+                ['비타민C(mg)', '15', '20', '25', '20', '15', '8', '10', '5', '10', '12'],
+                ['칼슘(mg)', '120', '150', '180', '80', '100', '60', '120', '80', '80', '60'],
+                ['철분(mg)', '2', '3', '3', '2', '3', '2', '3', '2', '2', '2'],
+                ['캡사이신(mg)', '15', '25', '8', '8', '3', '0', '1', '0', '0', '0']
+            ],
+            tips: [
+                ['서빙팁', '뜨거울때바로', '매운맛주의', '김치국물함께', '뜨거울때', '따뜻할때', '차갑게서빙', '뜨거울때', '바로서빙', '뜨거울때', '뜨거울때'],
+                ['보관팁', '냉장보관', '냉장보관', '냉장보관', '냉장보관', '냉장보관', '당일섭취권장', '당일섭취권장', '당일섭취권장', '냉장보관', '냉장보관'],
+                ['조리팁', '마라소스충분히', '불닭소스조절', '김치잘볶기', '김치물기제거', '고기미리양념', '회신선하게', '차슈부드럽게', '돈까스바삭하게', '새우익히기', '면삶기시간정확히']
+            ]
+        };
+
+        // 테이블 생성 함수
+        function createTable(tableId, data) {
+            const table = document.getElementById(tableId);
+            const tbody = table.querySelector('tbody');
+            
+            data.forEach(row => {
+                const tr = document.createElement('tr');
+                row.forEach((cell, index) => {
+                    const td = document.createElement('td');
+                    td.textContent = cell;
+                    if (index === 0) {
+                        td.className = 'first-col';
+                    }
+                    tr.appendChild(td);
+                });
+                tbody.appendChild(tr);
+            });
+        }
+
+        // 모든 테이블 생성
+        createTable('ingredientsTable', fusionData.ingredients);
+        createTable('sauceTable', fusionData.sauces);
+        createTable('baseTable', fusionData.bases);
+        createTable('processTable', fusionData.process);
+        createTable('cookingInfoTable', fusionData.cookingInfo);
+        createTable('tasteTable', fusionData.taste);
+        createTable('nutritionTable', fusionData.nutrition);
+        createTable('tipsTable', fusionData.tips);
+
+        // 엑셀 다운로드 함수
+        function downloadExcel() {
+            const wb = XLSX.utils.book_new();
+            
+            // 헤더 설정
+            const headers = ['항목', '마라파스타', '불닭파스타', '김치파스타', '김치볶음밥', '한식덮밥', '스시버거', '라멘버거', '돈까스버거', '일식파스타', '우동파스타'];
+            
+            // 각 시트 생성
+            const sheets = [
+                { name: '주요식재료', data: fusionData.ingredients },
+                { name: '양념소스', data: fusionData.sauces },
+                { name: '베이스', data: fusionData.bases },
+                { name: '조리순서', data: fusionData.process },
+                { name: '조리정보', data: fusionData.cookingInfo },
+                { name: '특징맛', data: fusionData.taste },
+                { name: '영양정보', data: fusionData.nutrition },
+                { name: '서빙조리팁', data: fusionData.tips }
+            ];
+            
+            sheets.forEach(sheet => {
+                const wsData = [headers, ...sheet.data];
+                const ws = XLSX.utils.aoa_to_sheet(wsData);
+                
+                // 컬럼 너비 설정
+                const colWidths = [{ width: 15 }];
+                for (let i = 1; i < headers.length; i++) {
+                    colWidths.push({ width: 12 });
+                }
+                ws['!cols'] = colWidths;
+                
+                XLSX.utils.book_append_sheet(wb, ws, sheet.name);
+            });
+            
+            // 파일 다운로드
+            XLSX.writeFile(wb, '퓨전_상세레시피_10개메뉴.xlsx');
+        }
+    </script>
+</body>
+</html>
