@@ -1,5 +1,5 @@
 class SampleFlask:
-    def __init__(self, arg=''):
+    def __init__(self, arg=""):
         pass
     def route(self, func):
         def wrapper():
@@ -8,10 +8,9 @@ class SampleFlask:
             print(func.__name__, '함수 후처리')
         return wrapper
 app = SampleFlask(__name__)
-
 @app.route
 def hello():
-    print('hello')
+    print('Hello')
 
-if __name__=='__main__':
+if __name__=="__main__":
     hello()

@@ -1,0 +1,26 @@
+정적웹데이터 수집 (~/robots.txt에 사이트마다의 크롤링 허용범위)
+방법1 : request모듈이용
+headers = {'user-agent':'user-agent내용(브라우저에서복사)'}
+response = requests.get(url, headers=headers) # url에 한글,특수문자(' ')
+soup = BeautifulSoup(response.text, 'html.parser')
+
+방법2 : urllib.request모듈 이용
+urllib.parse.quote('url의 한글부분') 이용
+request = urllib.request.Request(url, headers=headers)
+response = urllib.request.urlopen(request)
+soup = BeautifulSoup(response, 'html.parser')
+
+=> soup.select('선택자')나 soup.select_one('선택자')나
+     soup.find('태그', 속성(dict, class_)나 
+     soup.find_all('태그들 list', 속성)
+
+
+
+
+
+
+
+
+
+
+동적웹데이터수집

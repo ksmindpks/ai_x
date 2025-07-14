@@ -4,14 +4,14 @@
     <meta charset="UTF-8">
     <title>Title</title>
 <!--    <link href="/static/file.css"-->
-    <link href="{{ url_for('static', filename='file.css') }}"
+    <link href="{{ url_for('static', filename='file.css' ) }}"
           rel="stylesheet" type="text/css">
 </head>
 <body>
-    <h1>Hello, world</h1>
+    <h1>Hello, World</h1>
     <form action="">
-        <p>이름 <input type="text" name="name"> </p>
-        <p><input type="submit" onclick="alert('완료')" </p>
+        <p>이름 <input type="text" name="name"></p>
+        <p><input type="submit" onclick="alert('완료')"></p>
     </form>
     <img src="/static/flask.png" alt="플라스크 이미지">
     <img src="{{ url_for('static', filename='flask.png') }}">

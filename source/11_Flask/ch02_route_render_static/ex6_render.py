@@ -1,21 +1,18 @@
-
 from flask import Flask, url_for, render_template
 app = Flask(__name__)
-
-@app.route('/')
+@app.route("/")
 def hello():
-    # templates/06_index.html에 파일 위치 필요
-    return render_template('06_index.html')
+    # templates/06_index.html
+    return render_template("06_index.html")
 
-@app.route('/profile/<name>/<int:age>')
+@app.route("/profile/<name>/<int:age>")
 def get_profile(name, age):
-    return render_template('06_profile.html',
+    return render_template("06_profile.html",
                            name=name,
                            age=age)
 
-if __name__=='__main__':
-
+if __name__=="__main__":
     with app.test_request_context():
         print('hello 뷰함수의 요청경로 :', url_for('hello'))
-        print(url_for('get_profile', name='hong', age=32))
+        print(url_for("get_profile", name="hong", age=32))
     app.run(debug=True, port=80)
