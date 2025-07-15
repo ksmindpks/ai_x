@@ -37,29 +37,9 @@ def errorhandler(error):
 
 @app.route('/', methods=["GET"])
 def index():
-    return render_template('index.html')
+    return render_template('2_post_etc/index.html')
 
-@app.route("/join_form", methods=["GET"])
-def join_form():
-    return render_template('1_onlyget/join.html')
-
-@app.route("/join", methods=["GET"])
+@app.route("/join", methods=["GET", "POST"])
 def join():
-    name = request.args.get('name')
-    id = request.args.get('id')
-    pw = request.args.get('pw')
-    addr = request.args.get('addr')
-    member = Member(name, id, pw, addr)
-    return render_template("result.html", member=member)
-
-if __name__=='__main__':
-    app.run(debug=True, port=80)
-
-
-
-class Member:
-    def __init__(self, name, id, pw, addr):
-        self.name = name
-        self.id = id
-        self.pw = pw
-        self.addr = addr
+    if request.method == 'GET':
+        return render_template('2_post_etc/join.html')
