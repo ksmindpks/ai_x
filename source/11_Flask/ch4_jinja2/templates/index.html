@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0" />
+    <link href="{{ url_for('static', filename='flask.png') }}" rel="icon" />
+    <link href="{{ url_for('static', filename='file.css') }}" rel="stylesheet" />
+</head>
+<body>
+    <!-- name, naem_length, price, names_list 변수 사용 -->
+    <h1>이름을 입력해주세요</h1>
+    <form action="/" method="post">
+        <input type="text" name="name" placeholder="이름을 입력해주세요"
+            value="{% if name %}{{name | trim | upper}}{% endif %}" />
+        <input type="submit" value="전송" />
+    </form>
+    {% if name_length and name_length%2 == 0 %}
+        <h1>이름의 길이가 짝수입니다: {{name}}({{name |length}} 글자)</h1>
+    {% elif name_length%2 != 0 %}
+        <h1>이름의 길이가 홀수입니다: {{name}}({{name |length}} 글자)</h1>
+    {% else %}
+        <h1>이름이 입력되지 않았습니다. </h1>
+    {% endif %}
+    {% if names_list %}
+    <ul>
+        {% for name in names_list %}
+        {% if loop.last %}
+            <li><b>{{loop.index}}/{{names_list|length}}번째 이름: {{name}}</b></li>
+        {% else %}
+            <li>{{loop.index}}/{{names_list|length}}번째 이름: {{name}}</li>
+        {% endif %}
+        {% endfor %}
+    </ul>
+    {% else %}
+        <p> 추가된 이름이 없습니다</p>
+    {% endif %}
+    <h2>가격 : {{ '{:,}'.format(price) }}원</h2>
+</body>
+</html>

@@ -24,6 +24,22 @@
 </html>
 <!-- button#update click 할 때 : #name, #id, #pw, #addr "/update/name/id/pw/addr을 patch방식 요청" -->
     <script>
+        document.getElementById('delete').addEventListener('click', ()=>{
+            let id = document.getElementById('value').value;
+            fetch(`/delete/${name}/${id}`, {method: 'DELETE'})
+            .then(response => {
+                if(!response.ok) {
+                    alert('삭제에 실패했습니다');
+                    return
+                }
+                return response.text();
+            })
+            .then(data => {
+                alert(data);
+                location.href = '/join';
+            });
+        });
+        
         document.getElementById('update').addEventListener('click', ()=>{
             let name = document.getElementById('name').value;
             let id = document.getElementById('value').value;

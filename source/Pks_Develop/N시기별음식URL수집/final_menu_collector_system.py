@@ -383,7 +383,7 @@ class MenuImageCollectorFinal:
                 
                 result = self.robust_api_call(api_type, keyword, start=start, display=100)
                 if not result or 'items' not in result:
-                    break
+                    break 
                 
                 items = result['items']
                 if not items:
