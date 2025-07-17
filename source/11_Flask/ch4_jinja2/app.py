@@ -16,7 +16,7 @@
     # {% endfor %}
 # 3. 헤더나 풋터 include {%include 'header.html'%}
 # 4. 서브 태그 {% block 블럭명 %} 내용 {% endblock %}
-# 5. 주석 {% comment %} 내용 {% endcomment %}
+# 5. 주석 {# 주석내용 #}
 
 from flask import Flask, render_template
 from flask import request # 파라미터 값 접근
