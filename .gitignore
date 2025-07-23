@@ -1,4 +1,5 @@
 download/
-/source/01_python/.env
-/source/01_python/ch14_image
-/IDE
+source/01_python/.env
+source/01_python/ch14_image
+IDE/
+lecNote/
