@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="p-5 mb-4 bg-light rounded-3">
+  <div class="container-fluid py-5">
+    <h1 class="display-5 fw-bold">{{todo.id ~ '번 상세보기'}}</h1>
+    <table class="table table-info table-hover">
+      <tbody>
+        <tr>
+          <td>
+            <div class="input-group input-group-lg">
+              <span class="input-group-text">할 일</span>
+              <input type="text" class="form-control" 
+                      value="{{todo.content | default('') }}" id="content" required>
+            </div>
+            <div class="input-group input-group-lg">
+              <span class="input-group-text">수 행</span>
+              <select id="is_done" class="form-select">
+                <option
+                  {% if not todo.is_done %}
+                    selected
+                  {% endif %}
+                value="False"
+                >미완료</option>
+                <option
+                  {% if todo['is_done'] %}
+                    selected
+                  {% endif %}
+                  value="True"
+                >완료</option>
+              </select>
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td colspan="3">
+            <button onclick="location='/todos'" class="btn btn-primary">목록</button>
+            <button class="btn btn-success update">수정</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

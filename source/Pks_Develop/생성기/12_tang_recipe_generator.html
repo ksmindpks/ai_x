@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>탕류 레시피 생성</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 100px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #B22222 0%, #DC143C 50%, #FF6347 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            text-align: center;
+            backdrop-filter: blur(10px);
+            border: 3px solid #DC143C;
+        }
+        .download-btn {
+            background: linear-gradient(135deg, #B22222 0%, #8B0000 100%);
+            color: white;
+            padding: 20px 40px;
+            border: none;
+            border-radius: 15px;
+            cursor: pointer;
+            font-size: 20px;
+            font-weight: bold;
+            transition: all 0.3s;
+            box-shadow: 0 8px 25px rgba(178,34,34,0.4);
+        }
+        .download-btn:hover {
+            background: linear-gradient(135deg, #8B0000 0%, #660000 100%);
+            transform: translateY(-3px);
+            box-shadow: 0 12px 30px rgba(178,34,34,0.6);
+        }
+        .download-btn:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <button id="downloadBtn" class="download-btn" onclick="downloadRecipe()">
+            탕류_상세레시피.xlsx 다운로드
+        </button>
+    </div>
+
+    <script>
+        // 탕류 상세메뉴 데이터
+        const detailMenus = [
+            {name: "산라탕", category: "산라탕", visual: "새콤매콤한 국물, 계란꽃"},
+            {name: "계란탕", category: "산라탕", visual: "맑은 국물, 계란꽃, 파"},
+            {name: "옥수수탕", category: "산라탕", visual: "옥수수 알갱이, 계란꽃"},
+            {name: "어향탕", category: "어향탕", visual: "진한 국물, 해산물, 야채"},
+            {name: "해물탕", category: "어향탕", visual: "해산물, 진한 국물"},
+            {name: "완자탕", category: "어향탕", visual: "완자, 맑은 국물"}
+        ];
+
+        // 레시피 데이터 생성 함수들
+        function generateIngredients() {
+            const ingredients = [
+                ["식재료"].concat(detailMenus.map(m => m.name))
+            ];
+
+            const ingredientData = {
+                "계란": ["3개", "4개", "3개", "2개", "2개", "2개"],
+                "두부": ["1/2모", "-", "1/2모", "1/2모", "1/2모", "-"],
+                "목이버섯": ["50g", "-", "-", "50g", "50g", "-"],
+                "죽순": ["100g", "-", "-", "100g", "100g", "-"],
+                "옥수수": ["-", "-", "1개", "-", "-", "-"],
+                "새우": ["-", "-", "-", "5마리", "8마리", "-"],
+                "오징어": ["-", "-", "-", "1/2마리", "1마리", "-"],
+                "홍합": ["-", "-", "-", "-", "5개", "-"],
+                "조개": ["-", "-", "-", "-", "10개", "-"],
+                "돼지고기": ["100g", "-", "-", "100g", "-", "-"],
+                "완자": ["-", "-", "-", "-", "-", "10개"],
+                "당근": ["1/2개", "1/4개", "1/4개", "1/2개", "1/2개", "1/4개"],
+                "양파": ["1/2개", "1/4개", "1/4개", "1/2개", "1/2개", "1/4개"],
+                "대파": ["2대", "2대", "2대", "2대", "2대", "2대"],
+                "마늘": ["3쪽", "2쪽", "2쪽", "4쪽", "4쪽", "3쪽"],
+                "생강": ["1조각", "-", "-", "1조각", "1조각", "1조각"],
+                "청양고추": ["2개", "-", "-", "1개", "1개", "-"]
+            };
+
+            Object.keys(ingredientData).forEach(ingredient => {
+                ingredients.push([ingredient].concat(ingredientData[ingredient]));
+            });
+
+            return ingredients;
+        }
+
+        function generateSauces() {
+            const sauces = [
+                ["양념/소스"].concat(detailMenus.map(m => m.name))
+            ];
+
+            const sauceData = {
+                "간장": ["2큰술", "2큰술", "2큰술", "2큰술", "2큰술", "2큰술"],
+                "식초": ["3큰술", "-", "-", "1큰술", "1큰술", "-"],
+                "설탕": ["1큰술", "1작은술", "1작은술", "1큰술", "1큰술", "1작은술"],
+                "고춧가루": ["1큰술", "-", "-", "1작은술", "1작은술", "-"],
+                "소금": ["적당량", "적당량", "적당량", "적당량", "적당량", "적당량"],
+                "후추": ["조금", "조금", "조금", "조금", "조금", "조금"],
+                "참기름": ["1큰술", "1큰술", "1큰술", "1큰술", "1큰술", "1큰술"],
+                "식용유": ["2큰술", "1큰술", "1큰술", "2큰술", "2큰술", "1큰술"],
+                "다진마늘": ["1큰술", "1큰술", "1큰술", "2큰술", "2큰술", "1큰술"],
+                "다진생강": ["1작은술", "-", "-", "1작은술", "1작은술", "1작은술"],
+                "물전분": ["2큰술", "1큰술", "1큰술", "2큰술", "2큰술", "1큰술"],
+                "청주": ["1큰술", "-", "-", "1큰술", "1큰술", "1큰술"],
+                "굴소스": ["-", "-", "-", "1큰술", "1큰술", "-"]
+            };
+
+            Object.keys(sauceData).forEach(sauce => {
+                sauces.push([sauce].concat(sauceData[sauce]));
+            });
+
+            return sauces;
+        }
+
+        function generateBroth() {
+            const broth = [
+                ["육수/베이스"].concat(detailMenus.map(m => m.name))
+            ];
+
+            const brothData = {
+                "물": ["6컵", "4컵", "5컵", "6컵", "6컵", "5컵"],
+                "닭육수": ["기본", "기본", "기본", "기본", "기본", "기본"],
+                "멸치육수": ["선택사항", "선택사항", "선택사항", "선택사항", "선택사항", "선택사항"]
+            };
+
+            Object.keys(brothData).forEach(item => {
+                broth.push([item].concat(brothData[item]));
+            });
+
+            return broth;
+        }
+
+        function generateCookingSteps() {
+            const steps = [];
+            
+            // 메뉴별로 개별 조리순서 생성 (단계 수가 다름)
+            const cookingSteps = {
+                "산라탕": [
+                    "1단계: 돼지고기 100g을 채 썰고 두부 1/2모를 깍둑썰기한다",
+                    "2단계: 목이버섯 50g을 불려서 채 썰고 죽순 100g도 채 썬다",
+                    "3단계: 당근, 양파를 채 썰고 계란 3개는 풀어둔다",
+                    "4단계: 웨이팬에 기름을 두르고 돼지고기를 볶는다",
+                    "5단계: 야채와 버섯을 넣고 볶은 후 닭육수 6컵을 넣는다",
+                    "6단계: 끓으면 간장 2큰술, 식초 3큰술, 고춧가루 1큰술을 넣는다",
+                    "7단계: 설탕 1큰술로 단맛을 내고 물전분으로 농도를 맞춘다",
+                    "8단계: 풀어둔 계란을 젓가락으로 저으며 넣어 계란꽃을 만든다",
+                    "9단계: 대파를 넣고 참기름을 둘러 새콤매콤한 산라탕을 완성한다"
+                ],
+                "계란탕": [
+                    "1단계: 계란 4개를 그릇에 풀어 준비한다",
+                    "2단계: 대파 2대를 송송 썰어 준비한다",
+                    "3단계: 냄비에 닭육수 4컵을 끓인다",
+                    "4단계: 육수가 끓으면 간장 2큰술과 소금으로 간을 맞춘다",
+                    "5단계: 풀어둔 계란을 젓가락으로 저으며 천천히 넣는다",
+                    "6단계: 물전분 1큰술로 살짝 농도를 맞춘다",
+                    "7단계: 대파와 참기름을 넣어 깔끔한 계란탕을 완성한다"
+                ],
+                "옥수수탕": [
+                    "1단계: 옥수수 1개를 알갱이로 분리하여 준비한다",
+                    "2단계: 계란 3개를 풀고 두부 1/2모를 깍둑썰기한다",
+                    "3단계: 당근, 양파를 잘게 썬다",
+                    "4단계: 냄비에 닭육수 5컵을 끓인다",
+                    "5단계: 옥수수 알갱이를 넣고 5분간 끓인다",
+                    "6단계: 두부와 야채를 넣고 간장으로 간을 맞춘다",
+                    "7단계: 계란을 넣어 계란꽃을 만들고 대파를 넣어 완성한다"
+                ],
+                "어향탕": [
+                    "1단계: 돼지고기 100g과 새우 5마리, 오징어 1/2마리를 준비한다",
+                    "2단계: 목이버섯, 죽순을 채 썰고 두부를 깍둑썰기한다",
+                    "3단계: 당근, 양파를 썰고 청양고추를 어슷썬다",
+                    "4단계: 웨이팬에 기름을 두르고 돼지고기를 볶는다",
+                    "5단계: 해산물을 넣고 볶은 후 야채를 넣는다",
+                    "6단계: 닭육수 6컵을 넣고 끓인다",
+                    "7단계: 간장, 굴소스, 식초로 간을 맞춘다",
+                    "8단계: 물전분으로 농도를 맞추고 계란을 넣어 완성한다"
+                ],
+                "해물탕": [
+                    "1단계: 새우 8마리, 오징어 1마리, 홍합 5개, 조개 10개를 손질한다",
+                    "2단계: 목이버섯, 죽순, 두부를 준비한다",
+                    "3단계: 당근, 양파를 썰고 계란을 풀어둔다",
+                    "4단계: 웨이팬에 기름을 두르고 해산물을 순서대로 볶는다",
+                    "5단계: 야채와 버섯을 넣고 볶은 후 육수를 넣는다",
+                    "6단계: 간장, 굴소스로 간을 맞추고 끓인다",
+                    "7단계: 물전분으로 농도를 맞추고 계란꽃을 만든다",
+                    "8단계: 대파와 참기름을 넣어 해물탕을 완성한다"
+                ],
+                "완자탕": [
+                    "1단계: 완자 10개를 준비하고 계란 2개를 풀어둔다",
+                    "2단계: 당근, 양파, 대파를 썬다",
+                    "3단계: 냄비에 닭육수 5컵을 끓인다",
+                    "4단계: 완자를 넣고 5분간 끓인다",
+                    "5단계: 야채를 넣고 간장으로 간을 맞춘다",
+                    "6단계: 물전분으로 살짝 농도를 맞춘다",
+                    "7단계: 계란꽃을 만들고 대파, 참기름을 넣어 완성한다"
+                ]
+            };
+
+            // 각 메뉴별 조리순서를 테이블 형태로 변환
+            const maxSteps = Math.max(...Object.values(cookingSteps).map(steps => steps.length));
+            
+            for (let i = 1; i <= maxSteps; i++) {
+                const stepRow = [`${i}단계`];
+                detailMenus.forEach(menu => {
+                    const menuSteps = cookingSteps[menu.name];
+                    const stepText = menuSteps && menuSteps[i-1] ? menuSteps[i-1].replace(`${i}단계: `, '') : '-';
+                    stepRow.push(stepText);
+                });
+                steps.push(stepRow);
+            }
+
+            return [["조리순서"].concat(detailMenus.map(m => m.name))].concat(steps);
+        }
+
+        function generateCookingInfo() {
+            const info = [
+                ["조리정보"].concat(detailMenus.map(m => m.name))
+            ];
+
+            const infoData = {
+                "조리시간": ["25분", "15분", "20분", "30분", "35분", "20분"],
+                "난이도": ["중급", "초급", "초급", "중급", "중급", "초급"],
+                "칼로리(1인분)": ["180kcal", "120kcal", "150kcal", "200kcal", "220kcal", "160kcal"],
+                "인분": ["3-4인분", "2-3인분", "3인분", "3-4인분", "3-4인분", "2-3인분"],
+                "보관방법": ["냉장 1일", "당일 섭취", "당일 섭취", "냉장 1일", "당일 섭취", "냉장 1일"]
+            };
+
+            Object.keys(infoData).forEach(info_item => {
+                info.push([info_item].concat(infoData[info_item]));
+            });
+
+            return info;
+        }
+
+        function generateTasteFeatures() {
+            const taste = [
+                ["특징/맛"].concat(detailMenus.map(m => m.name))
+            ];
+
+            const tasteData = {
+                "주요맛": ["새콤매콤", "담백한맛", "달콤담백", "진한맛", "바다향", "담백한맛"],
+                "매운정도": ["보통", "순함", "순함", "순함", "순함", "순함"],
+                "특징": ["산라탕의새콤매콤함", "계란의부드러움", "옥수수의달콤함", "어향의진한맛", "해산물의시원함", "완자의담백함"],
+                "추천상황": ["매운맛좋을때", "간단한국물", "아이들좋아함", "진한맛좋을때", "해산물좋아할때", "담백한국물"]
+            };
+
+            Object.keys(tasteData).forEach(taste_item => {
+                taste.push([taste_item].concat(tasteData[taste_item]));
+            });
+
+            return taste;
+        }
+
+        function generateNutrition() {
+            const nutrition = [
+                ["영양정보"].concat(detailMenus.map(m => m.name))
+            ];
+
+            const nutritionData = {
+                "단백질(g)": ["15", "12", "10", "18", "22", "14"],
+                "탄수화물(g)": ["8", "4", "12", "10", "8", "8"],
+                "지방(g)": ["10", "8", "6", "12", "14", "9"],
+                "나트륨(mg)": ["1200", "800", "600", "1100", "1300", "900"],
+                "식이섬유(g)": ["4", "1", "3", "4", "3", "2"],
+                "비타민C(mg)": ["20", "5", "15", "18", "25", "8"],
+                "칼슘(mg)": ["80", "60", "40", "70", "120", "50"],
+                "철분(mg)": ["3", "2", "1", "3", "4", "2"],
+                "아연(mg)": ["2", "1", "1", "3", "4", "2"]
+            };
+
+            Object.keys(nutritionData).forEach(nutrition_item => {
+                nutrition.push([nutrition_item].concat(nutritionData[nutrition_item]));
+            });
+
+            return nutrition;
+        }
+
+        function generateServingTips() {
+            const tips = [
+                ["서빙/조리팁"].concat(detailMenus.map(m => m.name))
+            ];
+
+            const tipsData = {
+                "서빙팁": [
+                    "새콤매콤하게 뜨거울 때",
+                    "부드러운 계란꽃과 함께",
+                    "달콤한 옥수수와 함께",
+                    "진한 국물로 뜨겁게",
+                    "해산물이 보이게 담아서",
+                    "완자와 함께 따뜻하게"
+                ],
+                "보관팁": [
+                    "계란꽃이 풀어질 수 있음",
+                    "계란꽃 형태 유지 어려움",
+                    "옥수수가 물러질 수 있음",
+                    "해산물과 분리해서 보관",
+                    "해산물 당일 섭취 권장",
+                    "완자가 불어날 수 있음"
+                ],
+                "조리팁": [
+                    "식초로 신맛 조절이 포인트",
+                    "계란은 천천히 넣어 꽃 모양 만들기",
+                    "옥수수는 너무 오래 끓이지 말 것",
+                    "해산물 순서대로 넣어 익힘 조절",
+                    "해산물 비린내 제거가 중요",
+                    "완자는 미리 데워두면 좋음"
+                ]
+            };
+
+            Object.keys(tipsData).forEach(tip_item => {
+                tips.push([tip_item].concat(tipsData[tip_item]));
+            });
+
+            return tips;
+        }
+
+        function downloadRecipe() {
+            // 새 워크북 생성
+            const wb = XLSX.utils.book_new();
+
+            // 각 시트 데이터 생성 및 추가
+            const sheets = [
+                {name: "주요식재료", data: generateIngredients()},
+                {name: "양념소스", data: generateSauces()},
+                {name: "육수베이스", data: generateBroth()},
+                {name: "조리순서", data: generateCookingSteps()},
+                {name: "조리정보", data: generateCookingInfo()},
+                {name: "특징맛", data: generateTasteFeatures()},
+                {name: "영양정보", data: generateNutrition()},
+                {name: "서빙조리팁", data: generateServingTips()}
+            ];
+
+            sheets.forEach(sheet => {
+                const ws = XLSX.utils.aoa_to_sheet(sheet.data);
+                XLSX.utils.book_append_sheet(wb, ws, sheet.name);
+            });
+
+            // 파일 다운로드
+            XLSX.writeFile(wb, "탕류_상세레시피.xlsx");
+        }
+    </script>
+</body>
+</html>

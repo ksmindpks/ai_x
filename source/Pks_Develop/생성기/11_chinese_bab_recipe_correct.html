@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>중식 밥류 레시피 생성</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 100px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #B8860B 0%, #DAA520 50%, #FFD700 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            text-align: center;
+            backdrop-filter: blur(10px);
+            border: 3px solid #DAA520;
+        }
+        .download-btn {
+            background: linear-gradient(135deg, #B8860B 0%, #8B6914 100%);
+            color: white;
+            padding: 20px 40px;
+            border: none;
+            border-radius: 15px;
+            cursor: pointer;
+            font-size: 20px;
+            font-weight: bold;
+            transition: all 0.3s;
+            box-shadow: 0 8px 25px rgba(184,134,11,0.4);
+        }
+        .download-btn:hover {
+            background: linear-gradient(135deg, #8B6914 0%, #6B5610 100%);
+            transform: translateY(-3px);
+            box-shadow: 0 12px 30px rgba(184,134,11,0.6);
+        }
+        .download-btn:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <button id="downloadBtn" class="download-btn" onclick="downloadRecipe()">
+            중식밥류_상세레시피.xlsx 다운로드
+        </button>
+    </div>
+
+    <script>
+        // 중식 밥류 상세메뉴 데이터 (정확한 파일 분석 결과 기반)
+        const detailMenus = [
+            {name: "새우볶음밥", category: "볶음밥", visual: "새우, 노란 계란밥"},
+            {name: "계란볶음밥", category: "볶음밥", visual: "노란 계란밥, 파 고명"},
+            {name: "차돌볶음밥", category: "볶음밥", visual: "차돌박이, 고소한 볶음밥"},
+            {name: "잡채밥", category: "덮밥", visual: "잡채 + 밥"},
+            {name: "마파두부밥", category: "덮밥", visual: "마파두부, 매운 소스"},
+            {name: "유산슬밥", category: "덮밥", visual: "해산물, 야채, 밥"},
+            {name: "해물볶음밥", category: "해물밥", visual: "다양한 해산물, 볶음밥"},
+            {name: "오징어볶음밥", category: "해물밥", visual: "오징어, 볶음밥"}
+        ];
+
+        // 레시피 데이터 생성 함수들
+        function generateIngredients() {
+            const ingredients = [
+                ["식재료"].concat(detailMenus.map(m => m.name))
+            ];
+
+            const ingredientData = {
+                "밥": ["2공기", "2공기", "2공기", "2공기", "2공기", "2공기", "2공기", "2공기"],
+                "계란": ["3개", "4개", "3개", "-", "1개", "2개", "3개", "3개"],
+                "새우": ["12마리", "-", "-", "-", "-", "8마리", "8마리", "-"],
+                "차돌박이": ["-", "-", "200g", "-", "-", "-", "-", "-"],
+                "오징어": ["-", "-", "-", "-", "-", "-", "1마리", "1마리"],
+                "홍합": ["-", "-", "-", "-", "-", "5개", "5개", "-"],
+                "조개": ["-", "-", "-", "-", "-", "10개", "10개", "-"],
+                "두부": ["-", "-", "-", "-", "300g", "-", "-", "-"],
+                "돼지고기": ["-", "-", "-", "-", "100g", "100g", "-", "-"],
+                "당면": ["-", "-", "-", "200g", "-", "-", "-", "-"],
+                "양파": ["1개", "1개", "1개", "1개", "1개", "1개", "1개", "1개"],
+                "대파": ["2대", "3대", "2대", "2대", "2대", "2대", "2대", "2대"],
+                "당근": ["1/2개", "1/2개", "1/2개", "1/2개", "1/2개", "1/2개", "1/2개", "1/2개"],
+                "청피망": ["-", "-", "-", "2개", "1개", "2개", "1개", "1개"],
+                "적피망": ["-", "-", "-", "2개", "1개", "2개", "1개", "1개"],
+                "마늘": ["5쪽", "5쪽", "5쪽", "5쪽", "6쪽", "5쪽", "5쪽", "5쪽"],
+                "생강": ["1조각", "1조각", "1조각", "1조각", "2조각", "1조각", "1조각", "1조각"],
+                "청양고추": ["-", "-", "-", "-", "3개", "-", "-", "2개"],
+                "숙주": ["-", "-", "-", "100g", "-", "100g", "-", "-"],
+                "목이버섯": ["-", "-", "-", "50g", "-", "50g", "-", "-"],
+                "표고버섯": ["-", "-", "-", "3개", "-", "3개", "-", "-"]
+            };
+
+            Object.keys(ingredientData).forEach(ingredient => {
+                ingredients.push([ingredient].concat(ingredientData[ingredient]));
+            });
+
+            return ingredients;
+        }
+
+        function generateSauces() {
+            const sauces = [
+                ["양념/소스"].concat(detailMenus.map(m => m.name))
+            ];
+
+            const sauceData = {
+                "간장": ["3큰술", "3큰술", "3큰술", "3큰술", "2큰술", "3큰술", "3큰술", "3큰술"],
+                "굴소스": ["1큰술", "1큰술", "1큰술", "1큰술", "-", "1큰술", "1큰술", "1큰술"],
+                "두반장": ["-", "-", "-", "-", "2큰술", "-", "-", "-"],
+                "설탕": ["1큰술", "1큰술", "1큰술", "2큰술", "1큰술", "1큰술", "1큰술", "1큰술"],
+                "식용유": ["3큰술", "3큰술", "3큰술", "3큰술", "3큰술", "3큰술", "3큰술", "3큰술"],
+                "참기름": ["2큰술", "2큰술", "2큰술", "2큰술", "1큰술", "2큰술", "2큰술", "2큰술"],
+                "다진마늘": ["2큰술", "2큰술", "2큰술", "2큰술", "3큰술", "2큰술", "2큰술", "2큰술"],
+                "다진생강": ["1큰술", "1큰술", "1큰술", "1큰술", "2큰술", "1큰술", "1큰술", "1큰술"],
+                "소금": ["적당량", "적당량", "적당량", "적당량", "적당량", "적당량", "적당량", "적당량"],
+                "후추": ["조금", "조금", "조금", "조금", "조금", "조금", "조금", "조금"],
+                "청주": ["1큰술", "1큰술", "1큰술", "1큰술", "2큰술", "1큰술", "1큰술", "1큰술"],
+                "맛술": ["-", "-", "-", "1큰술", "1큰술", "1큰술", "-", "-"],
+                "물전분": ["-", "-", "-", "-", "2큰술", "2큰술", "-", "-"],
+                "고춧가루": ["-", "-", "-", "-", "1큰술", "-", "-", "1큰술"],
+                "식초": ["-", "-", "-", "1큰술", "-", "-", "-", "-"]
+            };
+
+            Object.keys(sauceData).forEach(sauce => {
+                sauces.push([sauce].concat(sauceData[sauce]));
+            });
+
+            return sauces;
+        }
+
+        function generateBroth() {
+            const broth = [
+                ["육수/베이스"].concat(detailMenus.map(m => m.name))
+            ];
+
+            const brothData = {
+                "물": ["-", "-", "-", "3컵", "2컵", "3컵", "-", "-"],
+                "닭육수": ["-", "-", "-", "선택사항", "기본", "기본", "-", "-"],
+                "멸치육수": ["-", "-", "-", "-", "-", "선택사항", "-", "-"]
+            };
+
+            Object.keys(brothData).forEach(item => {
+                broth.push([item].concat(brothData[item]));
+            });
+
+            return broth;
+        }
+
+        function generateCookingSteps() {
+            const steps = [];
+            
+            // 메뉴별로 개별 조리순서 생성 (단계 수가 다름)
+            const cookingSteps = {
+                "새우볶음밥": [
+                    "1단계: 새우 12마리를 손질하여 소금, 후추로 밑간한다",
+                    "2단계: 찬밥 2공기와 계란 3개를 준비한다",
+                    "3단계: 양파 1개, 당근 1/2개, 대파 2대를 잘게 썬다",
+                    "4단계: 웨이팬에 기름을 두르고 새우를 먼저 볶는다",
+                    "5단계: 새우가 익으면 계란을 넣어 스크램블한다",
+                    "6단계: 야채를 볶은 후 찬밥을 넣고 센 불에서 볶는다",
+                    "7단계: 간장 3큰술, 굴소스 1큰술로 간을 맞춘다",
+                    "8단계: 대파를 넣고 참기름을 둘러 완성한다"
+                ],
+                "계란볶음밥": [
+                    "1단계: 찬밥 2공기와 계란 4개를 준비한다",
+                    "2단계: 양파, 당근, 대파를 잘게 썬다",
+                    "3단계: 웨이팬에 기름을 두르고 계란을 스크램블한다",
+                    "4단계: 계란을 한쪽으로 밀고 야채를 볶는다",
+                    "5단계: 찬밥을 넣고 센 불에서 볶아 밥알을 분리한다",
+                    "6단계: 간장과 굴소스로 간을 맞춘다",
+                    "7단계: 대파와 참기름을 넣어 완성한다"
+                ],
+                "차돌볶음밥": [
+                    "1단계: 차돌박이 200g을 적당한 크기로 썬다",
+                    "2단계: 찬밥과 계란을 준비한다",
+                    "3단계: 웨이팬에 차돌박이를 먼저 볶아 기름을 낸다",
+                    "4단계: 차돌박이가 바삭해지면 계란을 넣어 스크램블한다",
+                    "5단계: 야채를 볶은 후 찬밥을 넣는다",
+                    "6단계: 간장과 굴소스로 간을 맞춘다",
+                    "7단계: 참기름을 넣고 고소하게 완성한다"
+                ],
+                "잡채밥": [
+                    "1단계: 당면 200g을 뜨거운 물에 불려 부드럽게 만든다",
+                    "2단계: 피망 4개, 양파, 당근을 채 썬다",
+                    "3단계: 숙주, 목이버섯, 표고버섯을 준비한다",
+                    "4단계: 웨이팬에 기름을 두르고 야채를 순서대로 볶는다",
+                    "5단계: 불린 당면을 넣고 함께 볶는다",
+                    "6단계: 간장 3큰술, 설탕 2큰술, 참기름으로 양념한다",
+                    "7단계: 밥 2공기와 함께 볶아 잡채밥으로 완성한다"
+                ],
+                "마파두부밥": [
+                    "1단계: 두부 300g을 2cm 크기로 깍둑썰기한다",
+                    "2단계: 돼지고기 100g을 다져서 준비한다",
+                    "3단계: 마늘, 생강, 청양고추를 다진다",
+                    "4단계: 웨이팬에 기름을 두르고 돼지고기를 볶는다",
+                    "5단계: 두반장 2큰술을 넣고 향이 날 때까지 볶는다",
+                    "6단계: 닭육수 2컵을 넣고 끓인 후 두부를 넣는다",
+                    "7단계: 간장, 설탕으로 간을 맞추고 물전분으로 농도를 맞춘다",
+                    "8단계: 계란을 풀어 넣고 밥 위에 올려 완성한다"
+                ],
+                "유산슬밥": [
+                    "1단계: 돼지고기 100g, 새우 8마리, 홍합 5개를 준비한다",
+                    "2단계: 피망, 숙주, 목이버섯, 표고버섯을 썬다",
+                    "3단계: 웨이팬에 기름을 두르고 돼지고기를 볶는다",
+                    "4단계: 해산물을 넣고 볶은 후 야채를 넣는다",
+                    "5단계: 닭육수 3컵을 넣고 끓인다",
+                    "6단계: 간장, 굴소스, 설탕으로 간을 맞춘다",
+                    "7단계: 물전분으로 농도를 맞추고 계란을 풀어 넣는다",
+                    "8단계: 밥 위에 올려 유산슬밥으로 완성한다"
+                ],
+                "해물볶음밥": [
+                    "1단계: 새우 8마리, 오징어 1마리, 홍합 5개, 조개 10개를 손질한다",
+                    "2단계: 찬밥과 계란을 준비한다",
+                    "3단계: 웨이팬에 기름을 두르고 해산물을 순서대로 볶는다",
+                    "4단계: 계란을 넣어 스크램블한 후 야채를 볶는다",
+                    "5단계: 찬밥을 넣고 센 불에서 볶는다",
+                    "6단계: 간장, 굴소스로 간을 맞춘다",
+                    "7단계: 참기름을 넣고 해물볶음밥으로 완성한다"
+                ],
+                "오징어볶음밥": [
+                    "1단계: 오징어 1마리를 손질하여 링 모양으로 썬다",
+                    "2단계: 찬밥과 계란을 준비한다",
+                    "3단계: 청양고추 2개를 어슷썬다",
+                    "4단계: 웨이팬에 기름을 두르고 오징어를 볶는다",
+                    "5단계: 계란을 스크램블하고 야채를 볶는다",
+                    "6단계: 찬밥을 넣고 볶은 후 간장으로 간을 맞춘다",
+                    "7단계: 청양고추와 참기름을 넣어 매콤하게 완성한다"
+                ]
+            };
+
+            // 각 메뉴별 조리순서를 테이블 형태로 변환
+            const maxSteps = Math.max(...Object.values(cookingSteps).map(steps => steps.length));
+            
+            for (let i = 1; i <= maxSteps; i++) {
+                const stepRow = [`${i}단계`];
+                detailMenus.forEach(menu => {
+                    const menuSteps = cookingSteps[menu.name];
+                    const stepText = menuSteps && menuSteps[i-1] ? menuSteps[i-1].replace(`${i}단계: `, '') : '-';
+                    stepRow.push(stepText);
+                });
+                steps.push(stepRow);
+            }
+
+            return [["조리순서"].concat(detailMenus.map(m => m.name))].concat(steps);
+        }
+
+        function generateCookingInfo() {
+            const info = [
+                ["조리정보"].concat(detailMenus.map(m => m.name))
+            ];
+
+            const infoData = {
+                "조리시간": ["20분", "15분", "18분", "25분", "30분", "35분", "25분", "18분"],
+                "난이도": ["초급", "초급", "초급", "중급", "중급", "중급", "중급", "초급"],
+                "칼로리(1인분)": ["580kcal", "520kcal", "620kcal", "580kcal", "450kcal", "520kcal", "600kcal", "550kcal"],
+                "인분": ["2인분", "2인분", "2인분", "2인분", "2인분", "2인분", "2인분", "2인분"],
+                "보관방법": ["냉장 1일", "냉장 1일", "냉장 1일", "냉장 1일", "냉장 2일", "냉장 1일", "냉장 1일", "냉장 1일"]
+            };
+
+            Object.keys(infoData).forEach(info_item => {
+                info.push([info_item].concat(infoData[info_item]));
+            });
+
+            return info;
+        }
+
+        function generateTasteFeatures() {
+            const taste = [
+                ["특징/맛"].concat(detailMenus.map(m => m.name))
+            ];
+
+            const tasteData = {
+                "주요맛": ["고소바다맛", "고소한맛", "고소진한맛", "매콤고소", "매콤한맛", "담백한맛", "바다향", "매콤바다맛"],
+                "매운정도": ["순함", "순함", "순함", "보통", "매움", "순함", "순함", "보통"],
+                "특징": ["새우의바다맛", "계란의고소함", "차돌의진한맛", "잡채와밥조화", "마파두부매콤함", "해산물의담백함", "다양한해산물", "오징어의쫄깃함"],
+                "추천상황": ["특별한식사", "간단한식사", "고급식사", "든든한한끼", "매운맛좋을때", "깔끔한식사", "해산물좋아할때", "매콤한맛좋을때"]
+            };
+
+            Object.keys(tasteData).forEach(taste_item => {
+                taste.push([taste_item].concat(tasteData[taste_item]));
+            });
+
+            return taste;
+        }
+
+        function generateNutrition() {
+            const nutrition = [
+                ["영양정보"].concat(detailMenus.map(m => m.name))
+            ];
+
+            const nutritionData = {
+                "단백질(g)": ["25", "18", "22", "15", "18", "20", "28", "20"],
+                "탄수화물(g)": ["70", "75", "68", "85", "65", "70", "72", "75"],
+                "지방(g)": ["22", "20", "28", "15", "18", "18", "25", "20"],
+                "나트륨(mg)": ["1300", "1200", "1250", "1400", "1500", "1350", "1400", "1300"],
+                "식이섬유(g)": ["4", "3", "3", "8", "5", "6", "4", "3"],
+                "비타민C(mg)": ["20", "15", "12", "45", "25", "35", "22", "18"],
+                "칼슘(mg)": ["120", "80", "60", "100", "150", "120", "150", "80"],
+                "철분(mg)": ["4", "3", "4", "5", "4", "5", "6", "3"],
+                "아연(mg)": ["4", "2", "5", "3", "3", "4", "6", "3"],
+                "오메가3(mg)": ["200", "50", "100", "0", "0", "150", "300", "180"]
+            };
+
+            Object.keys(nutritionData).forEach(nutrition_item => {
+                nutrition.push([nutrition_item].concat(nutritionData[nutrition_item]));
+            });
+
+            return nutrition;
+        }
+
+        function generateServingTips() {
+            const tips = [
+                ["서빙/조리팁"].concat(detailMenus.map(m => m.name))
+            ];
+
+            const tipsData = {
+                "서빙팁": [
+                    "새우가 보이게 담아서 뜨거울 때",
+                    "계란이 골고루 섞인 상태로",
+                    "차돌의 고소함이 나도록 뜨겁게",
+                    "잡채와 밥이 잘 섞인 상태로",
+                    "매콤한 마파두부와 밥 함께",
+                    "다양한 재료가 보이게 담아서",
+                    "해산물이 풍성하게 보이도록",
+                    "매콤한 향과 함께 뜨겁게"
+                ],
+                "보관팁": [
+                    "새우는 당일 섭취 권장",
+                    "계란밥은 밀폐용기에 보관",
+                    "차돌 기름이 굳을 수 있음",
+                    "당면이 불 수 있으니 주의",
+                    "두부는 으깨질 수 있으니 조심",
+                    "해산물 특성상 빨리 상함",
+                    "해산물 당일 섭취 권장",
+                    "오징어는 질길 수 있음"
+                ],
+                "조리팁": [
+                    "새우는 너무 오래 볶으면 질김",
+                    "계란은 부드럽게 스크램블",
+                    "차돌박이로 기름을 충분히 내기",
+                    "당면은 너무 오래 볶으면 끊어짐",
+                    "두부는 마지막에 넣어 부서지지 않게",
+                    "해산물은 각각 조리시간 다름",
+                    "해산물 순서대로 넣어 익힘 조절",
+                    "오징어는 센 불에서 빠르게 볶기"
+                ]
+            };
+
+            Object.keys(tipsData).forEach(tip_item => {
+                tips.push([tip_item].concat(tipsData[tip_item]));
+            });
+
+            return tips;
+        }
+
+        function downloadRecipe() {
+            // 새 워크북 생성
+            const wb = XLSX.utils.book_new();
+
+            // 각 시트 데이터 생성 및 추가
+            const sheets = [
+                {name: "주요식재료", data: generateIngredients()},
+                {name: "양념소스", data: generateSauces()},
+                {name: "육수베이스", data: generateBroth()},
+                {name: "조리순서", data: generateCookingSteps()},
+                {name: "조리정보", data: generateCookingInfo()},
+                {name: "특징맛", data: generateTasteFeatures()},
+                {name: "영양정보", data: generateNutrition()},
+                {name: "서빙조리팁", data: generateServingTips()}
+            ];
+
+            sheets.forEach(sheet => {
+                const ws = XLSX.utils.aoa_to_sheet(sheet.data);
+                XLSX.utils.book_append_sheet(wb, ws, sheet.name);
+            });
+
+            // 파일 다운로드
+            XLSX.writeFile(wb, "중식밥류_상세레시피.xlsx");
+        }
+    </script>
+</body>
+</html>

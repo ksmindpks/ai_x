@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>카페 상세 레시피 엑셀 생성기 (전체 29개 메뉴)</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #8B4513 0%, #D2691E 50%, #F4A460 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #8B4513;
+            margin-bottom: 30px;
+            font-size: 2.5rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .menu-info {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border-left: 5px solid #8B4513;
+        }
+        
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+        
+        .menu-card {
+            background: white;
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border: 1px solid #e0e0e0;
+            transition: transform 0.3s ease;
+        }
+        
+        .menu-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+        }
+        
+        .menu-card h3 {
+            color: #333;
+            margin: 0 0 6px 0;
+            font-size: 0.9rem;
+            border-bottom: 2px solid #8B4513;
+            padding-bottom: 3px;
+        }
+        
+        .menu-card p {
+            margin: 3px 0;
+            font-size: 0.8rem;
+        }
+        
+        .category-커피 { border-left: 3px solid #8B4513; }
+        .category-음료 { border-left: 3px solid #20c997; }
+        .category-디저트 { border-left: 3px solid #fd7e14; }
+        
+        .recipe-section {
+            margin-bottom: 25px;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        
+        .recipe-section h2 {
+            color: #8B4513;
+            border-bottom: 3px solid #8B4513;
+            padding-bottom: 8px;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+        }
+        
+        .table-container {
+            overflow-x: auto;
+            margin-top: 10px;
+        }
+        
+        table {
+            width: 100%;
+            min-width: 1500px;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            font-size: 0.7rem;
+        }
+        
+        th, td {
+            padding: 4px;
+            text-align: center;
+            border: 1px solid #ddd;
+            white-space: nowrap;
+        }
+        
+        th {
+            background: linear-gradient(135deg, #8B4513 0%, #D2691E 100%);
+            color: white;
+            font-weight: bold;
+            font-size: 0.65rem;
+            writing-mode: horizontal-tb;
+        }
+        
+        tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        
+        tr:hover {
+            background-color: #fff3cd;
+        }
+        
+        .download-btn {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            display: block;
+            margin: 30px auto;
+            box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+            transition: all 0.3s ease;
+        }
+        
+        .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
+        }
+        
+        .description {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #ffc107;
+        }
+        
+        .first-col {
+            background-color: #f1f3f4 !important;
+            font-weight: bold;
+            color: #333;
+            text-align: left !important;
+            padding-left: 8px !important;
+        }
+        
+        .menu-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .category-summary {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .category-summary h3 {
+            margin: 0 0 10px 0;
+            color: #8B4513;
+        }
+        
+        .category-summary .count {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #D2691E;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>☕ 카페 상세 레시피 엑셀 생성기 (전체 29개 메뉴)</h1>
+        
+        <div class="description">
+            <p><strong>마라사천 레시피 파일과 동일한 8개 시트 구조로 모든 카페 메뉴들의 상세 레시피를 생성합니다.</strong></p>
+            <p>총 29개 개별 카페 메뉴: 커피 9개, 음료 9개, 디저트 11개</p>
+        </div>
+
+        <div class="menu-summary">
+            <div class="category-summary">
+                <h3>☕ 커피</h3>
+                <div class="count">9</div>
+                <p>에스프레소 기반</p>
+            </div>
+            <div class="category-summary">
+                <h3>🥤 음료</h3>
+                <div class="count">9</div>
+                <p>차, 프라페, 에이드</p>
+            </div>
+            <div class="category-summary">
+                <h3>🍰 디저트</h3>
+                <div class="count">11</div>
+                <p>케이크, 빵, 빙수</p>
+            </div>
+        </div>
+
+        <div class="menu-info">
+            <h2>📋 전체 카페 메뉴 정보</h2>
+            <div class="menu-grid">
+                <div class="menu-card category-커피"><h3>☕ 아메리카노</h3><p><strong>분류:</strong> 커피</p></div>
+                <div class="menu-card category-커피"><h3>☕ 에스프레소</h3><p><strong>분류:</strong> 커피</p></div>
+                <div class="menu-card category-커피"><h3>☕ 롱블랙</h3><p><strong>분류:</strong> 커피</p></div>
+                <div class="menu-card category-커피"><h3>🥛 카페라떼</h3><p><strong>분류:</strong> 커피</p></div>
+                <div class="menu-card category-커피"><h3>🥛 카푸치노</h3><p><strong>분류:</strong> 커피</p></div>
+                <div class="menu-card category-커피"><h3>🥛 마끼아또</h3><p><strong>분류:</strong> 커피</p></div>
+                <div class="menu-card category-커피"><h3>🍦 바닐라라떼</h3><p><strong>분류:</strong> 커피</p></div>
+                <div class="menu-card category-커피"><h3>🍮 카라멜마끼아또</h3><p><strong>분류:</strong> 커피</p></div>
+                <div class="menu-card category-커피"><h3>🌰 헤이즐넛</h3><p><strong>분류:</strong> 커피</p></div>
+                <div class="menu-card category-음료"><h3>🫖 얼그레이</h3><p><strong>분류:</strong> 음료</p></div>
+                <div class="menu-card category-음료"><h3>🌿 허브티</h3><p><strong>분류:</strong> 음료</p></div>
+                <div class="menu-card category-음료"><h3>🍵 녹차라떼</h3><p><strong>분류:</strong> 음료</p></div>
+                <div class="menu-card category-음료"><h3>🧊 카페프라페</h3><p><strong>분류:</strong> 음료</p></div>
+                <div class="menu-card category-음료"><h3>🍫 초콜릿프라페</h3><p><strong>분류:</strong> 음료</p></div>
+                <div class="menu-card category-음료"><h3>🍓 딸기프라페</h3><p><strong>분류:</strong> 음료</p></div>
+                <div class="menu-card category-음료"><h3>🍋 레몬에이드</h3><p><strong>분류:</strong> 음료</p></div>
+                <div class="menu-card category-음료"><h3>🍊 자몽에이드</h3><p><strong>분류:</strong> 음료</p></div>
+                <div class="menu-card category-음료"><h3>🥤 탄산음료</h3><p><strong>분류:</strong> 음료</p></div>
+                <div class="menu-card category-디저트"><h3>🧀 치즈케이크</h3><p><strong>분류:</strong> 디저트</p></div>
+                <div class="menu-card category-디저트"><h3>🍫 초콜릿케이크</h3><p><strong>분류:</strong> 디저트</p></div>
+                <div class="menu-card category-디저트"><h3>🍰 생크림케이크</h3><p><strong>분류:</strong> 디저트</p></div>
+                <div class="menu-card category-디저트"><h3>🥐 크루아상</h3><p><strong>분류:</strong> 디저트</p></div>
+                <div class="menu-card category-디저트"><h3>🥯 베이글</h3><p><strong>분류:</strong> 디저트</p></div>
+                <div class="menu-card category-디저트"><h3>🧁 머핀</h3><p><strong>분류:</strong> 디저트</p></div>
+                <div class="menu-card category-디저트"><h3>🍧 팥빙수</h3><p><strong>분류:</strong> 디저트</p></div>
+                <div class="menu-card category-디저트"><h3>🥭 망고빙수</h3><p><strong>분류:</strong> 디저트</p></div>
+                <div class="menu-card category-디저트"><h3>🍡 인절미빙수</h3><p><strong>분류:</strong> 디저트</p></div>
+                <div class="menu-card category-디저트"><h3>🌈 마카롱</h3><p><strong>분류:</strong> 디저트</p></div>
+                <div class="menu-card category-디저트"><h3>🍪 쿠키</h3><p><strong>분류:</strong> 디저트</p></div>
+            </div>
+        </div>
+
+        <div class="recipe-section">
+            <h2>🧄 주요재료</h2>
+            <div class="table-container">
+                <table id="ingredientsTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 100px;">재료</th>
+                            <th>아메리카노</th><th>에스프레소</th><th>롱블랙</th><th>카페라떼</th><th>카푸치노</th><th>마끼아또</th><th>바닐라라떼</th><th>카라멜마끼아또</th><th>헤이즐넛</th><th>얼그레이</th><th>허브티</th><th>녹차라떼</th><th>카페프라페</th><th>초콜릿프라페</th><th>딸기프라페</th><th>레몬에이드</th><th>자몽에이드</th><th>탄산음료</th><th>치즈케이크</th><th>초콜릿케이크</th><th>생크림케이크</th><th>크루아상</th><th>베이글</th><th>머핀</th><th>팥빙수</th><th>망고빙수</th><th>인절미빙수</th><th>마카롱</th><th>쿠키</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="recipe-section">
+            <h2>🧂 시럽소스</h2>
+            <div class="table-container">
+                <table id="sauceTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 100px;">시럽/소스</th>
+                            <th>아메리카노</th><th>에스프레소</th><th>롱블랙</th><th>카페라떼</th><th>카푸치노</th><th>마끼아또</th><th>바닐라라떼</th><th>카라멜마끼아또</th><th>헤이즐넛</th><th>얼그레이</th><th>허브티</th><th>녹차라떼</th><th>카페프라페</th><th>초콜릿프라페</th><th>딸기프라페</th><th>레몬에이드</th><th>자몽에이드</th><th>탄산음료</th><th>치즈케이크</th><th>초콜릿케이크</th><th>생크림케이크</th><th>크루아상</th><th>베이글</th><th>머핀</th><th>팥빙수</th><th>망고빙수</th><th>인절미빙수</th><th>마카롱</th><th>쿠키</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="recipe-section">
+            <h2>🍞 베이스</h2>
+            <div class="table-container">
+                <table id="baseTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 100px;">베이스</th>
+                            <th>아메리카노</th><th>에스프레소</th><th>롱블랙</th><th>카페라떼</th><th>카푸치노</th><th>마끼아또</th><th>바닐라라떼</th><th>카라멜마끼아또</th><th>헤이즐넛</th><th>얼그레이</th><th>허브티</th><th>녹차라떼</th><th>카페프라페</th><th>초콜릿프라페</th><th>딸기프라페</th><th>레몬에이드</th><th>자몽에이드</th><th>탄산음료</th><th>치즈케이크</th><th>초콜릿케이크</th><th>생크림케이크</th><th>크루아상</th><th>베이글</th><th>머핀</th><th>팥빙수</th><th>망고빙수</th><th>인절미빙수</th><th>마카롱</th><th>쿠키</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="recipe-section">
+            <h2>👨‍🍳 제조순서</h2>
+            <div class="table-container">
+                <table id="processTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 100px;">제조순서</th>
+                            <th>아메리카노</th><th>에스프레소</th><th>롱블랙</th><th>카페라떼</th><th>카푸치노</th><th>마끼아또</th><th>바닐라라떼</th><th>카라멜마끼아또</th><th>헤이즐넛</th><th>얼그레이</th><th>허브티</th><th>녹차라떼</th><th>카페프라페</th><th>초콜릿프라페</th><th>딸기프라페</th><th>레몬에이드</th><th>자몽에이드</th><th>탄산음료</th><th>치즈케이크</th><th>초콜릿케이크</th><th>생크림케이크</th><th>크루아상</th><th>베이글</th><th>머핀</th><th>팥빙수</th><th>망고빙수</th><th>인절미빙수</th><th>마카롱</th><th>쿠키</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="recipe-section">
+            <h2>ℹ️ 제조정보</h2>
+            <div class="table-container">
+                <table id="cookingInfoTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 100px;">제조정보</th>
+                            <th>아메리카노</th><th>에스프레소</th><th>롱블랙</th><th>카페라떼</th><th>카푸치노</th><th>마끼아또</th><th>바닐라라떼</th><th>카라멜마끼아또</th><th>헤이즐넛</th><th>얼그레이</th><th>허브티</th><th>녹차라떼</th><th>카페프라페</th><th>초콜릿프라페</th><th>딸기프라페</th><th>레몬에이드</th><th>자몽에이드</th><th>탄산음료</th><th>치즈케이크</th><th>초콜릿케이크</th><th>생크림케이크</th><th>크루아상</th><th>베이글</th><th>머핀</th><th>팥빙수</th><th>망고빙수</th><th>인절미빙수</th><th>마카롱</th><th>쿠키</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="recipe-section">
+            <h2>😋 특징맛</h2>
+            <div class="table-container">
+                <table id="tasteTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 100px;">특징/맛</th>
+                            <th>아메리카노</th><th>에스프레소</th><th>롱블랙</th><th>카페라떼</th><th>카푸치노</th><th>마끼아또</th><th>바닐라라떼</th><th>카라멜마끼아또</th><th>헤이즐넛</th><th>얼그레이</th><th>허브티</th><th>녹차라떼</th><th>카페프라페</th><th>초콜릿프라페</th><th>딸기프라페</th><th>레몬에이드</th><th>자몽에이드</th><th>탄산음료</th><th>치즈케이크</th><th>초콜릿케이크</th><th>생크림케이크</th><th>크루아상</th><th>베이글</th><th>머핀</th><th>팥빙수</th><th>망고빙수</th><th>인절미빙수</th><th>마카롱</th><th>쿠키</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="recipe-section">
+            <h2>📊 영양정보</h2>
+            <div class="table-container">
+                <table id="nutritionTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 100px;">영양정보</th>
+                            <th>아메리카노</th><th>에스프레소</th><th>롱블랙</th><th>카페라떼</th><th>카푸치노</th><th>마끼아또</th><th>바닐라라떼</th><th>카라멜마끼아또</th><th>헤이즐넛</th><th>얼그레이</th><th>허브티</th><th>녹차라떼</th><th>카페프라페</th><th>초콜릿프라페</th><th>딸기프라페</th><th>레몬에이드</th><th>자몽에이드</th><th>탄산음료</th><th>치즈케이크</th><th>초콜릿케이크</th><th>생크림케이크</th><th>크루아상</th><th>베이글</th><th>머핀</th><th>팥빙수</th><th>망고빙수</th><th>인절미빙수</th><th>마카롱</th><th>쿠키</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="recipe-section">
+            <h2>💡 서빙제조팁</h2>
+            <div class="table-container">
+                <table id="tipsTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 100px;">서빙/제조팁</th>
+                            <th>아메리카노</th><th>에스프레소</th><th>롱블랙</th><th>카페라떼</th><th>카푸치노</th><th>마끼아또</th><th>바닐라라떼</th><th>카라멜마끼아또</th><th>헤이즐넛</th><th>얼그레이</th><th>허브티</th><th>녹차라떼</th><th>카페프라페</th><th>초콜릿프라페</th><th>딸기프라페</th><th>레몬에이드</th><th>자몽에이드</th><th>탄산음료</th><th>치즈케이크</th><th>초콜릿케이크</th><th>생크림케이크</th><th>크루아상</th><th>베이글</th><th>머핀</th><th>팥빙수</th><th>망고빙수</th><th>인절미빙수</th><th>마카롱</th><th>쿠키</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <button class="download-btn" onclick="downloadExcel()">📥 카페 레시피 엑셀 파일 다운로드 (29개 메뉴)</button>
+    </div>
+
+    <script>
+        // 29개 카페 메뉴 레시피 데이터
+        const cafeData = {
+            ingredients: [
+                ['에스프레소', '2샷', '2샷', '2샷', '2샷', '2샷', '1샷', '2샷', '2샷', '2샷', '-', '-', '-', '2샷', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-'],
+                ['뜨거운물', '150ml', '-', '120ml', '-', '-', '-', '-', '-', '-', '200ml', '200ml', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-'],
+                ['우유', '-', '-', '-', '150ml', '100ml', '30ml', '150ml', '150ml', '150ml', '-', '-', '150ml', '50ml', '100ml', '100ml', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-'],
+                ['얼음', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '200g', '200g', '200g', '200g', '200g', '200g', '-', '-', '-', '-', '-', '-', '300g', '300g', '300g', '-', '-'],
+                ['설탕', '-', '-', '-', '-', '-', '-', '10g', '15g', '10g', '5g', '-', '10g', '15g', '20g', '20g', '30g', '25g', '-', '80g', '100g', '100g', '20g', '15g', '50g', '50g', '60g', '40g', '40g', '30g'],
+                ['바닐라시럽', '-', '-', '-', '-', '-', '-', '20ml', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '5ml', '-', '10ml', '5ml', '-', '5ml', '-', '-', '-', '2ml', '2ml'],
+                ['카라멜시럽', '-', '-', '-', '-', '-', '-', '-', '20ml', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-'],
+                ['헤이즐넛시럽', '-', '-', '-', '-', '-', '-', '-', '-', '20ml', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-'],
+                ['얼그레이티백', '-', '-', '-', '-', '-', '-', '-', '-', '-', '1개', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-'],
+                ['허브블렌드', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '1팩', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-'],
+                ['녹차파우더', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '10g', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-'],
+                ['초콜릿시럽', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '30ml', '-', '-', '-', '-', '-', '50ml', '-', '-', '-', '20ml', '-', '-', '-', '-', '10ml'],
+                ['딸기시럽', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '30ml', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-'],
+                ['레몬원액', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '50ml', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-'],
+                ['자몽원액', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '60ml', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-'],
+                ['탄산수', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '150ml', '140ml', '250ml', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-'],
+                ['크림치즈', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '200g', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-'],
+                ['밀가루', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '100g', '150g', '120g', '200g', '180g', '150g', '-', '-', '-', '80g', '120g'],
+                ['달걀', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '2개', '3개', '2개', '1개', '1개', '2개', '-', '-', '-', '2개', '1개'],
+                ['버터', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '50g', '80g', '70g', '100g', '30g', '60g', '-', '-', '-', '40g', '50g']
+            ],
+            sauces: [
+                ['휘핑크림', '-', '-', '-', '-', '○', '-', '-', '○', '-', '-', '-', '-', '○', '○', '○', '-', '-', '-', '○', '○', '○', '-', '-', '-', '○', '○', '○', '-', '-'],
+                ['바닐라소스', '-', '-', '-', '-', '-', '-', '○', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '○', '-', '○', '○', '-', '○', '-', '-', '-', '○', '○'],
+                ['카라멜소스', '-', '-', '-', '-', '-', '-', '-', '○', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-'],
+                ['헤이즐넛소스', '-', '-', '-', '-', '-', '-', '-', '-', '○', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-'],
+                ['초콜릿소스', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '○', '-', '-', '-', '-', '-', '○', '-', '-', '-', '○', '-', '-', '-', '-', '○'],
+                ['딸기소스', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '○', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-'],
+                ['꿀', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '○', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-'],
+                ['연유', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '○', '-', '○', '-', '-']
+            ],
+            bases: [
+                ['에스프레소베이스', '○', '○', '○', '○', '○', '○', '○', '○', '○', '-', '-', '-', '○', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-'],
+                ['티베이스', '-', '-', '-', '-', '-', '-', '-', '-', '-', '○', '○', '○', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-'],
+                ['프라페베이스', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '○', '○', '○', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-'],
+                ['에이드베이스', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '○', '○', '○', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-'],
+                ['케이크베이스', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '○', '○', '○', '-', '-', '-', '-', '-', '-', '-', '-'],
+                ['베이커리베이스', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '○', '○', '○', '-', '-', '-', '-', '-'],
+                ['빙수베이스', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '○', '○', '○', '-', '-']
+            ],
+            process: [
+                ['1단계', '에스프레소추출', '에스프레소추출', '뜨거운물준비', '에스프레소추출', '에스프레소추출', '에스프레소추출', '에스프레소추출', '에스프레소추출', '에스프레소추출', '물끓이기', '물끓이기', '우유데우기', '에스프레소추출', '얼음준비', '얼음준비', '레몬즙준비', '자몽즙준비', '탄산수준비', '크림치즈준비', '초콜릿녹이기', '계란거품내기', '버터준비', '반죽준비', '오븐예열', '얼음갈기', '얼음갈기', '얼음갈기', '아몬드가루체치기', '버터크림화'],
+                ['2단계', '뜨거운물추가', '바로서빙', '에스프레소추가', '우유스티밍', '우유스티밍', '우유소량추가', '바닐라시럽추가', '카라멜시럽추가', '헤이즐넛시럽추가', '티백우리기', '허브티우리기', '녹차파우더섞기', '얼음과블렌딩', '초콜릿시럽추가', '딸기시럽추가', '설탕녹이기', '설탕녹이기', '잔에붓기', '설탕크림화', '계란추가', '설탕추가', '발효시키기', '반죽하기', '반죽하기', '토핑준비', '망고준비', '인절미준비', '설탕추가', '설탕추가'],
+                ['3단계', '서빙', '완성', '서빙', '라떼아트', '풍부한거품', '서빙', '우유스티밍', '우유스티밍', '우유스티밍', '꿀추가', '완성', '라떼아트', '휘핑크림토핑', '블렌딩', '블렌딩', '탄산수추가', '탄산수추가', '완성', '오븐굽기', '밀가루추가', '밀가루추가', '성형하기', '성형하기', '굽기', '팥올리기', '망고올리기', '인절미올리기', '계란추가', '밀가루추가'],
+                ['4단계', '완성', '', '완성', '서빙', '서빙', '완성', '라떼아트', '카라멜드리즐', '서빙', '서빙', '', '서빙', '서빙', '휘핑크림토핑', '휘핑크림토핑', '레몬장식', '자몽장식', '', '냉장보관', '굽기', '굽기', '굽기', '굽기', '완성', '연유뿌리기', '휘핑크림토핑', '견과류토핑', '굽기', '굽기'],
+                ['5단계', '', '', '', '완성', '완성', '', '서빙', '서빙', '완성', '완성', '', '완성', '완성', '서빙', '서빙', '서빙', '서빙', '', '완성', '완성', '완성', '완성', '완성', '', '완성', '완성', '완성', '완성', '완성']
+            ],
+            cookingInfo: [
+                ['제조시간', '2분', '1분', '2분', '3분', '4분', '2분', '4분', '5분', '4분', '3분', '4분', '4분', '3분', '4분', '4분', '3분', '3분', '1분', '60분', '45분', '40분', '120분', '30분', '25분', '5분', '6분', '6분', '90분', '35분'],
+                ['난이도', '초급', '초급', '초급', '중급', '중급', '초급', '중급', '중급', '중급', '초급', '초급', '중급', '중급', '중급', '중급', '초급', '초급', '초급', '고급', '중급', '중급', '고급', '중급', '중급', '초급', '초급', '초급', '고급', '중급'],
+                ['칼로리', '5kcal', '10kcal', '5kcal', '120kcal', '80kcal', '25kcal', '140kcal', '160kcal', '150kcal', '2kcal', '2kcal', '90kcal', '150kcal', '200kcal', '180kcal', '80kcal', '60kcal', '100kcal', '350kcal', '400kcal', '320kcal', '280kcal', '250kcal', '220kcal', '280kcal', '320kcal', '300kcal', '120kcal', '180kcal'],
+                ['용량', '250ml', '30ml', '200ml', '300ml', '200ml', '80ml', '300ml', '350ml', '300ml', '200ml', '200ml', '250ml', '400ml', '400ml', '400ml', '300ml', '300ml', '250ml', '1조각', '1조각', '1조각', '1개', '1개', '1개', '1인분', '1인분', '1인분', '2개', '3개'],
+                ['보관방법', '즉시음용', '즉시음용', '즉시음용', '즉시음용', '즉시음용', '즉시음용', '즉시음용', '즉시음용', '즉시음용', '30분내', '30분내', '즉시음용', '즉시음용', '즉시음용', '즉시음용', '즉시음용', '즉시음용', '즉시음용', '냉장3일', '냉장2일', '냉장2일', '상온1일', '냉장2일', '상온2일', '즉시섭취', '즉시섭취', '즉시섭취', '냉장5일', '상온3일']
+            ],
+            taste: [
+                ['주요맛', '쓴맛', '진한쓴맛', '쓴맛', '고소함', '부드러움', '진함', '달콤함', '달콤함', '고소함', '향긋함', '허브향', '고소달콤', '시원함', '달콤함', '상큼함', '상큼함', '쌉쌀함', '시원함', '진한단맛', '진한단맛', '부드러움', '바삭함', '쫄깃함', '달콤함', '달콤함', '상큼달콤', '고소달콤', '달콤함', '바삭달콤'],
+                ['단맛정도', '0단계', '0단계', '0단계', '1단계', '1단계', '0단계', '3단계', '4단계', '2단계', '1단계', '0단계', '2단계', '2단계', '4단계', '3단계', '3단계', '1단계', '0단계', '5단계', '5단계', '4단계', '2단계', '1단계', '3단계', '4단계', '4단계', '3단계', '4단계', '4단계'],
+                ['특징', '깔끔함', '진한농축', '크레마보존', '라떼아트', '풍부한거품', '층분리', '바닐라향', '카라멜향', '견과류향', '베르가못향', '다양한허브', '차향과우유', '시원한커피', '진한초콜릿', '상큼한딸기', '비타민C', '상큼쌉쌀', '청량감', '진한치즈', '진한초콜릿', '부드러운크림', '겉바속촉', '쫄깃한식감', '폭신함', '전통팥맛', '열대과일', '한국전통', '프랑스전통', '바삭함'],
+                ['추천상황', '아침', '졸릴때', '아침', '브런치', '오후', '오후', '디저트타임', '특별한날', '오후', '휴식시간', '잠들기전', '오후', '더운날', '더운날', '더운날', '갈증날때', '더운날', '갈증날때', '축하날', '생일', '기념일', '아침', '아침', '간식', '여름', '여름', '여름', '선물용', '간식']
+            ],
+            nutrition: [
+                ['단백질(g)', '0.5', '1', '0.5', '6', '4', '1', '6', '6', '6', '0', '0', '4', '2', '3', '3', '0', '0', '0', '8', '6', '5', '6', '8', '4', '4', '2', '5', '3', '3'],
+                ['탄수화물(g)', '1', '2', '1', '12', '8', '2', '18', '22', '16', '0', '0', '15', '20', '35', '30', '20', '15', '25', '25', '45', '35', '30', '25', '28', '50', '60', '45', '15', '25'],
+                ['지방(g)', '0', '0', '0', '5', '3', '0.5', '5', '6', '5', '0', '0', '3', '3', '8', '6', '0', '0', '0', '25', '20', '18', '15', '2', '8', '2', '1', '3', '5', '8'],
+                ['나트륨(mg)', '2', '3', '2', '50', '40', '10', '55', '60', '55', '1', '1', '30', '30', '40', '35', '5', '8', '15', '200', '180', '150', '300', '250', '180', '20', '15', '25', '80', '120'],
+                ['당분(g)', '0', '0', '0', '8', '6', '1', '15', '18', '12', '0', '0', '10', '15', '30', '25', '18', '12', '20', '20', '35', '25', '8', '3', '15', '35', '45', '30', '12', '18'],
+                ['카페인(mg)', '126', '63', '126', '63', '63', '63', '63', '63', '63', '0', '0', '0', '63', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0']
+            ],
+            tips: [
+                ['서빙팁', '뜨거울때', '즉시서빙', '뜨거울때', '라떼아트', '거품풍성하게', '층분리보이게', '뜨거울때', '카라멜드리즐', '뜨거울때', '적당온도', '따뜻하게', '따뜻하게', '차갑게', '차갑게', '차갑게', '얼음넣고', '얼음넣고', '차갑게', '상온에서', '상온에서', '상온에서', '따뜻하게', '따뜻하게', '따뜻하게', '바로서빙', '바로서빙', '바로서빙', '상온에서', '상온에서'],
+                ['보관팁', '즉시음용', '즉시음용', '즉시음용', '즉시음용', '즉시음용', '즉시음용', '즉시음용', '즉시음용', '즉시음용', '30분내음용', '30분내음용', '즉시음용', '즉시음용', '즉시음용', '즉시음용', '즉시음용', '즉시음용', '즉시음용', '냉장보관', '냉장보관', '냉장보관', '밀폐용기', '냉장보관', '밀폐용기', '즉시섭취', '즉시섭취', '즉시섭취', '냉장밀폐', '밀폐용기'],
+                ['제조팁', '크레마유지', '압력일정', '크레마보존', '우유온도65도', '거품풍성하게', '우유소량만', '시럽먼저', '시럽먼저', '시럽먼저', '우리는시간3분', '블렌드비율', '파우더잘섞기', '얼음충분히', '시럽충분히', '딸기신선하게', '레몬신선하게', '자몽껍질제거', '탄산뺄지않게', '오븐온도정확', '초콜릿완전녹이기', '계란충분거품', '버터실온', '발효충분히', '오븐예열필수', '얼음곱게갈기', '망고잘익은것', '인절미부드럽게', '마카로나주', '반죽과하지말기']
+            ]
+        };
+
+        // 테이블 생성 함수
+        function createTable(tableId, data) {
+            const table = document.getElementById(tableId);
+            const tbody = table.querySelector('tbody');
+            
+            data.forEach(row => {
+                const tr = document.createElement('tr');
+                row.forEach((cell, index) => {
+                    const td = document.createElement('td');
+                    td.textContent = cell;
+                    if (index === 0) {
+                        td.className = 'first-col';
+                    }
+                    tr.appendChild(td);
+                });
+                tbody.appendChild(tr);
+            });
+        }
+
+        // 모든 테이블 생성
+        createTable('ingredientsTable', cafeData.ingredients);
+        createTable('sauceTable', cafeData.sauces);
+        createTable('baseTable', cafeData.bases);
+        createTable('processTable', cafeData.process);
+        createTable('cookingInfoTable', cafeData.cookingInfo);
+        createTable('tasteTable', cafeData.taste);
+        createTable('nutritionTable', cafeData.nutrition);
+        createTable('tipsTable', cafeData.tips);
+
+        // 엑셀 다운로드 함수
+        function downloadExcel() {
+            const wb = XLSX.utils.book_new();
+            
+            // 헤더 설정
+            const headers = ['항목', '아메리카노', '에스프레소', '롱블랙', '카페라떼', '카푸치노', '마끼아또', '바닐라라떼', '카라멜마끼아또', '헤이즐넛', '얼그레이', '허브티', '녹차라떼', '카페프라페', '초콜릿프라페', '딸기프라페', '레몬에이드', '자몽에이드', '탄산음료', '치즈케이크', '초콜릿케이크', '생크림케이크', '크루아상', '베이글', '머핀', '팥빙수', '망고빙수', '인절미빙수', '마카롱', '쿠키'];
+            
+            // 각 시트 생성
+            const sheets = [
+                { name: '주요재료', data: cafeData.ingredients },
+                { name: '시럽소스', data: cafeData.sauces },
+                { name: '베이스', data: cafeData.bases },
+                { name: '제조순서', data: cafeData.process },
+                { name: '제조정보', data: cafeData.cookingInfo },
+                { name: '특징맛', data: cafeData.taste },
+                { name: '영양정보', data: cafeData.nutrition },
+                { name: '서빙제조팁', data: cafeData.tips }
+            ];
+            
+            sheets.forEach(sheet => {
+                const wsData = [headers, ...sheet.data];
+                const ws = XLSX.utils.aoa_to_sheet(wsData);
+                
+                // 컬럼 너비 설정
+                const colWidths = [{ width: 15 }];
+                for (let i = 1; i < headers.length; i++) {
+                    colWidths.push({ width: 10 });
+                }
+                ws['!cols'] = colWidths;
+                
+                XLSX.utils.book_append_sheet(wb, ws, sheet.name);
+            });
+            
+            // 파일 다운로드
+            XLSX.writeFile(wb, '카페_상세레시피_29개메뉴.xlsx');
+        }
+    </script>
+</body>
+</html>

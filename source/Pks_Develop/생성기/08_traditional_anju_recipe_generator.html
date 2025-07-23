@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>한식 전통안주 상세 레시피 엑셀 생성기 (전체 12개 메뉴)</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #8B0000 0%, #DC143C 50%, #B22222 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #8B0000;
+            margin-bottom: 30px;
+            font-size: 2.5rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .menu-info {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border-left: 5px solid #8B0000;
+        }
+        
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        
+        .menu-card {
+            background: white;
+            padding: 18px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border: 1px solid #e0e0e0;
+            transition: transform 0.3s ease;
+        }
+        
+        .menu-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+        }
+        
+        .menu-card h3 {
+            color: #333;
+            margin: 0 0 12px 0;
+            font-size: 1.2rem;
+            border-bottom: 2px solid #8B0000;
+            padding-bottom: 6px;
+        }
+        
+        .menu-card p {
+            margin: 6px 0;
+            font-size: 0.95rem;
+            line-height: 1.4;
+        }
+        
+        .category-전류 { border-left: 4px solid #FF6347; }
+        .category-무침류 { border-left: 4px solid #FF4500; }
+        .category-내장류 { border-left: 4px solid #DC143C; }
+        .category-마른안주 { border-left: 4px solid #8B4513; }
+        
+        .recipe-section {
+            margin-bottom: 30px;
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        
+        .recipe-section h2 {
+            color: #8B0000;
+            border-bottom: 3px solid #8B0000;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .table-container {
+            overflow-x: auto;
+            margin-top: 15px;
+        }
+        
+        table {
+            width: 100%;
+            min-width: 1300px;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            font-size: 0.8rem;
+        }
+        
+        th, td {
+            padding: 8px;
+            text-align: center;
+            border: 1px solid #ddd;
+        }
+        
+        th {
+            background: linear-gradient(135deg, #8B0000 0%, #DC143C 100%);
+            color: white;
+            font-weight: bold;
+            font-size: 0.75rem;
+        }
+        
+        tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        
+        tr:hover {
+            background-color: #ffe4e1;
+        }
+        
+        .download-btn {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            display: block;
+            margin: 30px auto;
+            box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+            transition: all 0.3s ease;
+        }
+        
+        .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
+        }
+        
+        .description {
+            background: #ffe4e1;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #DC143C;
+        }
+        
+        .first-col {
+            background-color: #f1f3f4 !important;
+            font-weight: bold;
+            color: #333;
+            text-align: left !important;
+            padding-left: 10px !important;
+        }
+        
+        .menu-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .category-summary {
+            background: white;
+            padding: 18px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        
+        .category-summary h3 {
+            margin: 0 0 12px 0;
+            color: #8B0000;
+            font-size: 1.1rem;
+        }
+        
+        .category-summary .count {
+            font-size: 2.2rem;
+            font-weight: bold;
+            color: #DC143C;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .anju-highlight {
+            background: linear-gradient(45deg, #8B0000, #DC143C);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: bold;
+        }
+
+        .alcohol-badge {
+            display: inline-block;
+            background: #8B0000;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            margin: 2px;
+        }
+
+        .spicy-badge {
+            background: #FF4500;
+        }
+
+        .savory-badge {
+            background: #8B4513;
+        }
+
+        .fresh-badge {
+            background: #4682B4;
+        }
+
+        .feature-list {
+            list-style: none;
+            padding: 0;
+            margin: 10px 0;
+        }
+
+        .feature-list li {
+            padding: 4px 0;
+            border-bottom: 1px solid #eee;
+            font-size: 0.85rem;
+        }
+
+        .feature-list li:last-child {
+            border-bottom: none;
+        }
+
+        .icon {
+            margin-right: 6px;
+        }
+
+        .alcohol-pairing {
+            background: #f5f5f5;
+            padding: 8px;
+            border-radius: 5px;
+            margin-top: 8px;
+            font-size: 0.8rem;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🍻 한식 전통안주 상세 레시피 엑셀 생성기 (전체 12개 메뉴)</h1>
+        
+        <div class="description">
+            <p><strong>마라사천 레시피 파일과 동일한 8개 시트 구조로 모든 전통안주 메뉴들의 상세 레시피를 생성합니다.</strong></p>
+            <p>총 12개 개별 전통안주 메뉴: <span class="anju-highlight">전류 3개, 무침류 3개, 내장류 3개, 마른안주 3개</span></p>
+        </div>
+
+        <div class="menu-summary">
+            <div class="category-summary">
+                <h3>🥞 전류</h3>
+                <div class="count">3</div>
+                <p>바삭한 부침요리</p>
+            </div>
+            <div class="category-summary">
+                <h3>🦑 무침류</h3>
+                <div class="count">3</div>
+                <p>매콤한 해산물 무침</p>
+            </div>
+            <div class="category-summary">
+                <h3>🥩 내장류</h3>
+                <div class="count">3</div>
+                <p>고소한 내장 요리</p>
+            </div>
+            <div class="category-summary">
+                <h3>🍥 마른안주</h3>
+                <div class="count">3</div>
+                <p>오래 먹는 마른 안주</p>
+            </div>
+        </div>
+
+        <div class="menu-info">
+            <h2>📋 전체 전통안주 메뉴 정보</h2>
+            <div class="menu-grid">
+                <div class="menu-card category-전류">
+                    <h3>🧅 파전</h3>
+                    <p><strong>분류:</strong> 전류</p>
+                    <span class="alcohol-badge fresh-badge">시원한맛</span>
+                    <span class="alcohol-badge savory-badge">고소함</span>
+                    <ul class="feature-list">
+                        <li><span class="icon">🧅</span>파와 밀가루 반죽</li>
+                        <li><span class="icon">🥚</span>계란으로 바인딩</li>
+                        <li><span class="icon">🔥</span>기름에 바삭하게</li>
+                    </ul>
+                    <div class="alcohol-pairing">🍻 막걸리, 소주와 궁합</div>
+                </div>
+                
+                <div class="menu-card category-전류">
+                    <h3>🥬 김치전</h3>
+                    <p><strong>분류:</strong> 전류</p>
+                    <span class="alcohol-badge spicy-badge">매콤함</span>
+                    <span class="alcohol-badge savory-badge">감칠맛</span>
+                    <ul class="feature-list">
+                        <li><span class="icon">🥬</span>신 김치 사용</li>
+                        <li><span class="icon">🌶️</span>매콤한 맛</li>
+                        <li><span class="icon">🔥</span>바삭한 식감</li>
+                    </ul>
+                    <div class="alcohol-pairing">🍻 막걸리, 맥주와 궁합</div>
+                </div>
+                
+                <div class="menu-card category-전류">
+                    <h3>🦐 해물전</h3>
+                    <p><strong>분류:</strong> 전류</p>
+                    <span class="alcohol-badge fresh-badge">바다향</span>
+                    <span class="alcohol-badge savory-badge">고급스러운</span>
+                    <ul class="feature-list">
+                        <li><span class="icon">🦐</span>새우, 오징어</li>
+                        <li><span class="icon">🧄</span>마늘, 대파</li>
+                        <li><span class="icon">🔥</span>겉바속촉</li>
+                    </ul>
+                    <div class="alcohol-pairing">🍶 소주, 청주와 궁합</div>
+                </div>
+                
+                <div class="menu-card category-무침류">
+                    <h3>🐚 골뱅이무침</h3>
+                    <p><strong>분류:</strong> 무침류</p>
+                    <span class="alcohol-badge spicy-badge">매콤함</span>
+                    <span class="alcohol-badge fresh-badge">쫄깃함</span>
+                    <ul class="feature-list">
+                        <li><span class="icon">🐚</span>골뱅이살</li>
+                        <li><span class="icon">🥒</span>오이, 당면</li>
+                        <li><span class="icon">🌶️</span>고추장 양념</li>
+                    </ul>
+                    <div class="alcohol-pairing">🍻 맥주, 소주와 궁합</div>
+                </div>
+                
+                <div class="menu-card category-무침류">
+                    <h3>🦑 오징어무침</h3>
+                    <p><strong>분류:</strong> 무침류</p>
+                    <span class="alcohol-badge spicy-badge">매콤함</span>
+                    <span class="alcohol-badge fresh-badge">쫄깃함</span>
+                    <ul class="feature-list">
+                        <li><span class="icon">🦑</span>오징어살</li>
+                        <li><span class="icon">🥕</span>채소</li>
+                        <li><span class="icon">🌶️</span>고춧가루 양념</li>
+                    </ul>
+                    <div class="alcohol-pairing">🍻 맥주와 최고 궁합</div>
+                </div>
+                
+                <div class="menu-card category-무침류">
+                    <h3>🌊 멍게무침</h3>
+                    <p><strong>분류:</strong> 무침류</p>
+                    <span class="alcohol-badge fresh-badge">바다향</span>
+                    <span class="alcohol-badge spicy-badge">시원함</span>
+                    <ul class="feature-list">
+                        <li><span class="icon">🌊</span>신선한 멍게</li>
+                        <li><span class="icon">🥒</span>오이</li>
+                        <li><span class="icon">🍶</span>초고추장</li>
+                    </ul>
+                    <div class="alcohol-pairing">🍶 소주와 환상 궁합</div>
+                </div>
+                
+                <div class="menu-card category-내장류">
+                    <h3>🍖 곱창</h3>
+                    <p><strong>분류:</strong> 내장류</p>
+                    <span class="alcohol-badge savory-badge">고소함</span>
+                    <span class="alcohol-badge spicy-badge">쫄깃함</span>
+                    <ul class="feature-list">
+                        <li><span class="icon">🍖</span>소 곱창</li>
+                        <li><span class="icon">🧄</span>마늘, 양파</li>
+                        <li><span class="icon">🔥</span>구워서 고소함</li>
+                    </ul>
+                    <div class="alcohol-pairing">🍻 맥주, 소주와 궁합</div>
+                </div>
+                
+                <div class="menu-card category-내장류">
+                    <h3>🥩 막창</h3>
+                    <p><strong>분류:</strong> 내장류</p>
+                    <span class="alcohol-badge savory-badge">진한맛</span>
+                    <span class="alcohol-badge spicy-badge">쫄깃함</span>
+                    <ul class="feature-list">
+                        <li><span class="icon">🥩</span>돼지 막창</li>
+                        <li><span class="icon">🧂</span>소금, 후추</li>
+                        <li><span class="icon">🔥</span>불에 구워</li>
+                    </ul>
+                    <div class="alcohol-pairing">🍻 맥주와 최고</div>
+                </div>
+                
+                <div class="menu-card category-내장류">
+                    <h3>🌭 순대</h3>
+                    <p><strong>분류:</strong> 내장류</p>
+                    <span class="alcohol-badge savory-badge">부드러움</span>
+                    <span class="alcohol-badge fresh-badge">담백함</span>
+                    <ul class="feature-list">
+                        <li><span class="icon">🌭</span>돼지 순대</li>
+                        <li><span class="icon">🧂</span>새우젓</li>
+                        <li><span class="icon">🥗</span>상추 쌈</li>
+                    </ul>
+                    <div class="alcohol-pairing">🍶 소주, 막걸리와 궁합</div>
+                </div>
+                
+                <div class="menu-card category-마른안주">
+                    <h3>🦑 마른오징어</h3>
+                    <p><strong>분류:</strong> 마른안주</p>
+                    <span class="alcohol-badge savory-badge">쫄깃함</span>
+                    <span class="alcohol-badge fresh-badge">바다향</span>
+                    <ul class="feature-list">
+                        <li><span class="icon">🦑</span>건조 오징어</li>
+                        <li><span class="icon">🌶️</span>고추장</li>
+                        <li><span class="icon">🍯</span>마요네즈</li>
+                    </ul>
+                    <div class="alcohol-pairing">🍻 맥주와 완벽</div>
+                </div>
+                
+                <div class="menu-card category-마른안주">
+                    <h3>🥩 육포</h3>
+                    <p><strong>분류:</strong> 마른안주</p>
+                    <span class="alcohol-badge savory-badge">고소함</span>
+                    <span class="alcohol-badge spicy-badge">쫄깃함</span>
+                    <ul class="feature-list">
+                        <li><span class="icon">🥩</span>소고기 건조</li>
+                        <li><span class="icon">🧂</span>간장 양념</li>
+                        <li><span class="icon">🍯</span>달콤함</li>
+                    </ul>
+                    <div class="alcohol-pairing">🍶 소주, 위스키와 궁합</div>
+                </div>
+                
+                <div class="menu-card category-마른안주">
+                    <h3>🥜 땅콩</h3>
+                    <p><strong>분류:</strong> 마른안주</p>
+                    <span class="alcohol-badge savory-badge">고소함</span>
+                    <span class="alcohol-badge fresh-badge">바삭함</span>
+                    <ul class="feature-list">
+                        <li><span class="icon">🥜</span>볶은 땅콩</li>
+                        <li><span class="icon">🧂</span>소금 간</li>
+                        <li><span class="icon">🌶️</span>마른고추</li>
+                    </ul>
+                    <div class="alcohol-pairing">🍻 맥주, 막걸리와 궁합</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="recipe-section">
+            <h2>🧄 주요식재료</h2>
+            <div class="table-container">
+                <table id="ingredientsTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 100px;">식재료</th>
+                            <th>파전</th>
+                            <th>김치전</th>
+                            <th>해물전</th>
+                            <th>골뱅이무침</th>
+                            <th>오징어무침</th>
+                            <th>멍게무침</th>
+                            <th>곱창</th>
+                            <th>막창</th>
+                            <th>순대</th>
+                            <th>마른오징어</th>
+                            <th>육포</th>
+                            <th>땅콩</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="recipe-section">
+            <h2>🧂 양념소스</h2>
+            <div class="table-container">
+                <table id="sauceTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 100px;">양념/소스</th>
+                            <th>파전</th>
+                            <th>김치전</th>
+                            <th>해물전</th>
+                            <th>골뱅이무침</th>
+                            <th>오징어무침</th>
+                            <th>멍게무침</th>
+                            <th>곱창</th>
+                            <th>막창</th>
+                            <th>순대</th>
+                            <th>마른오징어</th>
+                            <th>육포</th>
+                            <th>땅콩</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="recipe-section">
+            <h2>🍻 안주베이스</h2>
+            <div class="table-container">
+                <table id="baseTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 100px;">안주/베이스</th>
+                            <th>파전</th>
+                            <th>김치전</th>
+                            <th>해물전</th>
+                            <th>골뱅이무침</th>
+                            <th>오징어무침</th>
+                            <th>멍게무침</th>
+                            <th>곱창</th>
+                            <th>막창</th>
+                            <th>순대</th>
+                            <th>마른오징어</th>
+                            <th>육포</th>
+                            <th>땅콩</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="recipe-section">
+            <h2>👨‍🍳 조리순서</h2>
+            <div class="table-container">
+                <table id="processTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 100px;">조리순서</th>
+                            <th>파전</th>
+                            <th>김치전</th>
+                            <th>해물전</th>
+                            <th>골뱅이무침</th>
+                            <th>오징어무침</th>
+                            <th>멍게무침</th>
+                            <th>곱창</th>
+                            <th>막창</th>
+                            <th>순대</th>
+                            <th>마른오징어</th>
+                            <th>육포</th>
+                            <th>땅콩</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="recipe-section">
+            <h2>ℹ️ 조리정보</h2>
+            <div class="table-container">
+                <table id="cookingInfoTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 100px;">조리정보</th>
+                            <th>파전</th>
+                            <th>김치전</th>
+                            <th>해물전</th>
+                            <th>골뱅이무침</th>
+                            <th>오징어무침</th>
+                            <th>멍게무침</th>
+                            <th>곱창</th>
+                            <th>막창</th>
+                            <th>순대</th>
+                            <th>마른오징어</th>
+                            <th>육포</th>
+                            <th>땅콩</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="recipe-section">
+            <h2>😋 특징맛</h2>
+            <div class="table-container">
+                <table id="tasteTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 100px;">특징/맛</th>
+                            <th>파전</th>
+                            <th>김치전</th>
+                            <th>해물전</th>
+                            <th>골뱅이무침</th>
+                            <th>오징어무침</th>
+                            <th>멍게무침</th>
+                            <th>곱창</th>
+                            <th>막창</th>
+                            <th>순대</th>
+                            <th>마른오징어</th>
+                            <th>육포</th>
+                            <th>땅콩</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="recipe-section">
+            <h2>📊 영양정보</h2>
+            <div class="table-container">
+                <table id="nutritionTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 100px;">영양정보</th>
+                            <th>파전</th>
+                            <th>김치전</th>
+                            <th>해물전</th>
+                            <th>골뱅이무침</th>
+                            <th>오징어무침</th>
+                            <th>멍게무침</th>
+                            <th>곱창</th>
+                            <th>막창</th>
+                            <th>순대</th>
+                            <th>마른오징어</th>
+                            <th>육포</th>
+                            <th>땅콩</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="recipe-section">
+            <h2>💡 안주조리팁</h2>
+            <div class="table-container">
+                <table id="tipsTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 100px;">안주/조리팁</th>
+                            <th>파전</th>
+                            <th>김치전</th>
+                            <th>해물전</th>
+                            <th>골뱅이무침</th>
+                            <th>오징어무침</th>
+                            <th>멍게무침</th>
+                            <th>곱창</th>
+                            <th>막창</th>
+                            <th>순대</th>
+                            <th>마른오징어</th>
+                            <th>육포</th>
+                            <th>땅콩</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <button class="download-btn" onclick="downloadExcel()">📥 전통안주 레시피 엑셀 파일 다운로드 (12개 메뉴)</button>
+    </div>
+
+    <script>
+        // 12개 전통안주 메뉴 레시피 데이터
+        const anjuData = {
+            ingredients: [
+                ['밀가루', '200g', '150g', '200g', '-', '-', '-', '-', '-', '-', '-', '-', '-'],
+                ['대파', '3대', '-', '2대', '1대', '-', '-', '2대', '1대', '-', '-', '-', '-'],
+                ['파', '5대', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-'],
+                ['김치', '-', '200g', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-'],
+                ['새우', '-', '-', '200g', '-', '-', '-', '-', '-', '-', '-', '-', '-'],
+                ['오징어', '-', '-', '150g', '-', '200g', '-', '-', '-', '-', '1마리', '-', '-'],
+                ['골뱅이', '-', '-', '-', '200g', '-', '-', '-', '-', '-', '-', '-', '-'],
+                ['멍게', '-', '-', '-', '-', '-', '200g', '-', '-', '-', '-', '-', '-'],
+                ['곱창', '-', '-', '-', '-', '-', '-', '500g', '-', '-', '-', '-', '-'],
+                ['막창', '-', '-', '-', '-', '-', '-', '-', '500g', '-', '-', '-', '-'],
+                ['순대', '-', '-', '-', '-', '-', '-', '-', '-', '400g', '-', '-', '-'],
+                ['소고기', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '300g', '-'],
+                ['땅콩', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '200g'],
+                ['당면', '-', '-', '-', '100g', '50g', '-', '-', '-', '-', '-', '-', '-'],
+                ['오이', '-', '-', '-', '1개', '1개', '1개', '-', '-', '-', '-', '-', '-'],
+                ['양파', '-', '-', '1개', '1/2개', '1/2개', '-', '1개', '1개', '-', '-', '-', '-'],
+                ['당근', '-', '-', '-', '1/2개', '1/2개', '-', '-', '-', '-', '-', '-', '-'],
+                ['마늘', '3쪽', '2쪽', '4쪽', '3쪽', '3쪽', '2쪽', '5쪽', '5쪽', '-', '2쪽', '3쪽', '2쪽'],
+                ['생강', '-', '-', '1쪽', '-', '-', '-', '1쪽', '1쪽', '-', '-', '1쪽', '-'],
+                ['계란', '2개', '1개', '2개', '-', '-', '-', '-', '-', '-', '-', '-', '-'],
+                ['물', '250ml', '200ml', '250ml', '-', '-', '-', '-', '-', '-', '-', '-', '-'],
+                ['마른고추', '-', '-', '-', '-', '-', '-', '-', '-', '-', '2개', '-', '3개']
+            ],
+            sauces: [
+                ['간장', '2tbsp', '1tbsp', '2tbsp', '1tbsp', '1tbsp', '1tbsp', '2tbsp', '2tbsp', '-', '1tbsp', '3tbsp', '-'],
+                ['고추장', '-', '-', '-', '2tbsp', '2tbsp', '1tbsp', '1tbsp', '1tbsp', '-', '1tbsp', '-', '-'],
+                ['고춧가루', '-', '-', '-', '1tbsp', '1tbsp', '1tbsp', '1tbsp', '1tbsp', '-', '1tbsp', '1tsp', '1tsp'],
+                ['설탕', '1tsp', '1tsp', '1tsp', '1tbsp', '1tbsp', '1tsp', '1tsp', '1tsp', '-', '1tbsp', '2tbsp', '-'],
+                ['참기름', '1tbsp', '1tbsp', '1tbsp', '1tbsp', '1tbsp', '1tbsp', '1tbsp', '1tbsp', '-', '1tsp', '1tsp', '1tsp'],
+                ['식용유', '적당량', '적당량', '적당량', '-', '-', '-', '1tbsp', '1tbsp', '-', '-', '-', '2tbsp'],
+                ['소금', '1tsp', '1/2tsp', '1tsp', '1/2tsp', '1/2tsp', '1/2tsp', '적당량', '적당량', '적당량', '1/2tsp', '1tsp', '1tsp'],
+                ['후추', '적당량', '적당량', '적당량', '-', '-', '-', '적당량', '적당량', '적당량', '-', '적당량', '-'],
+                ['식초', '-', '-', '-', '1tbsp', '1tbsp', '2tbsp', '-', '-', '-', '-', '-', '-'],
+                ['마요네즈', '-', '-', '-', '-', '-', '-', '-', '-', '-', '2tbsp', '-', '-'],
+                ['새우젓', '-', '-', '-', '-', '-', '-', '-', '-', '1tbsp', '-', '-', '-'],
+                ['깻잎', '-', '-', '-', '-', '-', '-', '-', '-', '5장', '-', '-', '-'],
+                ['쌈장', '-', '-', '-', '-', '-', '-', '-', '-', '1tbsp', '-', '-', '-'],
+                ['청주', '-', '-', '-', '-', '-', '-', '2tbsp', '2tbsp', '-', '-', '1tbsp', '-'],
+                ['미림', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '1tbsp', '-']
+            ],
+            bases: [
+                ['전류베이스', '○', '○', '○', '-', '-', '-', '-', '-', '-', '-', '-', '-'],
+                ['무침베이스', '-', '-', '-', '○', '○', '○', '-', '-', '-', '-', '-', '-'],
+                ['구이베이스', '-', '-', '-', '-', '-', '-', '○', '○', '-', '-', '-', '-'],
+                ['마른안주베이스', '-', '-', '-', '-', '-', '-', '-', '-', '-', '○', '○', '○'],
+                ['삶기베이스', '-', '-', '-', '-', '-', '-', '-', '-', '○', '-', '-', '-'],
+                ['막걸리궁합', '○', '○', '-', '-', '-', '-', '-', '-', '○', '-', '-', '○'],
+                ['맥주궁합', '○', '○', '○', '○', '○', '-', '○', '○', '-', '○', '-', '○'],
+                ['소주궁합', '○', '-', '○', '-', '-', '○', '○', '○', '○', '○', '○', '-']
+            ],
+            process: [
+                ['1단계', '파썰기', '김치송송썰기', '해물준비', '골뱅이삶기', '오징어삶기', '멍게손질', '곱창손질', '막창손질', '순대썰기', '오징어찢기', '소고기양념', '땅콩볶기'],
+                ['2단계', '반죽만들기', '반죽만들기', '반죽만들기', '당면삶기', '야채썰기', '오이썰기', '밑간하기', '밑간하기', '야채준비', '양념만들기', '재우기', '마른고추볶기'],
+                ['3단계', '파넣고섞기', '김치넣고섞기', '해물넣고섞기', '야채준비', '양념만들기', '양념만들기', '팬에굽기', '팬에굽기', '양념준비', '무치기', '말리기', '양념하기'],
+                ['4단계', '팬에부치기', '팬에부치기', '팬에부치기', '양념만들기', '무치기', '무치기', '뒤집어굽기', '뒤집어굽기', '무치기', '완성', '구우면서말리기', '완성'],
+                ['5단계', '뒤집기', '뒤집기', '뒤집기', '무치기', '완성', '완성', '완성', '완성', '완성', '', '완성', ''],
+                ['6단계', '완성', '완성', '완성', '완성', '', '', '', '', '', '', '', '']
+            ],
+            cookingInfo: [
+                ['조리시간', '20분', '18분', '25분', '30분', '20분', '15분', '40분', '35분', '10분', '15분', '24시간', '20분'],
+                ['난이도', '초급', '초급', '중급', '중급', '중급', '초급', '중급', '중급', '초급', '초급', '고급', '초급'],
+                ['칼로리(1인분)', '280kcal', '250kcal', '320kcal', '120kcal', '150kcal', '80kcal', '450kcal', '380kcal', '200kcal', '180kcal', '250kcal', '320kcal'],
+                ['인분', '2-3인분', '2-3인분', '2-3인분', '3-4인분', '2-3인분', '2인분', '3-4인분', '3-4인분', '2-3인분', '2-3인분', '4-5인분', '3-4인분'],
+                ['보관방법', '당일섭취', '당일섭취', '당일섭취', '냉장2일', '냉장2일', '당일섭취', '당일섭취', '당일섭취', '당일섭취', '상온1주일', '상온2주일', '상온1개월'],
+                ['술안주궁합', '막걸리', '막걸리', '소주', '맥주', '맥주', '소주', '맥주', '맥주', '소주', '맥주', '소주', '막걸리']
+            ],
+            taste: [
+                ['주요맛', '고소바삭', '매콤바삭', '고소담백', '매콤쫄깃', '매콤쫄깃', '시원달콤', '고소쫄깃', '고소진한', '부드러운', '쫄깃바삭', '달콤짭짤', '고소바삭'],
+                ['매운정도', '0단계', '2단계', '0단계', '2단계', '2단계', '1단계', '1단계', '1단계', '0단계', '1단계', '0단계', '1단계'],
+                ['특징', '파향가득', '김치발효맛', '바다향풍부', '쫄깃한식감', '탱탱한식감', '바다의단맛', '기름기와고소함', '진한육향', '부드러운식감', '오징어고유맛', '육류진한맛', '견과류고소함'],
+                ['안주효과', '기름기해소', '입맛돋움', '해장효과', '씹는재미', '씹는재미', '입가심', '기름기좋음', '기름기좋음', '속편안', '오래씹기', '오래씹기', '고소함'],
+                ['추천상황', '비오는날', '김치좋아할때', '회식자리', '맥주마실때', '오징어좋아할때', '소주한잔', '삼겹살과함께', '막창좋아할때', '간단안주', '맥주안주', '위스키안주', '맥주땅콩']
+            ],
+            nutrition: [
+                ['단백질(g)', '12', '10', '18', '15', '20', '12', '25', '22', '10', '18', '28', '12'],
+                ['탄수화물(g)', '35', '30', '32', '15', '12', '8', '5', '8', '15', '8', '10', '15'],
+                ['지방(g)', '12', '10', '15', '3', '5', '2', '30', '25', '8', '8', '12', '25'],
+                ['나트륨(mg)', '800', '1200', '900', '1500', '1400', '800', '1200', '1300', '600', '2000', '2500', '400'],
+                ['식이섬유(g)', '3', '4', '2', '3', '2', '1', '0', '0', '2', '1', '1', '3'],
+                ['비타민C(mg)', '15', '20', '10', '8', '12', '15', '0', '0', '5', '0', '0', '0'],
+                ['칼슘(mg)', '50', '80', '120', '60', '80', '40', '30', '35', '25', '100', '20', '60'],
+                ['철분(mg)', '2', '3', '4', '8', '6', '3', '3', '4', '2', '2', '4', '2'],
+                ['타우린(mg)', '0', '0', '200', '150', '300', '100', '50', '80', '20', '250', '30', '0'],
+                ['콜레스테롤(mg)', '120', '100', '180', '80', '150', '60', '200', '180', '120', '120', '80', '0']
+            ],
+            tips: [
+                ['안주팁', '막걸리와최고', '비오는날최고', '바다향가득', '맥주한잔', '쫄깃함최고', '소주안주완벽', '기름기안주', '고소한맛', '순대국밥재료', '오래씹어야', '육류단백질', '견과류영양'],
+                ['조리팁', '반죽농도중요', '김치물기제거', '해물신선해야', '삶기시간중요', '오징어질기지않게', '멍게신선도중요', '잡내제거필수', '기름기빼주기', '두툼하게썰기', '찢어서양념', '24시간숙성', '약불에천천히'],
+                ['보관팁', '당일드세요', '당일드세요', '당일드세요', '냉장밀폐보관', '냉장밀폐보관', '당일드세요', '당일드세요', '당일드세요', '당일드세요', '밀폐용기상온', '냉장또는상온', '밀폐용기상온'],
+                ['술궁합팁', '막걸리기름기해소', '막걸리발효궁합', '소주깔끔함', '맥주시원함', '맥주시원함', '소주바다향', '맥주기름기', '맥주기름기', '소주부드러움', '맥주씹는재미', '소주진한맛', '막걸리고소함'],
+                ['건강팁', '파비타민풍부', '김치유산균', '해산물타우린', '골뱅이타우린', '오징어타우린', '멍게비타민', '곱창철분풍부', '막창단백질', '순대철분', '오징어타우린', '소고기단백질', '땅콩비타민E']
+            ]
+        };
+
+        // 테이블 생성 함수
+        function createTable(tableId, data) {
+            const table = document.getElementById(tableId);
+            const tbody = table.querySelector('tbody');
+            
+            data.forEach(row => {
+                const tr = document.createElement('tr');
+                row.forEach((cell, index) => {
+                    const td = document.createElement('td');
+                    td.textContent = cell;
+                    if (index === 0) {
+                        td.className = 'first-col';
+                    }
+                    tr.appendChild(td);
+                });
+                tbody.appendChild(tr);
+            });
+        }
+
+        // 모든 테이블 생성
+        createTable('ingredientsTable', anjuData.ingredients);
+        createTable('sauceTable', anjuData.sauces);
+        createTable('baseTable', anjuData.bases);
+        createTable('processTable', anjuData.process);
+        createTable('cookingInfoTable', anjuData.cookingInfo);
+        createTable('tasteTable', anjuData.taste);
+        createTable('nutritionTable', anjuData.nutrition);
+        createTable('tipsTable', anjuData.tips);
+
+        // 엑셀 다운로드 함수
+        function downloadExcel() {
+            const wb = XLSX.utils.book_new();
+            
+            // 헤더 설정
+            const headers = ['항목', '파전', '김치전', '해물전', '골뱅이무침', '오징어무침', '멍게무침', '곱창', '막창', '순대', '마른오징어', '육포', '땅콩'];
+            
+            // 각 시트 생성
+            const sheets = [
+                { name: '주요식재료', data: anjuData.ingredients },
+                { name: '양념소스', data: anjuData.sauces },
+                { name: '안주베이스', data: anjuData.bases },
+                { name: '조리순서', data: anjuData.process },
+                { name: '조리정보', data: anjuData.cookingInfo },
+                { name: '특징맛', data: anjuData.taste },
+                { name: '영양정보', data: anjuData.nutrition },
+                { name: '안주조리팁', data: anjuData.tips }
+            ];
+            
+            sheets.forEach(sheet => {
+                const wsData = [headers, ...sheet.data];
+                const ws = XLSX.utils.aoa_to_sheet(wsData);
+                
+                // 컬럼 너비 설정
+                const colWidths = [{ width: 12 }];
+                for (let i = 1; i < headers.length; i++) {
+                    colWidths.push({ width: 10 });
+                }
+                ws['!cols'] = colWidths;
+                
+                XLSX.utils.book_append_sheet(wb, ws, sheet.name);
+            });
+            
+            // 파일 다운로드
+            XLSX.writeFile(wb, '한식전통안주_상세레시피_12개메뉴.xlsx');
+        }
+    </script>
+</body>
+</html>
