@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>브랜드 메뉴 상세 레시피 엑셀 생성기 (전체 12개 메뉴)</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #FF6B35 0%, #F7931E 50%, #FFD23F 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1500px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #FF6B35;
+            margin-bottom: 30px;
+            font-size: 2.5rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .menu-info {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border-left: 5px solid #FF6B35;
+        }
+        
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        
+        .menu-card {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border: 1px solid #e0e0e0;
+            transition: transform 0.3s ease;
+        }
+        
+        .menu-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+        }
+        
+        .menu-card h3 {
+            color: #333;
+            margin: 0 0 10px 0;
+            font-size: 1.1rem;
+            border-bottom: 2px solid #FF6B35;
+            padding-bottom: 5px;
+        }
+        
+        .menu-card p {
+            margin: 5px 0;
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+        
+        .category-버거 { border-left: 4px solid #FF6B35; }
+        .category-샌드위치 { border-left: 4px solid #F7931E; }
+        .category-디저트 { border-left: 4px solid #FFD23F; }
+        
+        .recipe-section {
+            margin-bottom: 30px;
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        
+        .recipe-section h2 {
+            color: #FF6B35;
+            border-bottom: 3px solid #FF6B35;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .table-container {
+            overflow-x: auto;
+            margin-top: 15px;
+        }
+        
+        table {
+            width: 100%;
+            min-width: 1400px;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            font-size: 0.75rem;
+        }
+        
+        th, td {
+            padding: 6px;
+            text-align: center;
+            border: 1px solid #ddd;
+        }
+        
+        th {
+            background: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%);
+            color: white;
+            font-weight: bold;
+            font-size: 0.7rem;
+        }
+        
+        tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        
+        tr:hover {
+            background-color: #fff8dc;
+        }
+        
+        .download-btn {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            display: block;
+            margin: 30px auto;
+            box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+            transition: all 0.3s ease;
+        }
+        
+        .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
+        }
+        
+        .description {
+            background: #fff8dc;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #FFD23F;
+        }
+        
+        .first-col {
+            background-color: #f1f3f4 !important;
+            font-weight: bold;
+            color: #333;
+            text-align: left !important;
+            padding-left: 8px !important;
+        }
+        
+        .menu-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .category-summary {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        
+        .category-summary h3 {
+            margin: 0 0 10px 0;
+            color: #FF6B35;
+            font-size: 1rem;
+        }
+        
+        .category-summary .count {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #F7931E;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .brand-highlight {
+            background: linear-gradient(45deg, #FF6B35, #F7931E);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: bold;
+        }
+
+        .brand-badge {
+            display: inline-block;
+            background: #FF6B35;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            margin: 2px;
+        }
+
+        .fast-food-badge {
+            background: #FF6B35;
+        }
+
+        .cafe-badge {
+            background: #F7931E;
+        }
+
+        .dessert-badge {
+            background: #FFD23F;
+            color: #333;
+        }
+
+        .feature-list {
+            list-style: none;
+            padding: 0;
+            margin: 8px 0;
+        }
+
+        .feature-list li {
+            padding: 3px 0;
+            font-size: 0.85rem;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .feature-list li:last-child {
+            border-bottom: none;
+        }
+
+        .icon {
+            margin-right: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🍔 브랜드 메뉴 상세 레시피 엑셀 생성기 (전체 12개 메뉴)</h1>
+        
+        <div class="description">
+            <p><strong>마라사천 레시피 파일과 동일한 8개 시트 구조로 인기 브랜드 메뉴들의 상세 레시피를 생성합니다.</strong></p>
+            <p>총 12개 브랜드 메뉴: <span class="brand-highlight">패스트푸드 4개, 샌드위치 4개, 디저트카페 4개</span></p>
+        </div>
+
+        <div class="menu-summary">
+            <div class="category-summary">
+                <h3>🍔 패스트푸드</h3>
+                <div class="count">4</div>
+                <p>햄버거 브랜드</p>
+            </div>
+            <div class="category-summary">
+                <h3>🥪 샌드위치</h3>
+                <div class="count">4</div>
+                <p>샌드위치 전문점</p>
+            </div>
+            <div class="category-summary">
+                <h3>🍰 디저트카페</h3>
+                <div class="count">4</div>
+                <p>디저트&카페</p>
+            </div>
+        </div>
+
+        <div class="menu-info">
+            <h2>📋 전체 브랜드 메뉴 정보</h2>
+            <div class="menu-grid">
+                <div class="menu-card category-버거">
+                    <h3>🍔 햄버거</h3>
+                    <span class="brand-badge fast-food-badge">클래식</span>
+                    <ul class="feature-list">
+                        <li><span class="icon">🥩</span>비프 패티</li>
+                        <li><span class="icon">🧅</span>양파, 피클</li>
+                        <li><span class="icon">🍅</span>토마토, 상추</li>
+                    </ul>
+                </div>
+                
+                <div class="menu-card category-버거">
+                    <h3>👑 버거킹</h3>
+                    <span class="brand-badge fast-food-badge">플레임그릴</span>
+                    <ul class="feature-list">
+                        <li><span class="icon">🔥</span>화염 그릴</li>
+                        <li><span class="icon">🍖</span>두꺼운 패티</li>
+                        <li><span class="icon">🥒</span>신선한 야채</li>
+                    </ul>
+                </div>
+                
+                <div class="menu-card category-버거">
+                    <h3>🌟 쉑쉑버거</h3>
+                    <span class="brand-badge fast-food-badge">프리미엄</span>
+                    <ul class="feature-list">
+                        <li><span class="icon">🥩</span>앵거스 비프</li>
+                        <li><span class="icon">🧀</span>체다 치즈</li>
+                        <li><span class="icon">🥔</span>크링클컷 감자</li>
+                    </ul>
+                </div>
+                
+                <div class="menu-card category-버거">
+                    <h3>🏪 롯데리아</h3>
+                    <span class="brand-badge fast-food-badge">한국형</span>
+                    <ul class="feature-list">
+                        <li><span class="icon">🇰🇷</span>한국식 맛</li>
+                        <li><span class="icon">🍖</span>불고기 버거</li>
+                        <li><span class="icon">🌶️</span>한국식 소스</li>
+                    </ul>
+                </div>
+                
+                <div class="menu-card category-샌드위치">
+                    <h3>🥪 샌드위치</h3>
+                    <span class="brand-badge cafe-badge">클래식</span>
+                    <ul class="feature-list">
+                        <li><span class="icon">🍞</span>식빵 베이스</li>
+                        <li><span class="icon">🥓</span>베이컨, 햄</li>
+                        <li><span class="icon">🥬</span>신선한 야채</li>
+                    </ul>
+                </div>
+                
+                <div class="menu-card category-샌드위치">
+                    <h3>🥚 에그드롭</h3>
+                    <span class="brand-badge cafe-badge">에그 전문</span>
+                    <ul class="feature-list">
+                        <li><span class="icon">🥚</span>스크램블 에그</li>
+                        <li><span class="icon">🧀</span>치즈</li>
+                        <li><span class="icon">🍞</span>브리오슈 번</li>
+                    </ul>
+                </div>
+                
+                <div class="menu-card category-샌드위치">
+                    <h3>🚇 서브웨이</h3>
+                    <span class="brand-badge cafe-badge">커스텀</span>
+                    <ul class="feature-list">
+                        <li><span class="icon">🥖</span>서브 롤</li>
+                        <li><span class="icon">🥩</span>다양한 미트</li>
+                        <li><span class="icon">🥗</span>자유로운 토핑</li>
+                    </ul>
+                </div>
+                
+                <div class="menu-card category-샌드위치">
+                    <h3>🏮 홍루이젠</h3>
+                    <span class="brand-badge cafe-badge">대만식</span>
+                    <ul class="feature-list">
+                        <li><span class="icon">🥪</span>대만식 샌드위치</li>
+                        <li><span class="icon">🥓</span>두꺼운 베이컨</li>
+                        <li><span class="icon">🧈</span>버터 토스트</li>
+                    </ul>
+                </div>
+                
+                <div class="menu-card category-디저트">
+                    <h3>🍰 디저트</h3>
+                    <span class="brand-badge dessert-badge">클래식</span>
+                    <ul class="feature-list">
+                        <li><span class="icon">🎂</span>케이크류</li>
+                        <li><span class="icon">🍪</span>쿠키류</li>
+                        <li><span class="icon">🧁</span>머핀류</li>
+                    </ul>
+                </div>
+                
+                <div class="menu-card category-디저트">
+                    <h3>🌰 노티드</h3>
+                    <span class="brand-badge dessert-badge">도넛 전문</span>
+                    <ul class="feature-list">
+                        <li><span class="icon">🍩</span>프리미엄 도넛</li>
+                        <li><span class="icon">🥥</span>코코넛</li>
+                        <li><span class="icon">🍓</span>과일 토핑</li>
+                    </ul>
+                </div>
+                
+                <div class="menu-card category-디저트">
+                    <h3>🍰 몽슈슈</h3>
+                    <span class="brand-badge dessert-badge">슈크림</span>
+                    <ul class="feature-list">
+                        <li><span class="icon">🥧</span>슈크림</li>
+                        <li><span class="icon">🍦</span>아이스크림</li>
+                        <li><span class="icon">🫐</span>베리류</li>
+                    </ul>
+                </div>
+                
+                <div class="menu-card category-디저트">
+                    <h3>☕ 투썸플레이스</h3>
+                    <span class="brand-badge dessert-badge">카페 디저트</span>
+                    <ul class="feature-list">
+                        <li><span class="icon">🍰</span>케이크</li>
+                        <li><span class="icon">☕</span>커피</li>
+                        <li><span class="icon">🧊</span>음료류</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="recipe-section">
+            <h2>🧄 주요식재료</h2>
+            <div class="table-container">
+                <table id="ingredientsTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 80px;">식재료</th>
+                            <th>햄버거</th>
+                            <th>버거킹</th>
+                            <th>쉑쉑버거</th>
+                            <th>롯데리아</th>
+                            <th>샌드위치</th>
+                            <th>에그드롭</th>
+                            <th>서브웨이</th>
+                            <th>홍루이젠</th>
+                            <th>디저트</th>
+                            <th>노티드</th>
+                            <th>몽슈슈</th>
+                            <th>투썸플레이스</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="recipe-section">
+            <h2>🧂 소스양념</h2>
+            <div class="table-container">
+                <table id="sauceTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 80px;">소스/양념</th>
+                            <th>햄버거</th>
+                            <th>버거킹</th>
+                            <th>쉑쉑버거</th>
+                            <th>롯데리아</th>
+                            <th>샌드위치</th>
+                            <th>에그드롭</th>
+                            <th>서브웨이</th>
+                            <th>홍루이젠</th>
+                            <th>디저트</th>
+                            <th>노티드</th>
+                            <th>몽슈슈</th>
+                            <th>투썸플레이스</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="recipe-section">
+            <h2>🍞 메뉴베이스</h2>
+            <div class="table-container">
+                <table id="baseTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 80px;">메뉴베이스</th>
+                            <th>햄버거</th>
+                            <th>버거킹</th>
+                            <th>쉑쉑버거</th>
+                            <th>롯데리아</th>
+                            <th>샌드위치</th>
+                            <th>에그드롭</th>
+                            <th>서브웨이</th>
+                            <th>홍루이젠</th>
+                            <th>디저트</th>
+                            <th>노티드</th>
+                            <th>몽슈슈</th>
+                            <th>투썸플레이스</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="recipe-section">
+            <h2>👨‍🍳 조리순서</h2>
+            <div class="table-container">
+                <table id="processTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 80px;">조리순서</th>
+                            <th>햄버거</th>
+                            <th>버거킹</th>
+                            <th>쉑쉑버거</th>
+                            <th>롯데리아</th>
+                            <th>샌드위치</th>
+                            <th>에그드롭</th>
+                            <th>서브웨이</th>
+                            <th>홍루이젠</th>
+                            <th>디저트</th>
+                            <th>노티드</th>
+                            <th>몽슈슈</th>
+                            <th>투썸플레이스</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="recipe-section">
+            <h2>ℹ️ 조리정보</h2>
+            <div class="table-container">
+                <table id="cookingInfoTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 80px;">조리정보</th>
+                            <th>햄버거</th>
+                            <th>버거킹</th>
+                            <th>쉑쉑버거</th>
+                            <th>롯데리아</th>
+                            <th>샌드위치</th>
+                            <th>에그드롭</th>
+                            <th>서브웨이</th>
+                            <th>홍루이젠</th>
+                            <th>디저트</th>
+                            <th>노티드</th>
+                            <th>몽슈슈</th>
+                            <th>투썸플레이스</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="recipe-section">
+            <h2>😋 특징맛</h2>
+            <div class="table-container">
+                <table id="tasteTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 80px;">특징/맛</th>
+                            <th>햄버거</th>
+                            <th>버거킹</th>
+                            <th>쉑쉑버거</th>
+                            <th>롯데리아</th>
+                            <th>샌드위치</th>
+                            <th>에그드롭</th>
+                            <th>서브웨이</th>
+                            <th>홍루이젠</th>
+                            <th>디저트</th>
+                            <th>노티드</th>
+                            <th>몽슈슈</th>
+                            <th>투썸플레이스</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="recipe-section">
+            <h2>📊 영양정보</h2>
+            <div class="table-container">
+                <table id="nutritionTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 80px;">영양정보</th>
+                            <th>햄버거</th>
+                            <th>버거킹</th>
+                            <th>쉑쉑버거</th>
+                            <th>롯데리아</th>
+                            <th>샌드위치</th>
+                            <th>에그드롭</th>
+                            <th>서브웨이</th>
+                            <th>홍루이젠</th>
+                            <th>디저트</th>
+                            <th>노티드</th>
+                            <th>몽슈슈</th>
+                            <th>투썸플레이스</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="recipe-section">
+            <h2>💡 브랜드조리팁</h2>
+            <div class="table-container">
+                <table id="tipsTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 80px;">브랜드/조리팁</th>
+                            <th>햄버거</th>
+                            <th>버거킹</th>
+                            <th>쉑쉑버거</th>
+                            <th>롯데리아</th>
+                            <th>샌드위치</th>
+                            <th>에그드롭</th>
+                            <th>서브웨이</th>
+                            <th>홍루이젠</th>
+                            <th>디저트</th>
+                            <th>노티드</th>
+                            <th>몽슈슈</th>
+                            <th>투썸플레이스</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <button class="download-btn" onclick="downloadExcel()">📥 브랜드 메뉴 레시피 엑셀 파일 다운로드 (12개 메뉴)</button>
+    </div>
+
+    <script>
+        // 12개 브랜드 메뉴 레시피 데이터
+        const brandData = {
+            ingredients: [
+                ['햄버거번', '2개', '2개', '2개', '2개', '-', '-', '-', '-', '-', '-', '-', '-'],
+                ['식빵', '-', '-', '-', '-', '2장', '-', '-', '2장', '-', '-', '-', '-'],
+                ['브리오슈번', '-', '-', '-', '-', '-', '1개', '-', '-', '-', '-', '-', '-'],
+                ['서브롤', '-', '-', '-', '-', '-', '-', '1개', '-', '-', '-', '-', '-'],
+                ['소고기패티', '1장', '1장', '1장', '-', '-', '-', '-', '-', '-', '-', '-', '-'],
+                ['불고기', '-', '-', '-', '100g', '-', '-', '-', '-', '-', '-', '-', '-'],
+                ['베이컨', '-', '-', '-', '-', '3장', '-', '2장', '2장', '-', '-', '-', '-'],
+                ['햄', '-', '-', '-', '-', '2장', '-', '3장', '-', '-', '-', '-', '-'],
+                ['계란', '-', '-', '-', '-', '1개', '2개', '-', '1개', '-', '-', '-', '-'],
+                ['체다치즈', '-', '1장', '2장', '1장', '1장', '1장', '1장', '1장', '-', '-', '-', '-'],
+                ['상추', '2장', '3장', '2장', '2장', '2장', '1장', '3장', '1장', '-', '-', '-', '-'],
+                ['토마토', '2조각', '3조각', '2조각', '1조각', '2조각', '-', '2조각', '-', '-', '-', '-', '-'],
+                ['양파', '2조각', '3조각', '1조각', '2조각', '1조각', '-', '2조각', '-', '-', '-', '-', '-'],
+                ['피클', '3조각', '4조각', '2조각', '2조각', '-', '-', '3조각', '-', '-', '-', '-', '-'],
+                ['밀가루', '-', '-', '-', '-', '-', '-', '-', '-', '200g', '300g', '150g', '180g'],
+                ['설탕', '-', '-', '-', '-', '-', '-', '-', '-', '100g', '80g', '60g', '120g'],
+                ['버터', '-', '-', '-', '-', '-', '-', '-', '30g', '80g', '100g', '70g', '90g'],
+                ['우유', '-', '-', '-', '-', '-', '-', '-', '-', '100ml', '150ml', '200ml', '120ml'],
+                ['생크림', '-', '-', '-', '-', '-', '-', '-', '-', '150ml', '100ml', '300ml', '200ml'],
+                ['초콜릿', '-', '-', '-', '-', '-', '-', '-', '-', '100g', '-', '50g', '80g'],
+                ['바닐라', '-', '-', '-', '-', '-', '-', '-', '-', '1tsp', '1tsp', '1tsp', '1tsp'],
+                ['이스트', '-', '-', '-', '-', '-', '-', '-', '-', '-', '7g', '-', '-'],
+                ['코코넛', '-', '-', '-', '-', '-', '-', '-', '-', '-', '50g', '-', '-'],
+                ['딸기', '-', '-', '-', '-', '-', '-', '-', '-', '-', '100g', '80g', '50g']
+            ],
+            sauces: [
+                ['케첩', '1tbsp', '1tbsp', '-', '1tbsp', '-', '-', '1tbsp', '-', '-', '-', '-', '-'],
+                ['마요네즈', '1tbsp', '1tbsp', '1tbsp', '1tbsp', '2tbsp', '1tbsp', '2tbsp', '1tbsp', '-', '-', '-', '-'],
+                ['머스타드', '1tsp', '1tsp', '1tsp', '-', '1tsp', '-', '1tsp', '-', '-', '-', '-', '-'],
+                ['특제소스', '-', '1tbsp', '2tbsp', '1tbsp', '-', '1tbsp', '-', '-', '-', '-', '-', '-'],
+                ['불고기소스', '-', '-', '-', '2tbsp', '-', '-', '-', '-', '-', '-', '-', '-'],
+                ['체다소스', '-', '-', '1tbsp', '-', '-', '-', '1tbsp', '-', '-', '-', '-', '-'],
+                ['홀랜다이즈', '-', '-', '-', '-', '-', '1tbsp', '-', '-', '-', '-', '-', '-'],
+                ['스리라차', '-', '-', '-', '-', '-', '1tsp', '1tsp', '-', '-', '-', '-', '-'],
+                ['바베큐소스', '-', '1tbsp', '-', '-', '-', '-', '1tbsp', '-', '-', '-', '-', '-'],
+                ['시럽', '-', '-', '-', '-', '-', '-', '-', '-', '50ml', '30ml', '40ml', '60ml'],
+                ['글레이즈', '-', '-', '-', '-', '-', '-', '-', '-', '-', '30ml', '-', '20ml'],
+                ['크림치즈', '-', '-', '-', '-', '-', '-', '-', '-', '100g', '-', '50g', '80g'],
+                ['잼', '-', '-', '-', '-', '1tbsp', '-', '-', '1tbsp', '50g', '30g', '20g', '40g'],
+                ['꿀', '-', '-', '-', '-', '-', '-', '-', '-', '1tbsp', '1tbsp', '1tbsp', '1tbsp']
+            ],
+            bases: [
+                ['패스트푸드베이스', '○', '○', '○', '○', '-', '-', '-', '-', '-', '-', '-', '-'],
+                ['샌드위치베이스', '-', '-', '-', '-', '○', '○', '○', '○', '-', '-', '-', '-'],
+                ['디저트베이스', '-', '-', '-', '-', '-', '-', '-', '-', '○', '○', '○', '○'],
+                ['구이베이스', '○', '○', '○', '○', '○', '○', '-', '○', '-', '-', '-', '-'],
+                ['베이킹베이스', '-', '-', '-', '-', '-', '-', '-', '-', '○', '○', '○', '○'],
+                ['프리미엄', '-', '-', '○', '-', '-', '○', '-', '-', '-', '○', '○', '○'],
+                ['한국식', '-', '-', '-', '○', '-', '-', '-', '-', '-', '-', '-', '-'],
+                ['커스터마이징', '-', '-', '-', '-', '-', '-', '○', '-', '-', '-', '-', '-']
+            ],
+            process: [
+                ['1단계', '패티굽기', '패티그릴하기', '앵거스패티굽기', '불고기볶기', '베이컨굽기', '스크램블에그', '재료선택', '식빵토스트', '반죽만들기', '도넛반죽', '슈만들기', '케이크만들기'],
+                ['2단계', '번굽기', '번굽기', '번굽기', '번굽기', '식빵굽기', '브리오슈굽기', '빵자르기', '베이컨굽기', '오븐예열', '기름가열', '오븐예열', '오븐예열'],
+                ['3단계', '야채준비', '야채준비', '야채준비', '야채준비', '야채준비', '야채준비', '야채준비', '재료준비', '굽기', '튀기기', '굽기', '굽기'],
+                ['4단계', '소스발라주기', '소스발라주기', '특제소스', '소스발라주기', '소스발라주기', '홀랜다이즈', '소스선택', '조립하기', '크림만들기', '글레이즈', '크림채우기', '데코레이션'],
+                ['5단계', '조립하기', '조립하기', '조립하기', '조립하기', '조립하기', '조립하기', '조립하기', '완성', '데코레이션', '토핑올리기', '완성', '완성'],
+                ['6단계', '완성', '완성', '완성', '완성', '완성', '완성', '완성', '', '완성', '완성', '', '']
+            ],
+            cookingInfo: [
+                ['조리시간', '8분', '10분', '12분', '15분', '10분', '8분', '5분', '12분', '45분', '60분', '90분', '40분'],
+                ['난이도', '초급', '초급', '중급', '중급', '초급', '중급', '초급', '초급', '중급', '중급', '고급', '중급'],
+                ['칼로리(1인분)', '540kcal', '630kcal', '590kcal', '520kcal', '420kcal', '380kcal', '350kcal', '450kcal', '320kcal', '280kcal', '250kcal', '380kcal'],
+                ['인분', '1인분', '1인분', '1인분', '1인분', '1인분', '1인분', '1인분', '1인분', '6개', '12개', '8개', '1개'],
+                ['보관방법', '즉시섭취', '즉시섭취', '즉시섭취', '즉시섭취', '즉시섭취', '즉시섭취', '즉시섭취', '즉시섭취', '냉장3일', '상온2일', '냉장2일', '냉장3일'],
+                ['브랜드특징', '클래식', '플레임그릴', '프리미엄', '한국식', '홈메이드', '에그전문', '커스텀', '대만식', '전통디저트', '아티산도넛', '슈전문', '카페디저트']
+            ],
+            taste: [
+                ['주요맛', '고소짭짤', '스모키', '진한고소', '달콤짭짤', '부드러운', '크리미', '신선한', '버터향', '달콤한', '바삭달콤', '부드러운', '달콤크리미'],
+                ['특징', '클래식버거', '화염그릴향', '프리미엄재료', '한국인입맛', '집에서만든맛', '폭신한에그', '다양한선택', '대만식토스트', '홈메이드', '수제도넛', '프랑스슈', '카페퀄리티'],
+                ['브랜드정체성', '대중적', '킹오브버거', '셰프메이드', '한국No1', '샌드위치전문', '에그샌드위치', '서브마린', '아시안퓨전', '클래식디저트', '프리미엄도넛', '슈크림전문', '카페문화'],
+                ['타겟고객', '전연령', '버거매니아', '프리미엄추구', '한국인', '샌드위치선호', '아침식사', '건강지향', '이국적취향', '디저트애호', '도넛마니아', '슈크림팬', '카페애호'],
+                ['추천상황', '간편식사', '든든한식사', '특별한날', '한국식버거', '아침브런치', '아침식사', '다이어트', '이국적간식', '홈파티', '선물용', '특별한날', '카페타임']
+            ],
+            nutrition: [
+                ['단백질(g)', '25', '28', '30', '22', '18', '20', '15', '16', '6', '4', '8', '5'],
+                ['탄수화물(g)', '45', '48', '42', '50', '35', '28', '40', '38', '45', '35', '25', '50'],
+                ['지방(g)', '28', '32', '35', '24', '20', '18', '12', '22', '15', '12', '18', '16'],
+                ['나트륨(mg)', '980', '1200', '890', '1100', '650', '580', '920', '750', '280', '320', '180', '250'],
+                ['당분(g)', '6', '8', '5', '12', '4', '3', '8', '6', '25', '18', '15', '28'],
+                ['콜레스테롤(mg)', '75', '85', '90', '60', '45', '180', '25', '50', '35', '25', '120', '80'],
+                ['식이섬유(g)', '3', '4', '3', '3', '2', '1', '4', '2', '2', '1', '1', '1'],
+                ['비타민C(mg)', '8', '12', '6', '15', '10', '2', '15', '5', '0', '2', '0', '5'],
+                ['칼슘(mg)', '180', '220', '250', '150', '120', '80', '100', '100', '80', '60', '100', '120']
+            ],
+            tips: [
+                ['브랜드팁', '간단하게', '불맛이생명', '고급재료사용', '한국인입맛', '집에서쉽게', '에그가핵심', '개인취향대로', '버터듬뿍', '정성스럽게', '기름온도중요', '슈피스타치오', '플레이팅'],
+                ['조리팁', '패티두께일정', '그릴온도높게', '고기온도체크', '불고기달콤하게', '베이컨바삭하게', '에그부드럽게', '재료신선하게', '식빵두껍게', '반죽과하지말기', '온도일정하게', '크림농도맞추기', '오븐온도정확히'],
+                ['서빙팁', '뜨거울때', '바로서빙', '따뜻할때', '뜨거울때', '따뜻할때', '뜨거울때', '신선할때', '따뜻할때', '상온에서', '따뜻할때', '차갑게', '차갑게'],
+                ['보관팁', '즉시섭취', '즉시섭취', '즉시섭취', '즉시섭취', '즉시섭취', '즉시섭취', '즉시섭취', '즉시섭취', '밀폐용기', '건조한곳', '냉장보관', '냉장보관'],
+                ['재현팁', '기본에충실', '숯불향추가', '좋은재료', '한국식양념', '수제느낌', '에그중심', '다양한조합', '버터향', '홈메이드감성', '장인정신', '프랑스기법', '카페감성']
+            ]
+        };
+
+        // 테이블 생성 함수
+        function createTable(tableId, data) {
+            const table = document.getElementById(tableId);
+            const tbody = table.querySelector('tbody');
+            
+            data.forEach(row => {
+                const tr = document.createElement('tr');
+                row.forEach((cell, index) => {
+                    const td = document.createElement('td');
+                    td.textContent = cell;
+                    if (index === 0) {
+                        td.className = 'first-col';
+                    }
+                    tr.appendChild(td);
+                });
+                tbody.appendChild(tr);
+            });
+        }
+
+        // 모든 테이블 생성
+        createTable('ingredientsTable', brandData.ingredients);
+        createTable('sauceTable', brandData.sauces);
+        createTable('baseTable', brandData.bases);
+        createTable('processTable', brandData.process);
+        createTable('cookingInfoTable', brandData.cookingInfo);
+        createTable('tasteTable', brandData.taste);
+        createTable('nutritionTable', brandData.nutrition);
+        createTable('tipsTable', brandData.tips);
+
+        // 엑셀 다운로드 함수
+        function downloadExcel() {
+            const wb = XLSX.utils.book_new();
+            
+            // 헤더 설정
+            const headers = ['항목', '햄버거', '버거킹', '쉑쉑버거', '롯데리아', '샌드위치', '에그드롭', '서브웨이', '홍루이젠', '디저트', '노티드', '몽슈슈', '투썸플레이스'];
+            
+            // 각 시트 생성
+            const sheets = [
+                { name: '주요식재료', data: brandData.ingredients },
+                { name: '소스양념', data: brandData.sauces },
+                { name: '메뉴베이스', data: brandData.bases },
+                { name: '조리순서', data: brandData.process },
+                { name: '조리정보', data: brandData.cookingInfo },
+                { name: '특징맛', data: brandData.taste },
+                { name: '영양정보', data: brandData.nutrition },
+                { name: '브랜드조리팁', data: brandData.tips }
+            ];
+            
+            sheets.forEach(sheet => {
+                const wsData = [headers, ...sheet.data];
+                const ws = XLSX.utils.aoa_to_sheet(wsData);
+                
+                // 컬럼 너비 설정
+                const colWidths = [{ width: 12 }];
+                for (let i = 1; i < headers.length; i++) {
+                    colWidths.push({ width: 9 });
+                }
+                ws['!cols'] = colWidths;
+                
+                XLSX.utils.book_append_sheet(wb, ws, sheet.name);
+            });
+            
+            // 파일 다운로드
+            XLSX.writeFile(wb, '브랜드메뉴_상세레시피_12개메뉴.xlsx');
+        }
+    </script>
+</body>
+</html>
