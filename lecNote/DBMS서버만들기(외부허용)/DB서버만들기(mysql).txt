@@ -1,0 +1,81 @@
+외부에서 mysql 허용을 위한 작업
+✅ 1. MySQL 서버가 외부 접속을 허용하도록 설정하기
+① my.cnf 또는 my.ini 파일 수정
+- Windows: C:\ProgramData\MySQL\MySQL Server X.X\my.ini 또는 C:\Program Files\MySQL\MySQL Server X.X\my.ini
+# 이 줄을 찾아서:
+[mysqld]
+bind-address = 127.0.0.1
+# 아래처럼 바꿔:
+[mysqld]
+bind-address = 0.0.0.0 # 이 설정은 MySQL이 외부(다른 IP)의 요청도 받을 수 있게 해주는 거야.
+② MySQL 사용자에게 외부접속 권한 주기
+-- 모든 IP에서 접근 가능한 사용자 만들기 (보안 상 id하나 만들어. 비밀번호 어렵게)
+CREATE USER 'remoteuser'@'%' IDENTIFIED BY 'mbcdkzkepal0902!';
+GRANT ALL PRIVILEGES ON *.* TO 'remoteuser'@'%' WITH GRANT OPTION;
+FLUSH PRIVILEGES;
+만약 특정 IP에서만 접속하게 하려면 '%' 대신 '123.123.123.123' 식으로 상대방 IP를 넣어줘.
+
+✅ 2. 방화벽에서 포트 열기 (기본 포트는 3306)
+Windows 방화벽 설정
+① 제어판 > 시스템 및 보안 > Windows Defender 방화벽
+② 고급 설정 > 인바운드 규칙 클릭
+③ 새 규칙 만들기
+	포트 선택
+	TCP / 특정 로컬 포트: 3306
+	연결 허용
+	도메인, 개인, 공용 모두 체크
+	이름: MySQL 3306 등으로
+
+✅ 3. 공유기 포트 포워딩 설정
+이게 제일 중요한 부분이야. 네 컴퓨터는 공유기 안에 있으니까, 외부에서 접속하려면 공유기가 MySQL 포트를 네 컴퓨터로 넘겨줘야 해.
+
+브라우저에서 공유기 접속 주소 입력 (보통 192.168.0.1 또는 192.168.1.1)
+
+관리자 로그인
+
+"포트 포워딩" 또는 "가상 서버", "NAT 설정" 같은 메뉴 찾기
+
+다음 설정 추가:
+
+항목	값
+서비스 이름	MySQL
+외부 포트	3306
+내부 IP 주소	네 PC의 내부 IP (ex. 192.168.0.10)
+내부 포트	3306
+프로토콜	TCP
+
+📌 네 PC의 내부 IP 주소는 명령어 ipconfig (Windows) 또는 ip addr (Linux)로 확인할 수 있어.
+
+✅ 4단계: DDNS 설정 또는 공인 IP 확인
+공인 IP가 바뀌면 접속이 안 되니까, 방법은 2가지야.
+
+방법 A: 고정 공인 IP를 학교에서 쓰고 있다면 그걸 사용(DHCP 서버 설정에서 고정 걸어둠)
+방법 B: 특수기능->DDNS 설정 (ipTIME이나 공유기에 따라 myhome.iptime.org처럼 주소 만들어줌)
+
+✅ 5. 외부에서 접속 테스트
+외부에서 접속하려면 네 집 공유기의 공인 IP 주소가 필요해. https://whatismyipaddress.com 같은 데서 확인 가능해.(https://whatismyipaddress.com 공인 IP : 210.121.189.12 )
+
+외부 컴퓨터에서 다음처럼 접속해봐: mysql -h 공인IP주소 -u your_user -p
+mysql -h 210.121.189.12 -uremoteuser -pmbcdkzkepal0902!
+
+핸드폰에서는 remoDB SQL Client MySQL로 확인 가능
+
+집 PC에서 
+# pip install pymysql
+
+import pymysql
+conn = pymysql.connect(
+    host='210.121.189.12',      # 예: '127.0.0.1' 또는 공인IP
+    port=3306,
+    user='remoteuser',
+    password='mbcdkzkepal0902!',
+    db='devdb',
+    charset='utf8'
+)
+cursor = conn.cursor()
+cursor.execute("SELECT * FROM personal order by pno")
+rows = cursor.fetchall()
+for row in rows:
+    print(row)
+cursor.close()
+conn.close() 실행

@@ -1,0 +1,12 @@
+# 날짜별 이미지 검색 ★ query, Afrom, to 만 수정하시면 됩니다 ★
+https://search.naver.com/search.naver?
+	where=image # 이미지로 검색
+	&query=치킨 # ★ 검색어 추가
+	&sm=tab_opt # 옵션탭 적용
+	&nso=so%3Ar%2Cp%3 # 최신순으로 정렬한다는 뜻
+	Afrom20100516 # ★ 시작날짜
+	to20100916 # ★ 종료날짜
+	&mode=column&section=image&ccl=0&gif=0
+
+
+https://search.naver.com/search.naver?where=image&query=쌀국수&sm=tab_opt&nso=so%3Ar%2Cp%3Afrom20250101to20250131&mode=column&section=image&ccl=0&gif=0

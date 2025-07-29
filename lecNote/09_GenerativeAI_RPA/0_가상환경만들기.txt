@@ -3,25 +3,23 @@
 2. .venv\Scripts\activate  가상환경 들어가기
 
 python.exe -m pip install --upgrade pip
-pip install jupyter numpy==1.23.5 pandas==1.5.3
+pip install numpy==1.23.5 pandas==1.5.3
 pip install xlwings                                  엑셀 파일 활용
 pip install python-decouple python-dotenv
 pip install openai
-pip install pyinstaller py(파이썬코드)파일을 EXE(실행파일)로 바꾸기
+pip install pyinstaller    py(파이썬코드)파일을 EXE(실행파일)로 바꿀 때 필요
 
-pip freeze > requirements.txt 현재 가상환경 라이브러리 목록
+pip freeze > requirements.txt 현재 가상환경 라이브러리목록
 
-실행시
-pip install -r requirements.txt
+py파일을 실행화일로 만들기 : pyinstaller --onefile 2-2_naverReport.py을 실행하면 dist폴더에 exe실행파일을 root로 옮겨 파일명을 "genai_rpa.exe"로 변경
 
-py파일을 실행화일로 만들기 : pyinstaller --onefile 2-2_naver_Report.py을 실행하면 dist폴더에 exe실행파일을  root로 옮겨 파일명을 'genai_rpa'로 변경
 
-(machine learning 수업중)
 
-conda install -c conda-forge graphviz(의사결정나무 그래프를 생성하는 도구)
-pip install pydot( Graphviz의 .dot 데이터를 이미지로 변환하는 라이브러리)
-dot -V (확인)
 
-(아나콘다 base 환경에서)
-conda install graphviz
-pip install pydot
+
+
+
+
+
+
+
