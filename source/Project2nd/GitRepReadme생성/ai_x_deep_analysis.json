@@ -1,0 +1,3433 @@
+{
+  "repository_info": {
+    "name": "ai_x",
+    "full_name": "ksmindpks/ai_x",
+    "description": null,
+    "language": "Jupyter Notebook",
+    "stars": 0,
+    "forks": 0,
+    "issues": 0,
+    "size": 1509909,
+    "created_at": "2025-04-07T05:48:04Z",
+    "updated_at": "2025-08-06T03:13:22Z",
+    "url": "https://github.com/ksmindpks/ai_x",
+    "license": null,
+    "topics": [],
+    "watchers": 0,
+    "default_branch": "main"
+  },
+  "file_statistics": {
+    "total_files": 4014,
+    "total_directories": 237,
+    "total_size_bytes": 1867661655,
+    "total_size_mb": 1781.14,
+    "file_extensions": {
+      "jpg": 2152,
+      "xlsx": 410,
+      "html": 234,
+      "docx": 174,
+      "ipynb": 160,
+      "h5": 125,
+      "doc": 121,
+      "py": 117,
+      "csv": 103,
+      "png": 70,
+      "txt": 62,
+      "pyc": 59,
+      "pdf": 44,
+      "json": 20,
+      "gitignore": 18
+    },
+    "max_depth": 6,
+    "average_depth": 4.6,
+    "files_by_depth": {
+      "0": 3,
+      "2": 298,
+      "3": 877,
+      "5": 74,
+      "4": 826,
+      "1": 8,
+      "6": 1928
+    }
+  },
+  "directory_structure": {
+    "top_directories": [
+      {
+        "path": "source",
+        "file_count": 3823,
+        "size_mb": 1681.79
+      },
+      {
+        "path": "source/Pks_Develop",
+        "file_count": 2400,
+        "size_mb": 449.91
+      },
+      {
+        "path": "source/Pks_Develop/햄버거코드",
+        "file_count": 2013,
+        "size_mb": 140.45
+      },
+      {
+        "path": "source/Pks_Develop/햄버거코드/b3모델링",
+        "file_count": 1921,
+        "size_mb": 127.77
+      },
+      {
+        "path": "source/Pks_Develop/햄버거코드/b3모델링/test",
+        "file_count": 1915,
+        "size_mb": 41.85
+      },
+      {
+        "path": "source/01_python",
+        "file_count": 379,
+        "size_mb": 272.7
+      },
+      {
+        "path": "source/Pks_Develop/N시기별음식URL수집",
+        "file_count": 282,
+        "size_mb": 303.09
+      },
+      {
+        "path": "source/Project2nd",
+        "file_count": 277,
+        "size_mb": 175.88
+      },
+      {
+        "path": "source/Project2nd/금융법령수집",
+        "file_count": 251,
+        "size_mb": 48.6
+      },
+      {
+        "path": "source/Pks_Develop/햄버거코드/b3모델링/test/eggdrop",
+        "file_count": 223,
+        "size_mb": 5.66
+      },
+      {
+        "path": "source/Pks_Develop/햄버거코드/b3모델링/test/hongruijian",
+        "file_count": 221,
+        "size_mb": 3.43
+      },
+      {
+        "path": "source/Pks_Develop/햄버거코드/b3모델링/test/subway",
+        "file_count": 212,
+        "size_mb": 6.17
+      },
+      {
+        "path": "source/Pks_Develop/햄버거코드/b3모델링/test/knotted",
+        "file_count": 211,
+        "size_mb": 5.01
+      },
+      {
+        "path": "source/Pks_Develop/햄버거코드/b3모델링/test/shakeshack",
+        "file_count": 211,
+        "size_mb": 6.13
+      },
+      {
+        "path": "source/Pks_Develop/햄버거코드/b3모델링/test/burgerking",
+        "file_count": 210,
+        "size_mb": 4.03
+      },
+      {
+        "path": "source/Pks_Develop/햄버거코드/b3모델링/test/lotteria",
+        "file_count": 210,
+        "size_mb": 3.91
+      },
+      {
+        "path": "source/Pks_Develop/햄버거코드/b3모델링/test/monchouchou",
+        "file_count": 210,
+        "size_mb": 4.5
+      },
+      {
+        "path": "source/Pks_Develop/햄버거코드/b3모델링/test/twosome",
+        "file_count": 207,
+        "size_mb": 3.01
+      },
+      {
+        "path": "source/01_python/ch14_image",
+        "file_count": 206,
+        "size_mb": 29.6
+      },
+      {
+        "path": "lecNote",
+        "file_count": 181,
+        "size_mb": 97.34
+      }
+    ],
+    "directory_count_by_level": {
+      "level_0": 4,
+      "level_1": 19,
+      "level_2": 57,
+      "level_3": 51,
+      "level_4": 10,
+      "level_5": 14
+    }
+  },
+  "directory_tree": {
+    "name": "root",
+    "type": "directory",
+    "children": {
+      "lecNote": {
+        "name": "lecNote",
+        "type": "directory",
+        "children": {
+          "01_python": {
+            "name": "01_python",
+            "type": "directory",
+            "children": {},
+            "file_count": 32,
+            "total_size": 26122923,
+            "file_types": {
+              "txt": 12,
+              "pdf": 15,
+              "xlsx": 1,
+              "docx": 4
+            }
+          },
+          "02_HTML_CSS": {
+            "name": "02_HTML_CSS",
+            "type": "directory",
+            "children": {},
+            "file_count": 15,
+            "total_size": 3996431,
+            "file_types": {
+              "txt": 2,
+              "hwp": 1,
+              "docx": 10,
+              "pdf": 2
+            }
+          },
+          "03_JavaScript": {
+            "name": "03_JavaScript",
+            "type": "directory",
+            "children": {},
+            "file_count": 16,
+            "total_size": 2751953,
+            "file_types": {
+              "txt": 1,
+              "docx": 12,
+              "jpg": 3
+            }
+          },
+          "04_DBMS": {
+            "name": "04_DBMS",
+            "type": "directory",
+            "children": {},
+            "file_count": 11,
+            "total_size": 976888,
+            "file_types": {
+              "txt": 2,
+              "docx": 6,
+              "pdf": 1,
+              "jpg": 1,
+              "sql": 1
+            }
+          },
+          "05_DeepLearning": {
+            "name": "05_DeepLearning",
+            "type": "directory",
+            "children": {},
+            "file_count": 7,
+            "total_size": 17123481,
+            "file_types": {
+              "txt": 3,
+              "pdf": 2,
+              "docx": 1,
+              "jpg": 1
+            }
+          },
+          "06_이미지처리": {
+            "name": "06_이미지처리",
+            "type": "directory",
+            "children": {},
+            "file_count": 3,
+            "total_size": 6355491,
+            "file_types": {
+              "pdf": 1,
+              "xlsx": 1,
+              "h5": 1
+            }
+          },
+          "07_자연어처리": {
+            "name": "07_자연어처리",
+            "type": "directory",
+            "children": {
+              "data": {
+                "name": "data",
+                "type": "directory",
+                "children": {},
+                "file_count": 12,
+                "total_size": 5036714,
+                "file_types": {
+                  "ttf": 1,
+                  "csv": 5,
+                  "jpg": 2,
+                  "png": 4
+                }
+              }
+            },
+            "file_count": 5,
+            "total_size": 7917388,
+            "file_types": {
+              "pdf": 2,
+              "xlsx": 2,
+              "txt": 1
+            }
+          },
+          "08_LLM": {
+            "name": "08_LLM",
+            "type": "directory",
+            "children": {
+              "data": {
+                "name": "data",
+                "type": "directory",
+                "children": {},
+                "file_count": 6,
+                "total_size": 1577250,
+                "file_types": {
+                  "txt": 1,
+                  "csv": 1,
+                  "png": 1,
+                  "mp3": 3
+                }
+              },
+              "images": {
+                "name": "images",
+                "type": "directory",
+                "children": {},
+                "file_count": 5,
+                "total_size": 445151,
+                "file_types": {
+                  "jpg": 4,
+                  "jpeg": 1
+                }
+              },
+              "tax_docs": {
+                "name": "tax_docs",
+                "type": "directory",
+                "children": {},
+                "file_count": 2,
+                "total_size": 1830046,
+                "file_types": {
+                  "docx": 2
+                }
+              }
+            },
+            "file_count": 19,
+            "total_size": 8626027,
+            "file_types": {
+              "txt": 6,
+              "pdf": 4,
+              "docx": 7,
+              "wav": 1,
+              "bat": 1
+            }
+          },
+          "09_GenerativeAI_RPA": {
+            "name": "09_GenerativeAI_RPA",
+            "type": "directory",
+            "children": {},
+            "file_count": 6,
+            "total_size": 4574663,
+            "file_types": {
+              "pdf": 2,
+              "txt": 1,
+              "xlsx": 2,
+              "bat": 1
+            }
+          },
+          "10_MachineLearning": {
+            "name": "10_MachineLearning",
+            "type": "directory",
+            "children": {
+              "data": {
+                "name": "data",
+                "type": "directory",
+                "children": {},
+                "file_count": 4,
+                "total_size": 313461,
+                "file_types": {
+                  "csv": 4
+                }
+              }
+            },
+            "file_count": 6,
+            "total_size": 11916612,
+            "file_types": {
+              "txt": 2,
+              "pdf": 4
+            }
+          },
+          "12_Flask": {
+            "name": "12_Flask",
+            "type": "directory",
+            "children": {
+              "ch5": {
+                "name": "ch5",
+                "type": "directory",
+                "children": {
+                  "static": {
+                    "name": "static",
+                    "type": "directory",
+                    "children": {
+                      "img": {
+                        "name": "img",
+                        "type": "directory",
+                        "children": {},
+                        "file_count": 4,
+                        "total_size": 138846,
+                        "file_types": {
+                          "png": 3,
+                          "ico": 1
+                        }
+                      }
+                    },
+                    "file_count": 0,
+                    "total_size": 0,
+                    "file_types": {}
+                  },
+                  "templates": {
+                    "name": "templates",
+                    "type": "directory",
+                    "children": {},
+                    "file_count": 1,
+                    "total_size": 534,
+                    "file_types": {
+                      "html": 1
+                    }
+                  }
+                },
+                "file_count": 0,
+                "total_size": 0,
+                "file_types": {}
+              },
+              "ch6": {
+                "name": "ch6",
+                "type": "directory",
+                "children": {
+                  "database": {
+                    "name": "database",
+                    "type": "directory",
+                    "children": {},
+                    "file_count": 1,
+                    "total_size": 683,
+                    "file_types": {
+                      "sql": 1
+                    }
+                  },
+                  "static": {
+                    "name": "static",
+                    "type": "directory",
+                    "children": {
+                      "img": {
+                        "name": "img",
+                        "type": "directory",
+                        "children": {},
+                        "file_count": 1,
+                        "total_size": 16651,
+                        "file_types": {
+                          "png": 1
+                        }
+                      }
+                    },
+                    "file_count": 0,
+                    "total_size": 0,
+                    "file_types": {}
+                  },
+                  "templates": {
+                    "name": "templates",
+                    "type": "directory",
+                    "children": {
+                      "todo": {
+                        "name": "todo",
+                        "type": "directory",
+                        "children": {},
+                        "file_count": 3,
+                        "total_size": 4914,
+                        "file_types": {
+                          "html": 3
+                        }
+                      }
+                    },
+                    "file_count": 4,
+                    "total_size": 2370,
+                    "file_types": {
+                      "html": 4
+                    }
+                  }
+                },
+                "file_count": 0,
+                "total_size": 0,
+                "file_types": {}
+              },
+              "data": {
+                "name": "data",
+                "type": "directory",
+                "children": {},
+                "file_count": 2,
+                "total_size": 29479,
+                "file_types": {
+                  "xlsx": 1,
+                  "csv": 1
+                }
+              },
+              "model": {
+                "name": "model",
+                "type": "directory",
+                "children": {},
+                "file_count": 2,
+                "total_size": 147920,
+                "file_types": {
+                  "joblib": 1,
+                  "pkl": 1
+                }
+              },
+              "static": {
+                "name": "static",
+                "type": "directory",
+                "children": {},
+                "file_count": 2,
+                "total_size": 48232,
+                "file_types": {
+                  "css": 1,
+                  "png": 1
+                }
+              }
+            },
+            "file_count": 9,
+            "total_size": 486903,
+            "file_types": {
+              "txt": 1,
+              "png": 7,
+              "html": 1
+            }
+          },
+          "13_django": {
+            "name": "13_django",
+            "type": "directory",
+            "children": {},
+            "file_count": 1,
+            "total_size": 1618977,
+            "file_types": {
+              "pdf": 1
+            }
+          },
+          "DBMS서버만들기(외부허용)": {
+            "name": "DBMS서버만들기(외부허용)",
+            "type": "directory",
+            "children": {},
+            "file_count": 2,
+            "total_size": 5364,
+            "file_types": {
+              "txt": 2
+            }
+          }
+        },
+        "file_count": 0,
+        "total_size": 0,
+        "file_types": {}
+      },
+      "note": {
+        "name": "note",
+        "type": "directory",
+        "children": {
+          "01_python": {
+            "name": "01_python",
+            "type": "directory",
+            "children": {},
+            "file_count": 1,
+            "total_size": 12,
+            "file_types": {
+              "txt": 1
+            }
+          }
+        },
+        "file_count": 0,
+        "total_size": 0,
+        "file_types": {}
+      },
+      "source": {
+        "name": "source",
+        "type": "directory",
+        "children": {
+          "01_python": {
+            "name": "01_python",
+            "type": "directory",
+            "children": {
+              ".ipynb_checkpoints": {
+                "name": ".ipynb_checkpoints",
+                "type": "directory",
+                "children": {},
+                "file_count": 27,
+                "total_size": 125616708,
+                "file_types": {
+                  "ipynb": 27
+                }
+              },
+              "__pycache__": {
+                "name": "__pycache__",
+                "type": "directory",
+                "children": {},
+                "file_count": 2,
+                "total_size": 775,
+                "file_types": {
+                  "pyc": 2
+                }
+              },
+              "ch09_ex": {
+                "name": "ch09_ex",
+                "type": "directory",
+                "children": {
+                  "__pycache__": {
+                    "name": "__pycache__",
+                    "type": "directory",
+                    "children": {},
+                    "file_count": 2,
+                    "total_size": 6803,
+                    "file_types": {
+                      "pyc": 2
+                    }
+                  },
+                  "data": {
+                    "name": "data",
+                    "type": "directory",
+                    "children": {},
+                    "file_count": 2,
+                    "total_size": 215,
+                    "file_types": {
+                      "txt": 1,
+                      "csv": 1
+                    }
+                  }
+                },
+                "file_count": 3,
+                "total_size": 10379,
+                "file_types": {
+                  "py": 3
+                }
+              },
+              "ch14_image": {
+                "name": "ch14_image",
+                "type": "directory",
+                "children": {},
+                "file_count": 206,
+                "total_size": 31039269,
+                "file_types": {
+                  "jpg": 192,
+                  "jpeg": 9,
+                  "png": 4,
+                  "naver": 1
+                }
+              },
+              "data": {
+                "name": "data",
+                "type": "directory",
+                "children": {
+                  "naver": {
+                    "name": "naver",
+                    "type": "directory",
+                    "children": {},
+                    "file_count": 42,
+                    "total_size": 3619433,
+                    "file_types": {
+                      "csv": 42
+                    }
+                  }
+                },
+                "file_count": 47,
+                "total_size": 3049567,
+                "file_types": {
+                  "csv": 23,
+                  "txt": 10,
+                  "hdf5": 2,
+                  "h5": 1,
+                  "data": 1,
+                  "json": 2,
+                  "npy": 1,
+                  "pkl": 1,
+                  "bz2": 1,
+                  "gz": 1,
+                  "zip": 1,
+                  "jpg": 1,
+                  "xml": 1,
+                  "db": 1
+                }
+              },
+              "test": {
+                "name": "test",
+                "type": "directory",
+                "children": {
+                  ".ipynb_checkpoints": {
+                    "name": ".ipynb_checkpoints",
+                    "type": "directory",
+                    "children": {},
+                    "file_count": 2,
+                    "total_size": 1548467,
+                    "file_types": {
+                      "ipynb": 2
+                    }
+                  }
+                },
+                "file_count": 8,
+                "total_size": 5174315,
+                "file_types": {
+                  "html": 1,
+                  "ipynb": 1,
+                  "zip": 1,
+                  "png": 5
+                }
+              }
+            },
+            "file_count": 38,
+            "total_size": 115879633,
+            "file_types": {
+              "env": 1,
+              "gitignore": 1,
+              "xlsx": 1,
+              "ipynb": 27,
+              "py": 4,
+              "html": 1,
+              "txt": 2
+            }
+          },
+          "02_HTML_CSS": {
+            "name": "02_HTML_CSS",
+            "type": "directory",
+            "children": {
+              "ch01": {
+                "name": "ch01",
+                "type": "directory",
+                "children": {},
+                "file_count": 4,
+                "total_size": 1642,
+                "file_types": {
+                  "html": 2,
+                  "css": 1,
+                  "js": 1
+                }
+              },
+              "ch02_HTML-1_글자목록표": {
+                "name": "ch02_HTML-1_글자목록표",
+                "type": "directory",
+                "children": {
+                  "ch02_img": {
+                    "name": "ch02_img",
+                    "type": "directory",
+                    "children": {},
+                    "file_count": 1,
+                    "total_size": 25233,
+                    "file_types": {
+                      "jpg": 1
+                    }
+                  },
+                  "ch02_music": {
+                    "name": "ch02_music",
+                    "type": "directory",
+                    "children": {},
+                    "file_count": 10,
+                    "total_size": 26727497,
+                    "file_types": {
+                      "jpg": 5,
+                      "mp3": 5
+                    }
+                  },
+                  "ch02_sound": {
+                    "name": "ch02_sound",
+                    "type": "directory",
+                    "children": {},
+                    "file_count": 2,
+                    "total_size": 1120136,
+                    "file_types": {
+                      "mp3": 2
+                    }
+                  }
+                },
+                "file_count": 10,
+                "total_size": 12849,
+                "file_types": {
+                  "html": 10
+                }
+              },
+              "ch03_HTML-2_form공간분할": {
+                "name": "ch03_HTML-2_form공간분할",
+                "type": "directory",
+                "children": {},
+                "file_count": 8,
+                "total_size": 20903,
+                "file_types": {
+                  "html": 8
+                }
+              },
+              "ch04_CSS선택자": {
+                "name": "ch04_CSS선택자",
+                "type": "directory",
+                "children": {
+                  "ch04": {
+                    "name": "ch04",
+                    "type": "directory",
+                    "children": {},
+                    "file_count": 10,
+                    "total_size": 63629,
+                    "file_types": {
+                      "png": 7,
+                      "docx": 1,
+                      "xlsx": 1,
+                      "jpg": 1
+                    }
+                  }
+                },
+                "file_count": 16,
+                "total_size": 29041,
+                "file_types": {
+                  "html": 16
+                }
+              },
+              "ch05_CSS속성자": {
+                "name": "ch05_CSS속성자",
+                "type": "directory",
+                "children": {
+                  "ch05": {
+                    "name": "ch05",
+                    "type": "directory",
+                    "children": {},
+                    "file_count": 8,
+                    "total_size": 10049496,
+                    "file_types": {
+                      "ttf": 3,
+                      "png": 3,
+                      "jpg": 2
+                    }
+                  }
+                },
+                "file_count": 16,
+                "total_size": 23372,
+                "file_types": {
+                  "html": 14,
+                  "css": 2
+                }
+              },
+              "ch06_실전예제": {
+                "name": "ch06_실전예제",
+                "type": "directory",
+                "children": {
+                  "ch06_font": {
+                    "name": "ch06_font",
+                    "type": "directory",
+                    "children": {},
+                    "file_count": 2,
+                    "total_size": 297244,
+                    "file_types": {
+                      "ttf": 2
+                    }
+                  },
+                  "css": {
+                    "name": "css",
+                    "type": "directory",
+                    "children": {},
+                    "file_count": 3,
+                    "total_size": 3247,
+                    "file_types": {
+                      "css": 3
+                    }
+                  },
+                  "font": {
+                    "name": "font",
+                    "type": "directory",
+                    "children": {},
+                    "file_count": 2,
+                    "total_size": 297244,
+                    "file_types": {
+                      "ttf": 2
+                    }
+                  }
+                },
+                "file_count": 3,
+                "total_size": 8390,
+                "file_types": {
+                  "css": 1,
+                  "html": 2
+                }
+              },
+              "ch07_스마트폰_탭": {
+                "name": "ch07_스마트폰_탭",
+                "type": "directory",
+                "children": {
+                  "ch07_smart": {
+                    "name": "ch07_smart",
+                    "type": "directory",
+                    "children": {},
+                    "file_count": 4,
+                    "total_size": 13372,
+                    "file_types": {
+                      "png": 4
+                    }
+                  },
+                  "img": {
+                    "name": "img",
+                    "type": "directory",
+                    "children": {},
+                    "file_count": 4,
+                    "total_size": 13372,
+                    "file_types": {
+                      "png": 4
+                    }
+                  }
+                },
+                "file_count": 1,
+                "total_size": 9453,
+                "file_types": {
+                  "html": 1
+                }
+              },
+              "ch08_CSS3": {
+                "name": "ch08_CSS3",
+                "type": "directory",
+                "children": {
+                  "css": {
+                    "name": "css",
+                    "type": "directory",
+                    "children": {},
+                    "file_count": 4,
+                    "total_size": 485,
+                    "file_types": {
+                      "css": 4
+                    }
+                  }
+                },
+                "file_count": 3,
+                "total_size": 8014,
+                "file_types": {
+                  "html": 3
+                }
+              },
+              "htmlcss_test": {
+                "name": "htmlcss_test",
+                "type": "directory",
+                "children": {},
+                "file_count": 4,
+                "total_size": 71845,
+                "file_types": {
+                  "zip": 1,
+                  "css": 1,
+                  "html": 1,
+                  "png": 1
+                }
+              }
+            },
+            "file_count": 2,
+            "total_size": 2138,
+            "file_types": {
+              "txt": 2
+            }
+          },
+          "03_JavaScript": {
+            "name": "03_JavaScript",
+            "type": "directory",
+            "children": {
+              "aJax": {
+                "name": "aJax",
+                "type": "directory",
+                "children": {
+                  "css": {
+                    "name": "css",
+                    "type": "directory",
+                    "children": {},
+                    "file_count": 1,
+                    "total_size": 871,
+                    "file_types": {
+                      "css": 1
+                    }
+                  }
+                },
+                "file_count": 10,
+                "total_size": 102007,
+                "file_types": {
+                  "html": 9,
+                  "js": 1
+                }
+              },
+              "ch01": {
+                "name": "ch01",
+                "type": "directory",
+                "children": {},
+                "file_count": 3,
+                "total_size": 1872,
+                "file_types": {
+                  "html": 2,
+                  "js": 1
+                }
+              },
+              "ch02_기본문법": {
+                "name": "ch02_기본문법",
+                "type": "directory",
+                "children": {
+                  ".vscode": {
+                    "name": ".vscode",
+                    "type": "directory",
+                    "children": {},
+                    "file_count": 1,
+                    "total_size": 40,
+                    "file_types": {
+                      "json": 1
+                    }
+                  }
+                },
+                "file_count": 9,
+                "total_size": 7321,
+                "file_types": {
+                  "js": 3,
+                  "html": 6
+                }
+              },
+              "ch03_조건문": {
+                "name": "ch03_조건문",
+                "type": "directory",
+                "children": {},
+                "file_count": 7,
+                "total_size": 29172,
+                "file_types": {
+                  "html": 7
+                }
+              },
+              "ch04_반복문": {
+                "name": "ch04_반복문",
+                "type": "directory",
+                "children": {
+                  ".vscode": {
+                    "name": ".vscode",
+                    "type": "directory",
+                    "children": {},
+                    "file_count": 1,
+                    "total_size": 40,
+                    "file_types": {
+                      "json": 1
+                    }
+                  }
+                },
+                "file_count": 7,
+                "total_size": 7630,
+                "file_types": {
+                  "js": 1,
+                  "html": 6
+                }
+              },
+              "ch05_함수": {
+                "name": "ch05_함수",
+                "type": "directory",
+                "children": {
+                  "ch05_img": {
+                    "name": "ch05_img",
+                    "type": "directory",
+                    "children": {},
+                    "file_count": 3,
+                    "total_size": 125420,
+                    "file_types": {
+                      "png": 3
+                    }
+                  }
+                },
+                "file_count": 20,
+                "total_size": 13694,
+                "file_types": {
+                  "html": 12,
+                  "js": 8
+                }
+              },
+              "ch07_생성자함수": {
+                "name": "ch07_생성자함수",
+                "type": "directory",
+                "children": {
+                  ".vscode": {
+                    "name": ".vscode",
+                    "type": "directory",
+                    "children": {},
+                    "file_count": 1,
+                    "total_size": 40,
+                    "file_types": {
+                      "json": 1
+                    }
+                  }
+                },
+                "file_count": 3,
+                "total_size": 4246,
+                "file_types": {
+                  "html": 2,
+                  "js": 1
+                }
+              },
+              "ch08_기본객체": {
+                "name": "ch08_기본객체",
+                "type": "directory",
+                "children": {},
+                "file_count": 8,
+                "total_size": 18601,
+                "file_types": {
+                  "html": 7,
+                  "js": 1
+                }
+              },
+              "ch09_브라우저객체": {
+                "name": "ch09_브라우저객체",
+                "type": "directory",
+                "children": {
+                  "ch09_img": {
+                    "name": "ch09_img",
+                    "type": "directory",
+                    "children": {},
+                    "file_count": 2,
+                    "total_size": 73211,
+                    "file_types": {
+                      "jpg": 2
+                    }
+                  }
+                },
+                "file_count": 7,
+                "total_size": 4740,
+                "file_types": {
+                  "html": 7
+                }
+              },
+              "ch10_문서객체": {
+                "name": "ch10_문서객체",
+                "type": "directory",
+                "children": {
+                  ".vscode": {
+                    "name": ".vscode",
+                    "type": "directory",
+                    "children": {},
+                    "file_count": 1,
+                    "total_size": 40,
+                    "file_types": {
+                      "json": 1
+                    }
+                  },
+                  "ch10_img": {
+                    "name": "ch10_img",
+                    "type": "directory",
+                    "children": {},
+                    "file_count": 3,
+                    "total_size": 81173,
+                    "file_types": {
+                      "jpg": 3
+                    }
+                  }
+                },
+                "file_count": 9,
+                "total_size": 13733,
+                "file_types": {
+                  "html": 9
+                }
+              },
+              "ch11_이벤트": {
+                "name": "ch11_이벤트",
+                "type": "directory",
+                "children": {
+                  ".vscode": {
+                    "name": ".vscode",
+                    "type": "directory",
+                    "children": {},
+                    "file_count": 1,
+                    "total_size": 40,
+                    "file_types": {
+                      "json": 1
+                    }
+                  },
+                  "img": {
+                    "name": "img",
+                    "type": "directory",
+                    "children": {},
+                    "file_count": 13,
+                    "total_size": 133529,
+                    "file_types": {
+                      "jpg": 8,
+                      "gif": 5
+                    }
+                  }
+                },
+                "file_count": 16,
+                "total_size": 18625,
+                "file_types": {
+                  "html": 16
+                }
+              },
+              "ch6_객체": {
+                "name": "ch6_객체",
+                "type": "directory",
+                "children": {},
+                "file_count": 6,
+                "total_size": 8075,
+                "file_types": {
+                  "js": 1,
+                  "html": 5
+                }
+              }
+            },
+            "file_count": 2,
+            "total_size": 2138,
+            "file_types": {
+              "txt": 2
+            }
+          },
+          "04_DBMS": {
+            "name": "04_DBMS",
+            "type": "directory",
+            "children": {
+              "newProject": {
+                "name": "newProject",
+                "type": "directory",
+                "children": {},
+                "file_count": 3,
+                "total_size": 8454,
+                "file_types": {
+                  "project": 1,
+                  "exerd": 2
+                }
+              }
+            },
+            "file_count": 6,
+            "total_size": 50938,
+            "file_types": {
+              "gitignore": 1,
+              "sql": 5
+            }
+          },
+          "05_DeepLearning": {
+            "name": "05_DeepLearning",
+            "type": "directory",
+            "children": {
+              ".virtual_documents": {
+                "name": ".virtual_documents",
+                "type": "directory",
+                "children": {},
+                "file_count": 1,
+                "total_size": 1,
+                "file_types": {
+                  "ipynb": 1
+                }
+              },
+              "data": {
+                "name": "data",
+                "type": "directory",
+                "children": {},
+                "file_count": 8,
+                "total_size": 372196,
+                "file_types": {
+                  "xlsx": 1,
+                  "csv": 5,
+                  "jpg": 1,
+                  "txt": 1
+                }
+              },
+              "model": {
+                "name": "model",
+                "type": "directory",
+                "children": {},
+                "file_count": 7,
+                "total_size": 5081512,
+                "file_types": {
+                  "h5": 7
+                }
+              },
+              "model08": {
+                "name": "model08",
+                "type": "directory",
+                "children": {},
+                "file_count": 8,
+                "total_size": 31511552,
+                "file_types": {
+                  "h5": 8
+                }
+              },
+              "model_iris": {
+                "name": "model_iris",
+                "type": "directory",
+                "children": {},
+                "file_count": 31,
+                "total_size": 7865512,
+                "file_types": {
+                  "h5": 31
+                }
+              },
+              "modelwine": {
+                "name": "modelwine",
+                "type": "directory",
+                "children": {},
+                "file_count": 76,
+                "total_size": 659796620,
+                "file_types": {
+                  "h5": 76
+                }
+              }
+            },
+            "file_count": 15,
+            "total_size": 3012819,
+            "file_types": {
+              "ipynb": 15
+            }
+          },
+          "06_이미지처리": {
+            "name": "06_이미지처리",
+            "type": "directory",
+            "children": {},
+            "file_count": 2,
+            "total_size": 19028818,
+            "file_types": {
+              "ipynb": 1,
+              "h5": 1
+            }
+          },
+          "07_자연어처리": {
+            "name": "07_자연어처리",
+            "type": "directory",
+            "children": {
+              "data": {
+                "name": "data",
+                "type": "directory",
+                "children": {},
+                "file_count": 19,
+                "total_size": 7817439,
+                "file_types": {
+                  "ttf": 1,
+                  "csv": 9,
+                  "jpg": 4,
+                  "png": 4,
+                  "txt": 1
+                }
+              }
+            },
+            "file_count": 11,
+            "total_size": 3191234,
+            "file_types": {
+              "gitignore": 1,
+              "ipynb": 9,
+              "csv": 1
+            }
+          },
+          "08_LLM": {
+            "name": "08_LLM",
+            "type": "directory",
+            "children": {
+              "data": {
+                "name": "data",
+                "type": "directory",
+                "children": {},
+                "file_count": 15,
+                "total_size": 5080292,
+                "file_types": {
+                  "jpg": 2,
+                  "png": 2,
+                  "mp3": 7,
+                  "wav": 1,
+                  "txt": 2,
+                  "csv": 1
+                }
+              },
+              "images": {
+                "name": "images",
+                "type": "directory",
+                "children": {},
+                "file_count": 5,
+                "total_size": 445151,
+                "file_types": {
+                  "jpg": 4,
+                  "jpeg": 1
+                }
+              },
+              "tax_docs": {
+                "name": "tax_docs",
+                "type": "directory",
+                "children": {},
+                "file_count": 3,
+                "total_size": 2566087,
+                "file_types": {
+                  "docx": 3
+                }
+              }
+            },
+            "file_count": 28,
+            "total_size": 3227097,
+            "file_types": {
+              "gitignore": 1,
+              "py": 3,
+              "ipynb": 21,
+              "zip": 1,
+              "html": 1,
+              "png": 1
+            }
+          },
+          "09_GenerativeAI_RPA": {
+            "name": "09_GenerativeAI_RPA",
+            "type": "directory",
+            "children": {},
+            "file_count": 36,
+            "total_size": 919426,
+            "file_types": {
+              "gitignore": 1,
+              "py": 11,
+              "xlsx": 12,
+              "spec": 1,
+              "bat": 1,
+              "pdf": 9,
+              "txt": 1
+            }
+          },
+          "10_MachineLearning": {
+            "name": "10_MachineLearning",
+            "type": "directory",
+            "children": {
+              "data": {
+                "name": "data",
+                "type": "directory",
+                "children": {},
+                "file_count": 10,
+                "total_size": 580000,
+                "file_types": {
+                  "csv": 4,
+                  "npy": 1,
+                  "pkl": 2,
+                  "npz": 1,
+                  "joblib": 1,
+                  "png": 1
+                }
+              }
+            },
+            "file_count": 5,
+            "total_size": 29868633,
+            "file_types": {
+              "ipynb": 4,
+              "txt": 1
+            }
+          },
+          "11_Flask": {
+            "name": "11_Flask",
+            "type": "directory",
+            "children": {
+              "ch01_GUI_FlaskSample": {
+                "name": "ch01_GUI_FlaskSample",
+                "type": "directory",
+                "children": {
+                  "__pycache__": {
+                    "name": "__pycache__",
+                    "type": "directory",
+                    "children": {},
+                    "file_count": 1,
+                    "total_size": 763,
+                    "file_types": {
+                      "pyc": 1
+                    }
+                  }
+                },
+                "file_count": 6,
+                "total_size": 35766,
+                "file_types": {
+                  "gitignore": 1,
+                  "ipynb": 2,
+                  "py": 3
+                }
+              },
+              "ch02_route_render_static": {
+                "name": "ch02_route_render_static",
+                "type": "directory",
+                "children": {
+                  "__pycache__": {
+                    "name": "__pycache__",
+                    "type": "directory",
+                    "children": {},
+                    "file_count": 1,
+                    "total_size": 364,
+                    "file_types": {
+                      "pyc": 1
+                    }
+                  },
+                  "templates": {
+                    "name": "templates",
+                    "type": "directory",
+                    "children": {},
+                    "file_count": 2,
+                    "total_size": 1348,
+                    "file_types": {
+                      "html": 2
+                    }
+                  }
+                },
+                "file_count": 7,
+                "total_size": 3796,
+                "file_types": {
+                  "py": 7
+                }
+              },
+              "ch3_methods": {
+                "name": "ch3_methods",
+                "type": "directory",
+                "children": {
+                  ".idea": {
+                    "name": ".idea",
+                    "type": "directory",
+                    "children": {
+                      "inspectionProfiles": {
+                        "name": "inspectionProfiles",
+                        "type": "directory",
+                        "children": {},
+                        "file_count": 1,
+                        "total_size": 174,
+                        "file_types": {
+                          "xml": 1
+                        }
+                      }
+                    },
+                    "file_count": 5,
+                    "total_size": 1111,
+                    "file_types": {
+                      "gitignore": 1,
+                      "iml": 1,
+                      "xml": 3
+                    }
+                  },
+                  "__pycache__": {
+                    "name": "__pycache__",
+                    "type": "directory",
+                    "children": {},
+                    "file_count": 3,
+                    "total_size": 2653,
+                    "file_types": {
+                      "pyc": 3
+                    }
+                  },
+                  "static": {
+                    "name": "static",
+                    "type": "directory",
+                    "children": {},
+                    "file_count": 2,
+                    "total_size": 48232,
+                    "file_types": {
+                      "css": 1,
+                      "png": 1
+                    }
+                  },
+                  "templates": {
+                    "name": "templates",
+                    "type": "directory",
+                    "children": {
+                      "1_onlyget": {
+                        "name": "1_onlyget",
+                        "type": "directory",
+                        "children": {},
+                        "file_count": 1,
+                        "total_size": 673,
+                        "file_types": {
+                          "html": 1
+                        }
+                      },
+                      "2_post_etc": {
+                        "name": "2_post_etc",
+                        "type": "directory",
+                        "children": {},
+                        "file_count": 3,
+                        "total_size": 3930,
+                        "file_types": {
+                          "html": 3
+                        }
+                      }
+                    },
+                    "file_count": 3,
+                    "total_size": 2515,
+                    "file_types": {
+                      "html": 3
+                    }
+                  }
+                },
+                "file_count": 6,
+                "total_size": 5309,
+                "file_types": {
+                  "py": 5,
+                  "html": 1
+                }
+              },
+              "ch4_jinja2": {
+                "name": "ch4_jinja2",
+                "type": "directory",
+                "children": {
+                  "static": {
+                    "name": "static",
+                    "type": "directory",
+                    "children": {},
+                    "file_count": 2,
+                    "total_size": 48232,
+                    "file_types": {
+                      "css": 1,
+                      "png": 1
+                    }
+                  },
+                  "templates": {
+                    "name": "templates",
+                    "type": "directory",
+                    "children": {},
+                    "file_count": 3,
+                    "total_size": 10425,
+                    "file_types": {
+                      "html": 3
+                    }
+                  }
+                },
+                "file_count": 2,
+                "total_size": 2474,
+                "file_types": {
+                  "py": 2
+                }
+              },
+              "ch5_fileupload": {
+                "name": "ch5_fileupload",
+                "type": "directory",
+                "children": {
+                  "__pycache__": {
+                    "name": "__pycache__",
+                    "type": "directory",
+                    "children": {},
+                    "file_count": 1,
+                    "total_size": 906,
+                    "file_types": {
+                      "pyc": 1
+                    }
+                  },
+                  "static": {
+                    "name": "static",
+                    "type": "directory",
+                    "children": {
+                      "img": {
+                        "name": "img",
+                        "type": "directory",
+                        "children": {},
+                        "file_count": 4,
+                        "total_size": 138846,
+                        "file_types": {
+                          "png": 3,
+                          "ico": 1
+                        }
+                      }
+                    },
+                    "file_count": 0,
+                    "total_size": 0,
+                    "file_types": {}
+                  },
+                  "templates": {
+                    "name": "templates",
+                    "type": "directory",
+                    "children": {},
+                    "file_count": 5,
+                    "total_size": 5622,
+                    "file_types": {
+                      "html": 5
+                    }
+                  },
+                  "uploads": {
+                    "name": "uploads",
+                    "type": "directory",
+                    "children": {},
+                    "file_count": 3,
+                    "total_size": 156631,
+                    "file_types": {
+                      "xlsx": 2,
+                      "png": 1
+                    }
+                  }
+                },
+                "file_count": 5,
+                "total_size": 8248,
+                "file_types": {
+                  "py": 5
+                }
+              },
+              "ch6_todo": {
+                "name": "ch6_todo",
+                "type": "directory",
+                "children": {
+                  "__pycache__": {
+                    "name": "__pycache__",
+                    "type": "directory",
+                    "children": {},
+                    "file_count": 1,
+                    "total_size": 628,
+                    "file_types": {
+                      "pyc": 1
+                    }
+                  },
+                  "database": {
+                    "name": "database",
+                    "type": "directory",
+                    "children": {},
+                    "file_count": 1,
+                    "total_size": 683,
+                    "file_types": {
+                      "sql": 1
+                    }
+                  },
+                  "static": {
+                    "name": "static",
+                    "type": "directory",
+                    "children": {
+                      "img": {
+                        "name": "img",
+                        "type": "directory",
+                        "children": {},
+                        "file_count": 1,
+                        "total_size": 16651,
+                        "file_types": {
+                          "png": 1
+                        }
+                      }
+                    },
+                    "file_count": 0,
+                    "total_size": 0,
+                    "file_types": {}
+                  },
+                  "templates": {
+                    "name": "templates",
+                    "type": "directory",
+                    "children": {
+                      "todo": {
+                        "name": "todo",
+                        "type": "directory",
+                        "children": {},
+                        "file_count": 3,
+                        "total_size": 6011,
+                        "file_types": {
+                          "html": 3
+                        }
+                      }
+                    },
+                    "file_count": 4,
+                    "total_size": 2393,
+                    "file_types": {
+                      "html": 4
+                    }
+                  }
+                },
+                "file_count": 4,
+                "total_size": 7581,
+                "file_types": {
+                  "py": 4
+                }
+              },
+              "ch7_db_test": {
+                "name": "ch7_db_test",
+                "type": "directory",
+                "children": {
+                  "databse": {
+                    "name": "databse",
+                    "type": "directory",
+                    "children": {
+                      "__pycache__": {
+                        "name": "__pycache__",
+                        "type": "directory",
+                        "children": {},
+                        "file_count": 1,
+                        "total_size": 793,
+                        "file_types": {
+                          "pyc": 1
+                        }
+                      }
+                    },
+                    "file_count": 3,
+                    "total_size": 15597,
+                    "file_types": {
+                      "py": 1,
+                      "ipynb": 2
+                    }
+                  },
+                  "templates": {
+                    "name": "templates",
+                    "type": "directory",
+                    "children": {},
+                    "file_count": 1,
+                    "total_size": 82,
+                    "file_types": {
+                      "html": 1
+                    }
+                  }
+                },
+                "file_count": 1,
+                "total_size": 309,
+                "file_types": {
+                  "py": 1
+                }
+              },
+              "ch7_todo_db": {
+                "name": "ch7_todo_db",
+                "type": "directory",
+                "children": {
+                  "__pycache__": {
+                    "name": "__pycache__",
+                    "type": "directory",
+                    "children": {},
+                    "file_count": 2,
+                    "total_size": 3129,
+                    "file_types": {
+                      "pyc": 2
+                    }
+                  },
+                  "database": {
+                    "name": "database",
+                    "type": "directory",
+                    "children": {},
+                    "file_count": 1,
+                    "total_size": 697,
+                    "file_types": {
+                      "sql": 1
+                    }
+                  },
+                  "static": {
+                    "name": "static",
+                    "type": "directory",
+                    "children": {
+                      "img": {
+                        "name": "img",
+                        "type": "directory",
+                        "children": {},
+                        "file_count": 1,
+                        "total_size": 16651,
+                        "file_types": {
+                          "png": 1
+                        }
+                      }
+                    },
+                    "file_count": 0,
+                    "total_size": 0,
+                    "file_types": {}
+                  },
+                  "templates": {
+                    "name": "templates",
+                    "type": "directory",
+                    "children": {
+                      "todo": {
+                        "name": "todo",
+                        "type": "directory",
+                        "children": {},
+                        "file_count": 3,
+                        "total_size": 6011,
+                        "file_types": {
+                          "html": 3
+                        }
+                      }
+                    },
+                    "file_count": 4,
+                    "total_size": 2393,
+                    "file_types": {
+                      "html": 4
+                    }
+                  }
+                },
+                "file_count": 4,
+                "total_size": 6622,
+                "file_types": {
+                  "py": 4
+                }
+              },
+              "data": {
+                "name": "data",
+                "type": "directory",
+                "children": {},
+                "file_count": 2,
+                "total_size": 29904,
+                "file_types": {
+                  "xlsx": 1,
+                  "csv": 1
+                }
+              },
+              "model": {
+                "name": "model",
+                "type": "directory",
+                "children": {},
+                "file_count": 2,
+                "total_size": 147894,
+                "file_types": {
+                  "joblib": 1,
+                  "pkl": 1
+                }
+              }
+            },
+            "file_count": 0,
+            "total_size": 0,
+            "file_types": {}
+          },
+          "12_django": {
+            "name": "12_django",
+            "type": "directory",
+            "children": {
+              "ch01_hello": {
+                "name": "ch01_hello",
+                "type": "directory",
+                "children": {
+                  "ch01": {
+                    "name": "ch01",
+                    "type": "directory",
+                    "children": {
+                      "__pycache__": {
+                        "name": "__pycache__",
+                        "type": "directory",
+                        "children": {},
+                        "file_count": 4,
+                        "total_size": 3891,
+                        "file_types": {
+                          "pyc": 4
+                        }
+                      }
+                    },
+                    "file_count": 5,
+                    "total_size": 5002,
+                    "file_types": {
+                      "py": 5
+                    }
+                  },
+                  "home": {
+                    "name": "home",
+                    "type": "directory",
+                    "children": {
+                      "__pycache__": {
+                        "name": "__pycache__",
+                        "type": "directory",
+                        "children": {},
+                        "file_count": 5,
+                        "total_size": 1362,
+                        "file_types": {
+                          "pyc": 5
+                        }
+                      },
+                      "migrations": {
+                        "name": "migrations",
+                        "type": "directory",
+                        "children": {
+                          "__pycache__": {
+                            "name": "__pycache__",
+                            "type": "directory",
+                            "children": {},
+                            "file_count": 1,
+                            "total_size": 156,
+                            "file_types": {
+                              "pyc": 1
+                            }
+                          }
+                        },
+                        "file_count": 1,
+                        "total_size": 0,
+                        "file_types": {
+                          "py": 1
+                        }
+                      },
+                      "static": {
+                        "name": "static",
+                        "type": "directory",
+                        "children": {},
+                        "file_count": 2,
+                        "total_size": 48232,
+                        "file_types": {
+                          "css": 1,
+                          "png": 1
+                        }
+                      },
+                      "templates": {
+                        "name": "templates",
+                        "type": "directory",
+                        "children": {},
+                        "file_count": 1,
+                        "total_size": 458,
+                        "file_types": {
+                          "html": 1
+                        }
+                      }
+                    },
+                    "file_count": 6,
+                    "total_size": 637,
+                    "file_types": {
+                      "py": 6
+                    }
+                  }
+                },
+                "file_count": 3,
+                "total_size": 671,
+                "file_types": {
+                  "gitignore": 1,
+                  "sqlite3": 1,
+                  "py": 1
+                }
+              },
+              "ch02_wordcnt": {
+                "name": "ch02_wordcnt",
+                "type": "directory",
+                "children": {
+                  "ch02": {
+                    "name": "ch02",
+                    "type": "directory",
+                    "children": {
+                      "__pycache__": {
+                        "name": "__pycache__",
+                        "type": "directory",
+                        "children": {},
+                        "file_count": 4,
+                        "total_size": 4105,
+                        "file_types": {
+                          "pyc": 4
+                        }
+                      }
+                    },
+                    "file_count": 5,
+                    "total_size": 4999,
+                    "file_types": {
+                      "py": 5
+                    }
+                  },
+                  "home": {
+                    "name": "home",
+                    "type": "directory",
+                    "children": {
+                      "__pycache__": {
+                        "name": "__pycache__",
+                        "type": "directory",
+                        "children": {},
+                        "file_count": 5,
+                        "total_size": 2213,
+                        "file_types": {
+                          "pyc": 5
+                        }
+                      },
+                      "migrations": {
+                        "name": "migrations",
+                        "type": "directory",
+                        "children": {
+                          "__pycache__": {
+                            "name": "__pycache__",
+                            "type": "directory",
+                            "children": {},
+                            "file_count": 1,
+                            "total_size": 158,
+                            "file_types": {
+                              "pyc": 1
+                            }
+                          }
+                        },
+                        "file_count": 1,
+                        "total_size": 0,
+                        "file_types": {
+                          "py": 1
+                        }
+                      },
+                      "static": {
+                        "name": "static",
+                        "type": "directory",
+                        "children": {
+                          "css": {
+                            "name": "css",
+                            "type": "directory",
+                            "children": {},
+                            "file_count": 1,
+                            "total_size": 96,
+                            "file_types": {
+                              "css": 1
+                            }
+                          },
+                          "img": {
+                            "name": "img",
+                            "type": "directory",
+                            "children": {},
+                            "file_count": 2,
+                            "total_size": 44162,
+                            "file_types": {
+                              "png": 2
+                            }
+                          }
+                        },
+                        "file_count": 0,
+                        "total_size": 0,
+                        "file_types": {}
+                      },
+                      "templates": {
+                        "name": "templates",
+                        "type": "directory",
+                        "children": {
+                          "home": {
+                            "name": "home",
+                            "type": "directory",
+                            "children": {},
+                            "file_count": 2,
+                            "total_size": 986,
+                            "file_types": {
+                              "html": 2
+                            }
+                          }
+                        },
+                        "file_count": 2,
+                        "total_size": 1247,
+                        "file_types": {
+                          "html": 2
+                        }
+                      }
+                    },
+                    "file_count": 7,
+                    "total_size": 1372,
+                    "file_types": {
+                      "py": 6,
+                      "html": 1
+                    }
+                  },
+                  "wordcnt": {
+                    "name": "wordcnt",
+                    "type": "directory",
+                    "children": {
+                      "__pycache__": {
+                        "name": "__pycache__",
+                        "type": "directory",
+                        "children": {},
+                        "file_count": 6,
+                        "total_size": 2304,
+                        "file_types": {
+                          "pyc": 6
+                        }
+                      },
+                      "migrations": {
+                        "name": "migrations",
+                        "type": "directory",
+                        "children": {
+                          "__pycache__": {
+                            "name": "__pycache__",
+                            "type": "directory",
+                            "children": {},
+                            "file_count": 1,
+                            "total_size": 161,
+                            "file_types": {
+                              "pyc": 1
+                            }
+                          }
+                        },
+                        "file_count": 1,
+                        "total_size": 0,
+                        "file_types": {
+                          "py": 1
+                        }
+                      },
+                      "templates": {
+                        "name": "templates",
+                        "type": "directory",
+                        "children": {
+                          "wordcnt": {
+                            "name": "wordcnt",
+                            "type": "directory",
+                            "children": {},
+                            "file_count": 3,
+                            "total_size": 2316,
+                            "file_types": {
+                              "html": 3
+                            }
+                          }
+                        },
+                        "file_count": 0,
+                        "total_size": 0,
+                        "file_types": {}
+                      }
+                    },
+                    "file_count": 7,
+                    "total_size": 2486,
+                    "file_types": {
+                      "py": 7
+                    }
+                  }
+                },
+                "file_count": 3,
+                "total_size": 131743,
+                "file_types": {
+                  "gitignore": 1,
+                  "sqlite3": 1,
+                  "py": 1
+                }
+              },
+              "ch03_orm": {
+                "name": "ch03_orm",
+                "type": "directory",
+                "children": {
+                  "ch03": {
+                    "name": "ch03",
+                    "type": "directory",
+                    "children": {
+                      "__pycache__": {
+                        "name": "__pycache__",
+                        "type": "directory",
+                        "children": {},
+                        "file_count": 4,
+                        "total_size": 3821,
+                        "file_types": {
+                          "pyc": 4
+                        }
+                      }
+                    },
+                    "file_count": 5,
+                    "total_size": 4679,
+                    "file_types": {
+                      "py": 5
+                    }
+                  },
+                  "student": {
+                    "name": "student",
+                    "type": "directory",
+                    "children": {
+                      "__pycache__": {
+                        "name": "__pycache__",
+                        "type": "directory",
+                        "children": {},
+                        "file_count": 4,
+                        "total_size": 1626,
+                        "file_types": {
+                          "pyc": 4
+                        }
+                      },
+                      "migrations": {
+                        "name": "migrations",
+                        "type": "directory",
+                        "children": {
+                          "__pycache__": {
+                            "name": "__pycache__",
+                            "type": "directory",
+                            "children": {},
+                            "file_count": 2,
+                            "total_size": 908,
+                            "file_types": {
+                              "pyc": 2
+                            }
+                          }
+                        },
+                        "file_count": 2,
+                        "total_size": 657,
+                        "file_types": {
+                          "py": 2
+                        }
+                      }
+                    },
+                    "file_count": 6,
+                    "total_size": 875,
+                    "file_types": {
+                      "py": 6
+                    }
+                  }
+                },
+                "file_count": 3,
+                "total_size": 139928,
+                "file_types": {
+                  "gitignore": 1,
+                  "sqlite3": 1,
+                  "py": 1
+                }
+              }
+            },
+            "file_count": 0,
+            "total_size": 0,
+            "file_types": {}
+          },
+          "Pks_Develop": {
+            "name": "Pks_Develop",
+            "type": "directory",
+            "children": {
+              "N시기별음식URL수집": {
+                "name": "N시기별음식URL수집",
+                "type": "directory",
+                "children": {
+                  "N월별조회메뉴수집": {
+                    "name": "N월별조회메뉴수집",
+                    "type": "directory",
+                    "children": {},
+                    "file_count": 25,
+                    "total_size": 130623844,
+                    "file_types": {
+                      "xlsx": 25
+                    }
+                  },
+                  "N월별조회메뉴수집_비중반영": {
+                    "name": "N월별조회메뉴수집_비중반영",
+                    "type": "directory",
+                    "children": {},
+                    "file_count": 25,
+                    "total_size": 109335337,
+                    "file_types": {
+                      "xlsx": 25
+                    }
+                  },
+                  "N월별조회메뉴수집_비중반영_예측가능메뉴한": {
+                    "name": "N월별조회메뉴수집_비중반영_예측가능메뉴한",
+                    "type": "directory",
+                    "children": {},
+                    "file_count": 25,
+                    "total_size": 14983845,
+                    "file_types": {
+                      "xlsx": 25
+                    }
+                  },
+                  "N월별조회메뉴수집_비중반영_예측가능메뉴한_결과_최적화": {
+                    "name": "N월별조회메뉴수집_비중반영_예측가능메뉴한_결과_최적화",
+                    "type": "directory",
+                    "children": {},
+                    "file_count": 25,
+                    "total_size": 0,
+                    "file_types": {
+                      "xlsx": 25
+                    }
+                  },
+                  "N월별조회메뉴수집_비중반영_예측가능메뉴한정": {
+                    "name": "N월별조회메뉴수집_비중반영_예측가능메뉴한정",
+                    "type": "directory",
+                    "children": {},
+                    "file_count": 25,
+                    "total_size": 14983845,
+                    "file_types": {
+                      "xlsx": 25
+                    }
+                  },
+                  "N월별조회메뉴수집_비중반영_예측가능메뉴한정_결과": {
+                    "name": "N월별조회메뉴수집_비중반영_예측가능메뉴한정_결과",
+                    "type": "directory",
+                    "children": {},
+                    "file_count": 25,
+                    "total_size": 22965440,
+                    "file_types": {
+                      "xlsx": 25
+                    }
+                  },
+                  "N월별조회메뉴수집_비중반영_예측가능메뉴한정요약_결과": {
+                    "name": "N월별조회메뉴수집_비중반영_예측가능메뉴한정요약_결과",
+                    "type": "directory",
+                    "children": {},
+                    "file_count": 25,
+                    "total_size": 23018849,
+                    "file_types": {
+                      "xlsx": 25
+                    }
+                  },
+                  "N월별키워드검색추세5개메뉴단위": {
+                    "name": "N월별키워드검색추세5개메뉴단위",
+                    "type": "directory",
+                    "children": {},
+                    "file_count": 80,
+                    "total_size": 539958,
+                    "file_types": {
+                      "xlsx": 78,
+                      "csv": 1,
+                      "ipynb": 1
+                    }
+                  },
+                  "food_predict": {
+                    "name": "food_predict",
+                    "type": "directory",
+                    "children": {},
+                    "file_count": 5,
+                    "total_size": 280738,
+                    "file_types": {
+                      "gitignore": 1,
+                      "py": 1,
+                      "ipynb": 3
+                    }
+                  },
+                  "상세메뉴별총검색수": {
+                    "name": "상세메뉴별총검색수",
+                    "type": "directory",
+                    "children": {},
+                    "file_count": 9,
+                    "total_size": 384967,
+                    "file_types": {
+                      "xlsx": 4,
+                      "ipynb": 4,
+                      "csv": 1
+                    }
+                  }
+                },
+                "file_count": 13,
+                "total_size": 694009,
+                "file_types": {
+                  "env": 1,
+                  "gitignore": 1,
+                  "ipynb": 5,
+                  "xlsx": 5,
+                  "csv": 1
+                }
+              },
+              "네이버음식url등정보수집_코드모음": {
+                "name": "네이버음식url등정보수집_코드모음",
+                "type": "directory",
+                "children": {
+                  "햄샌디": {
+                    "name": "햄샌디",
+                    "type": "directory",
+                    "children": {},
+                    "file_count": 4,
+                    "total_size": 65655,
+                    "file_types": {
+                      "ipynb": 4
+                    }
+                  }
+                },
+                "file_count": 16,
+                "total_size": 718259,
+                "file_types": {
+                  "ipynb": 15,
+                  "csv": 1
+                }
+              },
+              "레서피": {
+                "name": "레서피",
+                "type": "directory",
+                "children": {},
+                "file_count": 36,
+                "total_size": 2794395,
+                "file_types": {
+                  "xlsx": 35,
+                  "ipynb": 1
+                }
+              },
+              "생성기": {
+                "name": "생성기",
+                "type": "directory",
+                "children": {},
+                "file_count": 36,
+                "total_size": 1006945,
+                "file_types": {
+                  "html": 34,
+                  "ipynb": 1,
+                  "py": 1
+                }
+              },
+              "햄버거코드": {
+                "name": "햄버거코드",
+                "type": "directory",
+                "children": {
+                  "b3모델링": {
+                    "name": "b3모델링",
+                    "type": "directory",
+                    "children": {
+                      "__pycache__": {
+                        "name": "__pycache__",
+                        "type": "directory",
+                        "children": {},
+                        "file_count": 1,
+                        "total_size": 841,
+                        "file_types": {
+                          "pyc": 1
+                        }
+                      },
+                      "test": {
+                        "name": "test",
+                        "type": "directory",
+                        "children": {
+                          "burgerking": {
+                            "name": "burgerking",
+                            "type": "directory",
+                            "children": {},
+                            "file_count": 210,
+                            "total_size": 4225351,
+                            "file_types": {
+                              "jpg": 210
+                            }
+                          },
+                          "eggdrop": {
+                            "name": "eggdrop",
+                            "type": "directory",
+                            "children": {},
+                            "file_count": 223,
+                            "total_size": 5935421,
+                            "file_types": {
+                              "jpg": 223
+                            }
+                          },
+                          "hongruijian": {
+                            "name": "hongruijian",
+                            "type": "directory",
+                            "children": {},
+                            "file_count": 221,
+                            "total_size": 3591583,
+                            "file_types": {
+                              "jpg": 221
+                            }
+                          },
+                          "knotted": {
+                            "name": "knotted",
+                            "type": "directory",
+                            "children": {},
+                            "file_count": 211,
+                            "total_size": 5249869,
+                            "file_types": {
+                              "jpg": 211
+                            }
+                          },
+                          "lotteria": {
+                            "name": "lotteria",
+                            "type": "directory",
+                            "children": {},
+                            "file_count": 210,
+                            "total_size": 4100140,
+                            "file_types": {
+                              "jpg": 210
+                            }
+                          },
+                          "monchouchou": {
+                            "name": "monchouchou",
+                            "type": "directory",
+                            "children": {},
+                            "file_count": 210,
+                            "total_size": 4722039,
+                            "file_types": {
+                              "jpg": 210
+                            }
+                          },
+                          "shakeshack": {
+                            "name": "shakeshack",
+                            "type": "directory",
+                            "children": {},
+                            "file_count": 211,
+                            "total_size": 6429387,
+                            "file_types": {
+                              "jpg": 211
+                            }
+                          },
+                          "subway": {
+                            "name": "subway",
+                            "type": "directory",
+                            "children": {},
+                            "file_count": 212,
+                            "total_size": 6473152,
+                            "file_types": {
+                              "jpg": 212
+                            }
+                          },
+                          "twosome": {
+                            "name": "twosome",
+                            "type": "directory",
+                            "children": {},
+                            "file_count": 207,
+                            "total_size": 3156750,
+                            "file_types": {
+                              "jpg": 207
+                            }
+                          }
+                        },
+                        "file_count": 0,
+                        "total_size": 0,
+                        "file_types": {}
+                      }
+                    },
+                    "file_count": 5,
+                    "total_size": 90088933,
+                    "file_types": {
+                      "pth": 1,
+                      "py": 2,
+                      "png": 1,
+                      "ipynb": 1
+                    }
+                  },
+                  "햄버거샌드위치디저트N네이버키워드추세": {
+                    "name": "햄버거샌드위치디저트N네이버키워드추세",
+                    "type": "directory",
+                    "children": {},
+                    "file_count": 5,
+                    "total_size": 40858,
+                    "file_types": {
+                      "xlsx": 4,
+                      "ipynb": 1
+                    }
+                  },
+                  "햄버거샌드위치디저트메뉴이미지월별모음": {
+                    "name": "햄버거샌드위치디저트메뉴이미지월별모음",
+                    "type": "directory",
+                    "children": {},
+                    "file_count": 25,
+                    "total_size": 4098744,
+                    "file_types": {
+                      "xlsx": 25
+                    }
+                  },
+                  "햄버거샌드위치디저트메뉴이미지월별모음_비중반영": {
+                    "name": "햄버거샌드위치디저트메뉴이미지월별모음_비중반영",
+                    "type": "directory",
+                    "children": {},
+                    "file_count": 25,
+                    "total_size": 3623214,
+                    "file_types": {
+                      "xlsx": 25
+                    }
+                  },
+                  "햄버거샌드위치디저트메뉴이미지월별모음_비중반영_결과": {
+                    "name": "햄버거샌드위치디저트메뉴이미지월별모음_비중반영_결과",
+                    "type": "directory",
+                    "children": {},
+                    "file_count": 25,
+                    "total_size": 5316719,
+                    "file_types": {
+                      "xlsx": 25
+                    }
+                  }
+                },
+                "file_count": 12,
+                "total_size": 217950,
+                "file_types": {
+                  "env": 1,
+                  "gitignore": 1,
+                  "html": 1,
+                  "xlsx": 5,
+                  "ipynb": 4
+                }
+              }
+            },
+            "file_count": 13,
+            "total_size": 2094457,
+            "file_types": {
+              "txt": 2,
+              "gitignore": 1,
+              "zip": 1,
+              "ipynb": 5,
+              "xlsx": 3,
+              "csv": 1
+            }
+          },
+          "Project2nd": {
+            "name": "Project2nd",
+            "type": "directory",
+            "children": {
+              "GitRepReadme생성": {
+                "name": "GitRepReadme생성",
+                "type": "directory",
+                "children": {},
+                "file_count": 3,
+                "total_size": 30289,
+                "file_types": {
+                  "py": 1,
+                  "json": 1,
+                  "md": 1
+                }
+              },
+              "금융법령수집": {
+                "name": "금융법령수집",
+                "type": "directory",
+                "children": {
+                  "금융법령_다운로드": {
+                    "name": "금융법령_다운로드",
+                    "type": "directory",
+                    "children": {},
+                    "file_count": 106,
+                    "total_size": 20591499,
+                    "file_types": {
+                      "doc": 53,
+                      "docx": 53
+                    }
+                  },
+                  "보험_법령_다운로드": {
+                    "name": "보험_법령_다운로드",
+                    "type": "directory",
+                    "children": {},
+                    "file_count": 96,
+                    "total_size": 15542677,
+                    "file_types": {
+                      "doc": 48,
+                      "docx": 48
+                    }
+                  },
+                  "은행_법령_다운로드": {
+                    "name": "은행_법령_다운로드",
+                    "type": "directory",
+                    "children": {},
+                    "file_count": 40,
+                    "total_size": 3984202,
+                    "file_types": {
+                      "doc": 20,
+                      "docx": 20
+                    }
+                  }
+                },
+                "file_count": 9,
+                "total_size": 10838686,
+                "file_types": {
+                  "gitignore": 1,
+                  "ipynb": 3,
+                  "zip": 3,
+                  "py": 1,
+                  "xls": 1
+                }
+              },
+              "코드파일수집_심재성": {
+                "name": "코드파일수집_심재성",
+                "type": "directory",
+                "children": {},
+                "file_count": 18,
+                "total_size": 122025753,
+                "file_types": {
+                  "env": 1,
+                  "gitignore": 1,
+                  "py": 3,
+                  "json": 12,
+                  "log": 1
+                }
+              }
+            },
+            "file_count": 5,
+            "total_size": 11414616,
+            "file_types": {
+              "docx": 3,
+              "txt": 1,
+              "pptx": 1
+            }
+          },
+          "pylib": {
+            "name": "pylib",
+            "type": "directory",
+            "children": {
+              "__pycache__": {
+                "name": "__pycache__",
+                "type": "directory",
+                "children": {},
+                "file_count": 1,
+                "total_size": 1066,
+                "file_types": {
+                  "pyc": 1
+                }
+              },
+              "sample_pac": {
+                "name": "sample_pac",
+                "type": "directory",
+                "children": {
+                  "__pycache__": {
+                    "name": "__pycache__",
+                    "type": "directory",
+                    "children": {},
+                    "file_count": 1,
+                    "total_size": 308,
+                    "file_types": {
+                      "pyc": 1
+                    }
+                  },
+                  "ab": {
+                    "name": "ab",
+                    "type": "directory",
+                    "children": {
+                      "__pycache__": {
+                        "name": "__pycache__",
+                        "type": "directory",
+                        "children": {},
+                        "file_count": 3,
+                        "total_size": 1026,
+                        "file_types": {
+                          "pyc": 3
+                        }
+                      }
+                    },
+                    "file_count": 3,
+                    "total_size": 470,
+                    "file_types": {
+                      "py": 3
+                    }
+                  },
+                  "cd": {
+                    "name": "cd",
+                    "type": "directory",
+                    "children": {
+                      "__pycache__": {
+                        "name": "__pycache__",
+                        "type": "directory",
+                        "children": {},
+                        "file_count": 2,
+                        "total_size": 470,
+                        "file_types": {
+                          "pyc": 2
+                        }
+                      }
+                    },
+                    "file_count": 2,
+                    "total_size": 153,
+                    "file_types": {
+                      "py": 2
+                    }
+                  }
+                },
+                "file_count": 1,
+                "total_size": 152,
+                "file_types": {
+                  "py": 1
+                }
+              }
+            },
+            "file_count": 1,
+            "total_size": 1014,
+            "file_types": {
+              "py": 1
+            }
+          }
+        },
+        "file_count": 3,
+        "total_size": 322128,
+        "file_types": {
+          "gitignore": 1,
+          "png": 2
+        }
+      },
+      "취업": {
+        "name": "취업",
+        "type": "directory",
+        "children": {
+          "혼자만드는회사": {
+            "name": "혼자만드는회사",
+            "type": "directory",
+            "children": {},
+            "file_count": 1,
+            "total_size": 98097,
+            "file_types": {
+              "docx": 1
+            }
+          }
+        },
+        "file_count": 5,
+        "total_size": 2012372,
+        "file_types": {
+          "docx": 3,
+          "pdf": 1,
+          "xlsx": 1
+        }
+      }
+    },
+    "file_count": 3,
+    "total_size": 2316,
+    "file_types": {
+      "gitignore": 1,
+      "txt": 1,
+      "md": 1
+    }
+  },
+  "code_analysis": {
+    "total_python_files": 117,
+    "analyzed_files": 117,
+    "total_lines_of_code": 5388,
+    "avg_lines_per_file": 46.1,
+    "total_functions": 191,
+    "total_classes": 17,
+    "total_docstrings": 81,
+    "documented_functions": 79,
+    "documented_classes": 2,
+    "function_documentation_rate": 41.4,
+    "class_documentation_rate": 11.8,
+    "complexity_distribution": {
+      "simple": 102,
+      "medium": 75,
+      "complex": 10,
+      "very_complex": 4
+    },
+    "python_file_distribution": {
+      "source": 117
+    },
+    "top_imports": [
+      [
+        "django",
+        39
+      ],
+      [
+        "flask",
+        31
+      ],
+      [
+        "os",
+        28
+      ],
+      [
+        "dotenv",
+        10
+      ],
+      [
+        "sys",
+        8
+      ],
+      [
+        "xlwings",
+        7
+      ],
+      [
+        "urllib",
+        6
+      ],
+      [
+        "datetime",
+        6
+      ],
+      [
+        "models",
+        6
+      ],
+      [
+        "tensorflow",
+        6
+      ],
+      [
+        "openai",
+        5
+      ],
+      [
+        "json",
+        5
+      ],
+      [
+        "selenium",
+        5
+      ],
+      [
+        "time",
+        4
+      ],
+      [
+        "decouple",
+        4
+      ]
+    ]
+  },
+  "documentation_analysis": {
+    "documentation_files": [
+      "README.md"
+    ],
+    "has_docs_directory": false,
+    "docs_file_count": 0,
+    "documentation_score": 1
+  },
+  "file_size_analysis": {},
+  "summary": {
+    "project_size": "Very Large",
+    "structure_complexity": "Complex",
+    "documentation_quality": "Poor",
+    "code_quality": "Fair",
+    "main_language": "Jupyter Notebook",
+    "activity_level": "Active",
+    "community_engagement": "0 stars, 0 forks, 0 watchers"
+  },
+  "directory_details": {
+    "root": {
+      "file_count": 3,
+      "subdirs_count": 0,
+      "total_size_mb": 0.0,
+      "depth": 0,
+      "main_file_types": {
+        "gitignore": 1,
+        "txt": 1,
+        "md": 1
+      }
+    },
+    "lecNote": {
+      "file_count": 181,
+      "subdirs_count": 13,
+      "total_size_mb": 97.34,
+      "depth": 1,
+      "main_file_types": {
+        "docx": 42,
+        "txt": 34,
+        "pdf": 34,
+        "png": 17,
+        "jpg": 11
+      }
+    },
+    "lecNote/01_python": {
+      "file_count": 32,
+      "subdirs_count": 0,
+      "total_size_mb": 24.91,
+      "depth": 2,
+      "main_file_types": {
+        "pdf": 15,
+        "txt": 12,
+        "docx": 4,
+        "xlsx": 1
+      }
+    },
+    "lecNote/02_HTML_CSS": {
+      "file_count": 15,
+      "subdirs_count": 0,
+      "total_size_mb": 3.81,
+      "depth": 2,
+      "main_file_types": {
+        "docx": 10,
+        "txt": 2,
+        "pdf": 2,
+        "hwp": 1
+      }
+    },
+    "lecNote/03_JavaScript": {
+      "file_count": 16,
+      "subdirs_count": 0,
+      "total_size_mb": 2.62,
+      "depth": 2,
+      "main_file_types": {
+        "docx": 12,
+        "jpg": 3,
+        "txt": 1
+      }
+    },
+    "lecNote/04_DBMS": {
+      "file_count": 11,
+      "subdirs_count": 0,
+      "total_size_mb": 0.93,
+      "depth": 2,
+      "main_file_types": {
+        "docx": 6,
+        "txt": 2,
+        "pdf": 1,
+        "jpg": 1,
+        "sql": 1
+      }
+    },
+    "lecNote/05_DeepLearning": {
+      "file_count": 7,
+      "subdirs_count": 0,
+      "total_size_mb": 16.33,
+      "depth": 2,
+      "main_file_types": {
+        "txt": 3,
+        "pdf": 2,
+        "docx": 1,
+        "jpg": 1
+      }
+    },
+    "lecNote/06_이미지처리": {
+      "file_count": 3,
+      "subdirs_count": 0,
+      "total_size_mb": 6.06,
+      "depth": 2,
+      "main_file_types": {
+        "pdf": 1,
+        "xlsx": 1,
+        "h5": 1
+      }
+    },
+    "lecNote/07_자연어처리": {
+      "file_count": 17,
+      "subdirs_count": 1,
+      "total_size_mb": 12.35,
+      "depth": 2,
+      "main_file_types": {
+        "csv": 5,
+        "png": 4,
+        "pdf": 2,
+        "xlsx": 2,
+        "jpg": 2
+      }
+    },
+    "lecNote/07_자연어처리/data": {
+      "file_count": 12,
+      "subdirs_count": 0,
+      "total_size_mb": 4.8,
+      "depth": 3,
+      "main_file_types": {
+        "csv": 5,
+        "png": 4,
+        "jpg": 2,
+        "ttf": 1
+      }
+    },
+    "lecNote/08_LLM": {
+      "file_count": 32,
+      "subdirs_count": 3,
+      "total_size_mb": 11.9,
+      "depth": 2,
+      "main_file_types": {
+        "docx": 9,
+        "txt": 7,
+        "pdf": 4,
+        "jpg": 4,
+        "mp3": 3
+      }
+    },
+    "lecNote/08_LLM/data": {
+      "file_count": 6,
+      "subdirs_count": 0,
+      "total_size_mb": 1.5,
+      "depth": 3,
+      "main_file_types": {
+        "mp3": 3,
+        "txt": 1,
+        "csv": 1,
+        "png": 1
+      }
+    },
+    "lecNote/08_LLM/images": {
+      "file_count": 5,
+      "subdirs_count": 0,
+      "total_size_mb": 0.42,
+      "depth": 3,
+      "main_file_types": {
+        "jpg": 4,
+        "jpeg": 1
+      }
+    },
+    "lecNote/08_LLM/tax_docs": {
+      "file_count": 2,
+      "subdirs_count": 0,
+      "total_size_mb": 1.75,
+      "depth": 3,
+      "main_file_types": {
+        "docx": 2
+      }
+    },
+    "lecNote/09_GenerativeAI_RPA": {
+      "file_count": 6,
+      "subdirs_count": 0,
+      "total_size_mb": 4.36,
+      "depth": 2,
+      "main_file_types": {
+        "pdf": 2,
+        "xlsx": 2,
+        "txt": 1,
+        "bat": 1
+      }
+    },
+    "lecNote/10_MachineLearning": {
+      "file_count": 10,
+      "subdirs_count": 1,
+      "total_size_mb": 11.66,
+      "depth": 2,
+      "main_file_types": {
+        "pdf": 4,
+        "csv": 4,
+        "txt": 2
+      }
+    },
+    "lecNote/10_MachineLearning/data": {
+      "file_count": 4,
+      "subdirs_count": 0,
+      "total_size_mb": 0.3,
+      "depth": 3,
+      "main_file_types": {
+        "csv": 4
+      }
+    },
+    "lecNote/12_Flask": {
+      "file_count": 29,
+      "subdirs_count": 5,
+      "total_size_mb": 0.84,
+      "depth": 2,
+      "main_file_types": {
+        "png": 12,
+        "html": 9,
+        "txt": 1,
+        "ico": 1,
+        "sql": 1
+      }
+    },
+    "lecNote/12_Flask/ch5": {
+      "file_count": 5,
+      "subdirs_count": 2,
+      "total_size_mb": 0.13,
+      "depth": 3,
+      "main_file_types": {
+        "png": 3,
+        "ico": 1,
+        "html": 1
+      }
+    },
+    "lecNote/12_Flask/ch5/static": {
+      "file_count": 4,
+      "subdirs_count": 1,
+      "total_size_mb": 0.13,
+      "depth": 4,
+      "main_file_types": {
+        "png": 3,
+        "ico": 1
+      }
+    },
+    "lecNote/12_Flask/ch5/static/img": {
+      "file_count": 4,
+      "subdirs_count": 0,
+      "total_size_mb": 0.13,
+      "depth": 5,
+      "main_file_types": {
+        "png": 3,
+        "ico": 1
+      }
+    },
+    "lecNote/12_Flask/ch5/templates": {
+      "file_count": 1,
+      "subdirs_count": 0,
+      "total_size_mb": 0.0,
+      "depth": 4,
+      "main_file_types": {
+        "html": 1
+      }
+    },
+    "lecNote/12_Flask/ch6": {
+      "file_count": 9,
+      "subdirs_count": 3,
+      "total_size_mb": 0.02,
+      "depth": 3,
+      "main_file_types": {
+        "html": 7,
+        "sql": 1,
+        "png": 1
+      }
+    },
+    "lecNote/12_Flask/ch6/database": {
+      "file_count": 1,
+      "subdirs_count": 0,
+      "total_size_mb": 0.0,
+      "depth": 4,
+      "main_file_types": {
+        "sql": 1
+      }
+    },
+    "lecNote/12_Flask/ch6/static": {
+      "file_count": 1,
+      "subdirs_count": 1,
+      "total_size_mb": 0.02,
+      "depth": 4,
+      "main_file_types": {
+        "png": 1
+      }
+    },
+    "lecNote/12_Flask/ch6/static/img": {
+      "file_count": 1,
+      "subdirs_count": 0,
+      "total_size_mb": 0.02,
+      "depth": 5,
+      "main_file_types": {
+        "png": 1
+      }
+    },
+    "lecNote/12_Flask/ch6/templates": {
+      "file_count": 7,
+      "subdirs_count": 1,
+      "total_size_mb": 0.01,
+      "depth": 4,
+      "main_file_types": {
+        "html": 7
+      }
+    },
+    "lecNote/12_Flask/ch6/templates/todo": {
+      "file_count": 3,
+      "subdirs_count": 0,
+      "total_size_mb": 0.0,
+      "depth": 5,
+      "main_file_types": {
+        "html": 3
+      }
+    },
+    "lecNote/12_Flask/data": {
+      "file_count": 2,
+      "subdirs_count": 0,
+      "total_size_mb": 0.03,
+      "depth": 3,
+      "main_file_types": {
+        "xlsx": 1,
+        "csv": 1
+      }
+    },
+    "lecNote/12_Flask/model": {
+      "file_count": 2,
+      "subdirs_count": 0,
+      "total_size_mb": 0.14,
+      "depth": 3,
+      "main_file_types": {
+        "joblib": 1,
+        "pkl": 1
+      }
+    },
+    "lecNote/12_Flask/static": {
+      "file_count": 2,
+      "subdirs_count": 0,
+      "total_size_mb": 0.05,
+      "depth": 3,
+      "main_file_types": {
+        "css": 1,
+        "png": 1
+      }
+    },
+    "lecNote/13_django": {
+      "file_count": 1,
+      "subdirs_count": 0,
+      "total_size_mb": 1.54,
+      "depth": 2,
+      "main_file_types": {
+        "pdf": 1
+      }
+    },
+    "lecNote/DBMS서버만들기(외부허용)": {
+      "file_count": 2,
+      "subdirs_count": 0,
+      "total_size_mb": 0.01,
+      "depth": 2,
+      "main_file_types": {
+        "txt": 2
+      }
+    },
+    "note": {
+      "file_count": 1,
+      "subdirs_count": 1,
+      "total_size_mb": 0.0,
+      "depth": 1,
+      "main_file_types": {
+        "txt": 1
+      }
+    },
+    "note/01_python": {
+      "file_count": 1,
+      "subdirs_count": 0,
+      "total_size_mb": 0.0,
+      "depth": 2,
+      "main_file_types": {
+        "txt": 1
+      }
+    },
+    "source": {
+      "file_count": 3823,
+      "subdirs_count": 15,
+      "total_size_mb": 1681.79,
+      "depth": 1,
+      "main_file_types": {
+        "jpg": 2141,
+        "xlsx": 402,
+        "html": 225,
+        "ipynb": 160,
+        "docx": 128
+      }
+    },
+    "source/01_python": {
+      "file_count": 379,
+      "subdirs_count": 6,
+      "total_size_mb": 272.7,
+      "depth": 2,
+      "main_file_types": {
+        "jpg": 193,
+        "csv": 66,
+        "ipynb": 57,
+        "txt": 13,
+        "jpeg": 9
+      }
+    },
+    "source/01_python/.ipynb_checkpoints": {
+      "file_count": 27,
+      "subdirs_count": 0,
+      "total_size_mb": 119.8,
+      "depth": 3,
+      "main_file_types": {
+        "ipynb": 27
+      }
+    },
+    "source/01_python/__pycache__": {
+      "file_count": 2,
+      "subdirs_count": 0,
+      "total_size_mb": 0.0,
+      "depth": 3,
+      "main_file_types": {
+        "pyc": 2
+      }
+    },
+    "source/01_python/ch09_ex": {
+      "file_count": 7,
+      "subdirs_count": 2,
+      "total_size_mb": 0.02,
+      "depth": 3,
+      "main_file_types": {
+        "py": 3,
+        "pyc": 2,
+        "txt": 1,
+        "csv": 1
+      }
+    },
+    "source/01_python/ch09_ex/__pycache__": {
+      "file_count": 2,
+      "subdirs_count": 0,
+      "total_size_mb": 0.01,
+      "depth": 4,
+      "main_file_types": {
+        "pyc": 2
+      }
+    },
+    "source/01_python/ch09_ex/data": {
+      "file_count": 2,
+      "subdirs_count": 0,
+      "total_size_mb": 0.0,
+      "depth": 4,
+      "main_file_types": {
+        "txt": 1,
+        "csv": 1
+      }
+    },
+    "source/01_python/ch14_image": {
+      "file_count": 206,
+      "subdirs_count": 0,
+      "total_size_mb": 29.6,
+      "depth": 3,
+      "main_file_types": {
+        "jpg": 192,
+        "jpeg": 9,
+        "png": 4,
+        "naver": 1
+      }
+    },
+    "source/01_python/data": {
+      "file_count": 89,
+      "subdirs_count": 1,
+      "total_size_mb": 6.36,
+      "depth": 3,
+      "main_file_types": {
+        "csv": 65,
+        "txt": 10,
+        "hdf5": 2,
+        "json": 2,
+        "h5": 1
+      }
+    },
+    "source/01_python/data/naver": {
+      "file_count": 42,
+      "subdirs_count": 0,
+      "total_size_mb": 3.45,
+      "depth": 4,
+      "main_file_types": {
+        "csv": 42
+      }
+    },
+    "source/01_python/test": {
+      "file_count": 10,
+      "subdirs_count": 1,
+      "total_size_mb": 6.41,
+      "depth": 3,
+      "main_file_types": {
+        "png": 5,
+        "ipynb": 3,
+        "html": 1,
+        "zip": 1
+      }
+    },
+    "source/01_python/test/.ipynb_checkpoints": {
+      "file_count": 2,
+      "subdirs_count": 0,
+      "total_size_mb": 1.48,
+      "depth": 4,
+      "main_file_types": {
+        "ipynb": 2
+      }
+    },
+    "source/02_HTML_CSS": {
+      "file_count": 117,
+      "subdirs_count": 9,
+      "total_size_mb": 37.0,
+      "depth": 2,
+      "main_file_types": {
+        "html": 57,
+        "png": 19,
+        "css": 12,
+        "jpg": 9,
+        "mp3": 7
+      }
+    },
+    "source/02_HTML_CSS/ch01": {
+      "file_count": 4,
+      "subdirs_count": 0,
+      "total_size_mb": 0.0,
+      "depth": 3,
+      "main_file_types": {
+        "html": 2,
+        "css": 1,
+        "js": 1
+      }
+    },
+    "source/02_HTML_CSS/ch02_HTML-1_글자목록표": {
+      "file_count": 23,
+      "subdirs_count": 3,
+      "total_size_mb": 26.59,
+      "depth": 3,
+      "main_file_types": {
+        "html": 10,
+        "mp3": 7,
+        "jpg": 6
+      }
+    }
+  }
+}

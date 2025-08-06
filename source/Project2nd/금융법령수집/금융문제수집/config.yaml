@@ -1,0 +1,34 @@
+# Minimal config for law_question_generator.py
+# Input: put the unzipped .docx folders here (comma-separated)
+input_dirs: C:/ai_x/source/Project2nd/금융법령수집/금융문제수집/금융법령, C:/ai_x/source/Project2nd/금융법령수집/금융문제수집/보험법령, C:/ai_x/source/Project2nd/금융법령수집/금융문제수집/은행법령
+
+# Output Excel path (will be created/overwritten)
+output_excel: C:/ai_x/source/Project2nd/금융법령수집/금융문제수집/법령문제_통합.xlsx
+
+# Resume state file (JSON)
+processed_state: C:/ai_x/source/Project2nd/금융법령수집/금융문제수집/법령문제_state.json
+
+# OpenAI model & generation controls
+model: gpt-4o-mini
+temperature: 0.2
+seed: 42
+per_law_target: 20
+mcq_ratio: 0.75
+
+# Difficulty distribution (sum ~= 1.0)
+difficulty_high: 0.5
+difficulty_mid: 0.4
+difficulty_low: 0.1
+
+# Cross-law comparative question probability per law
+crosslaw_ratio: 0.20
+
+# Batching
+batch_size: 10
+flush_every_batches: 1
+
+# Runtime
+resume: true
+max_retries: 3
+request_timeout: 120
+include_explanations: true
