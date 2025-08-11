@@ -1,0 +1,5 @@
+.idea/
+.venv/
+.ipynb_checkpoints/
+.env
+금융법률문서 기계독해 데이터/

@@ -1,18 +1,18 @@
 # Minimal config for law_question_generator.py
 # Input: put the unzipped .docx folders here (comma-separated)
-input_dirs: C:/ai_x/source/Project2nd/금융법령수집/금융문제수집/금융법령, C:/ai_x/source/Project2nd/금융법령수집/금융문제수집/보험법령, C:/ai_x/source/Project2nd/금융법령수집/금융문제수집/은행법령
+input_dirs: C:/ai_x/source/Project2nd/금융법령수집/금융문제수집/상법투자자산증권주식법령, C:/ai_x/source/Project2nd/금융법령수집/금융문제수집/기업법령, C:/ai_x/source/Project2nd/금융법령수집/금융문제수집/조합법령
 
 # Output Excel path (will be created/overwritten)
-output_excel: C:/ai_x/source/Project2nd/금융법령수집/금융문제수집/법령문제_통합.xlsx
+output_excel: C:/ai_x/source/Project2nd/금융법령수집/금융문제수집/법령문제_투자기업조합통합.xlsx
 
 # Resume state file (JSON)
-processed_state: C:/ai_x/source/Project2nd/금융법령수집/금융문제수집/법령문제_state.json
+processed_state: C:/ai_x/source/Project2nd/금융법령수집/금융문제수집/법령문제_투자기업조합_state.json
 
 # OpenAI model & generation controls
 model: gpt-4o-mini
 temperature: 0.2
 seed: 42
-per_law_target: 20
+per_law_target: 30
 mcq_ratio: 0.75
 
 # Difficulty distribution (sum ~= 1.0)
