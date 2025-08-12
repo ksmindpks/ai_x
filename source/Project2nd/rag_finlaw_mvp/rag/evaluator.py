@@ -5,7 +5,7 @@ from tqdm import tqdm
 import time
 from .retriever import retrieve_batch
 from .generator import generate_answer_short, generate_answer_mcq
-from .utils import calculate_em_f1, calculate_accuracy, postprocess_answer
+from .utils import calculate_accuracy, postprocess_answer, score_short  # score_short 추가
 from config import MAX_WORKERS, BATCH_SIZE
 
 class Evaluator:
@@ -42,38 +42,27 @@ class Evaluator:
         # 병렬 답변 생성
         with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_workers) as executor:
             futures = []
-            
             for q, contexts in zip(questions, all_contexts):
-                # 컨텍스트 품질 로깅
                 if contexts and contexts[0].get('score', 0) < 0.6:
-                    if self.stats["processed"] % 100 == 0:  # 100개마다 한 번만 출력
+                    if self.stats["processed"] % 100 == 0:
                         print(f"[디버그] 낮은 검색 점수: {contexts[0].get('score', 0):.3f} for '{q['question'][:30]}...'")
                 
                 if question_type == "mcq":
-                    future = executor.submit(
-                        generate_answer_mcq,
-                        q["question"],
-                        q["choices"],
-                        contexts
-                    )
+                    future = executor.submit(generate_answer_mcq, q["question"], q["choices"], contexts)
                 else:
-                    future = executor.submit(
-                        generate_answer_short,
-                        q["question"],
-                        contexts
-                    )
+                    future = executor.submit(generate_answer_short, q["question"], contexts)
                 futures.append((future, q, contexts))
             
             # 결과 수집
             results = []
             for future, q, contexts in futures:
                 try:
-                    prediction = future.result(timeout=30)  # 10 -> 30초로 증가
-                    
-                    # 후처리 적용
-                    prediction = postprocess_answer(prediction, question_type)
-                    
-                    # 검색 점수 포함
+                    prediction = future.result(timeout=30)
+                    prediction = postprocess_answer(
+                        prediction,
+                        question_type,
+                        contexts[0].get('text', '') if contexts else ""
+                    )
                     best_score = contexts[0].get('score', 0) if contexts else 0
                     
                     results.append({
@@ -84,7 +73,6 @@ class Evaluator:
                         "search_score": best_score
                     })
                     self.stats["processed"] += 1
-                    
                 except concurrent.futures.TimeoutError:
                     print(f"[타임아웃] '{q['question'][:30]}...'")
                     results.append({
@@ -95,7 +83,6 @@ class Evaluator:
                         "search_score": 0
                     })
                     self.stats["errors"] += 1
-                    
                 except Exception as e:
                     print(f"[오류] {str(e)[:50]} for '{q['question'][:30]}...'")
                     results.append({
@@ -117,13 +104,11 @@ class Evaluator:
         print(f"\n[{type_name} 평가 시작] {len(questions)}개 문제")
         print("-" * 50)
         
-        # 배치 처리
         all_results = []
         batches = [questions[i:i+BATCH_SIZE] for i in range(0, len(questions), BATCH_SIZE)]
         
         with tqdm(total=len(questions), desc=f"{type_name} 평가") as pbar:
             for batch_idx, batch in enumerate(batches):
-                # 진행 상황 출력 (10배치마다)
                 if batch_idx > 0 and batch_idx % 10 == 0:
                     elapsed = time.time() - self.stats["start_time"]
                     speed = self.stats["processed"] / elapsed
@@ -138,7 +123,6 @@ class Evaluator:
         # 검색 품질 통계
         avg_search_score = sum(r.get("search_score", 0) for r in all_results) / len(all_results) if all_results else 0
         low_score_results = sum(1 for r in all_results if r.get("search_score", 0) < 0.7)
-        
         print("\n[검색 품질 통계]")
         print(f"  평균 검색 점수: {avg_search_score:.3f}")
         print(f"  낮은 점수 질문: {low_score_results}/{len(all_results)} ({low_score_results/len(all_results)*100:.1f}%)")
@@ -148,8 +132,6 @@ class Evaluator:
         if question_type == "mcq":
             accuracy = calculate_accuracy(all_results)
             print(f"  정확도: {accuracy:.3f}")
-            
-            # 난이도별 분석
             difficulties = {}
             for r in all_results:
                 diff = r.get("metadata", {}).get("difficulty", "미분류")
@@ -158,25 +140,28 @@ class Evaluator:
                 difficulties[diff]["total"] += 1
                 if r["prediction"] == r["answer"]:
                     difficulties[diff]["correct"] += 1
-            
             if len(difficulties) > 1:
                 print("\n  난이도별 정확도:")
                 for diff, stats in sorted(difficulties.items()):
                     acc = stats["correct"] / stats["total"] if stats["total"] > 0 else 0
                     print(f"    {diff}: {acc:.3f} ({stats['correct']}/{stats['total']})")
         else:
-            em_avg, f1_avg = calculate_em_f1(all_results)
+            em_scores = []
+            f1_scores = []
+            for r in all_results:
+                em, f1 = score_short(r["prediction"], r["answer"])
+                em_scores.append(em)
+                f1_scores.append(f1)
+            em_avg = sum(em_scores) / len(em_scores)
+            f1_avg = sum(f1_scores) / len(f1_scores)
             print(f"  EM: {em_avg:.3f}")
             print(f"  F1: {f1_avg:.3f}")
-            
-            # 답변 길이 분석
             avg_pred_len = sum(len(r["prediction"].split()) for r in all_results) / len(all_results)
             avg_gold_len = sum(len(r["answer"].split()) for r in all_results) / len(all_results)
             print(f"\n  평균 답변 길이:")
             print(f"    예측: {avg_pred_len:.1f} 단어")
             print(f"    정답: {avg_gold_len:.1f} 단어")
         
-        # 처리 통계
         elapsed = time.time() - self.stats["start_time"]
         print(f"\n[처리 통계]")
         print(f"  소요 시간: {elapsed/60:.1f}분")
@@ -196,17 +181,12 @@ class Evaluator:
             if question_type == "mcq":
                 is_error = r["prediction"] != r["answer"]
             else:
-                # 단답형은 EM 기준
-                pred_norm = r["prediction"].lower().strip()
-                gold_norm = r["answer"].lower().strip()
-                is_error = pred_norm != gold_norm
-            
+                em, _ = score_short(r["prediction"], r["answer"])
+                is_error = em == 0.0
             if is_error:
                 errors.append(r)
         
-        # 검색 점수가 낮은 오류 우선
         errors.sort(key=lambda x: x.get("search_score", 0))
-        
         for i, err in enumerate(errors[:top_n], 1):
             print(f"\n[오류 {i}]")
             print(f"  질문: {err['question'][:60]}...")

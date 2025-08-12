@@ -30,21 +30,22 @@ cfg = HybridConfig(
 )
 retriever = HybridRetriever(cfg, embedder_fn)
 
-def retrieve(query: str, top_k: int = 5) -> List[Dict]:
-    try:
-        results = retriever.search(query, k_final=top_k, namespace=PINECONE_NAMESPACE)
-        return [
-            {
-                "score": r["final_score"],
-                "text": r["text"],
-                "filename": r["meta"].get("filename", ""),
-                "chunk_index": r["meta"].get("chunk_index", 0)
-            }
-            for r in results
-        ]
-    except Exception as e:
-        print(f"검색 오류: {e}")
-        return []
+def retrieve(query: str, top_k: int = 5):
+    results = retriever.search(query, k_final=top_k, namespace=PINECONE_NAMESPACE)
+    out = []
+    for r in results:
+        meta = r.get("meta", {}) or {}
+        out.append({
+            "score": r.get("final_score", 0.0),
+            "bm25_score_raw":  r.get("bm25_score_raw"),
+            "vec_score_raw":   r.get("vec_score_raw"),
+            "bm25_score_norm": r.get("bm25_score_norm"),
+            "vec_score_norm":  r.get("vec_score_norm"),
+            "text": r.get("text",""),
+            "filename": meta.get("filename",""),
+            "chunk_index": meta.get("chunk_index", 0)
+        })
+    return out
 
 def retrieve_batch(queries: List[str], top_k: int = 5) -> List[List[Dict]]:
     all_results = []

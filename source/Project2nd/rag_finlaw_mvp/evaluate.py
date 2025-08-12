@@ -21,7 +21,14 @@ def debug_retrieve(query: str, top_k: int = 5):
         bm25_score = r.get("bm25_score", None)
         vec_score = r.get("vec_score", None)
         final_score = r.get("score", None)
-        print(f" - BM25: {bm25_score}, Vec: {vec_score}, Final: {final_score}, Text: {r['text'][:50]}...")
+        print(
+        f" - BM25 raw:{r.get('bm25_score_raw')}, "
+        f"BM25 norm:{r.get('bm25_score_norm')}, "
+        f"Vec raw:{r.get('vec_score_raw')}, "
+        f"Vec norm:{r.get('vec_score_norm')}, "
+        f"Final:{r.get('score')}, "
+        f"Text: {r['text'][:50]}..."
+        )
     return results
 
 def main():

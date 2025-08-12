@@ -119,20 +119,24 @@ class HybridRetriever:
 
         # 점수 정규화
         bm25_vals = [v["bm25_score"] for v in merged.values()]
-        vec_vals = [v["vec_score"] for v in merged.values()]
+        vec_vals  = [v["vec_score"]  for v in merged.values()]
 
         def norm(vals):
             min_v, max_v = min(vals), max(vals)
             return [(v - min_v) / (max_v - min_v) if max_v > min_v else 0.0 for v in vals]
 
         bm25_norm = norm(bm25_vals)
-        vec_norm = norm(vec_vals)
+        vec_norm  = norm(vec_vals)
 
-        # 가중합
-        for i, key in enumerate(merged.keys()):
+        # 가중합 + 필드 부착
+        for i, key in enumerate(list(merged.keys())):
+            merged[key]["bm25_score_raw"] = bm25_vals[i]
+            merged[key]["vec_score_raw"]  = vec_vals[i]
+            merged[key]["bm25_score_norm"] = bm25_norm[i]
+            merged[key]["vec_score_norm"]  = vec_norm[i]
             merged[key]["final_score"] = (
                 self.cfg.weight_bm25 * bm25_norm[i] +
-                self.cfg.weight_vec * vec_norm[i]
+                self.cfg.weight_vec  * vec_norm[i]
             )
 
         # 최종 정렬 후 반환
