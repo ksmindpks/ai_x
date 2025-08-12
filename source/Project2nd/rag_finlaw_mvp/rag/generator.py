@@ -1,103 +1,108 @@
-# rag/generator.py (발췌)
-
+# rag/generator.py
 from typing import List, Dict
-import re
 from openai import OpenAI
-from config import OPENAI_API_KEY
-from .prompt import (
-    SYSTEM_BASE,
-    USER_TEMPLATE_SHORT_EXTRACT,
-    USER_TEMPLATE_SHORT,
-    USER_TEMPLATE_MCQ,
-)
+from config import OPENAI_API_KEY, GENERATION_MODEL
 
-_client = None
-def _client_once():
-    global _client
-    if _client is None:
-        _client = OpenAI(api_key=OPENAI_API_KEY)
-    return _client
+client = OpenAI(api_key=OPENAI_API_KEY)
 
-def select_best_single_ctx(hits: List[Dict]) -> str:
-    """retriever가 준 hits 중 score가 가장 높은 것의 text만 사용"""
-    if not hits:
-        return ""
-    best = max(hits, key=lambda h: h.get("score", 0.0))
-    return best.get("text", "")
-
-# --- 컨텍스트 빌더: 스팬 과제에서는 자르지 않는 게 안전 ---
-def build_context(hits: List[Dict]) -> str:
-    parts = []
-    for h in hits:
-        fn = h.get("filename", "unknown")
-        ck = h.get("chunk_index", "?")
-        txt = h.get("text", "")            # retriever가 'text' 메타를 제공해야 함
-        parts.append(f"[{fn}#{ck}] {txt}")
-    return "\n\n".join(parts)
-
-def answer_short_extract(question: str, hits: List[Dict], model: str = "gpt-4o-mini") -> str:
-    client = _client_once()
-    ctx = select_best_single_ctx(hits)
-    if not ctx:
-        return "정답: (근거 없음)"  # 검색 미히트 시 안전 리턴
-
-    user = USER_TEMPLATE_SHORT_EXTRACT.format(question=question, context=ctx)
-    resp = client.chat.completions.create(
-        model=model,
-        messages=[
-            {"role": "system", "content": "지시된 형식만 출력(START/END 또는 NOTFOUND). 생성 금지."},
-            {"role": "user", "content": user},
-        ],
-        temperature=0.0, top_p=1.0, presence_penalty=0.0, frequency_penalty=0.0,
-    )
-    out = resp.choices[0].message.content.strip()
-
-    if out.upper().startswith("NOTFOUND"):
-        return "정답: (근거 없음)"
-
-    m1 = re.search(r"START:\s*(\d+)", out)
-    m2 = re.search(r"END:\s*(\d+)", out)
-    if not (m1 and m2):
-        return "정답: (근거 없음)"
-
-    s, e = int(m1.group(1)), int(m2.group(1))
-    if 0 <= s < e <= len(ctx):
-        span = ctx[s:e]
-        return f"정답: {span}"
-    return "정답: (근거 없음)"
-
-def answer_short(question: str, hits: List[Dict], model: str = "gpt-4o-mini") -> str:
-    client = _client_once()
-    contexts = build_context(hits)
+def generate_answer_short(question: str, contexts: List[Dict]) -> str:
+    """단답형 - 숫자와 용어 중심"""
     if not contexts:
-        return "정답: (근거 없음)"
+        return "정보 없음"
     
-    user = USER_TEMPLATE_SHORT.format(question=question, contexts=contexts)
+    context_text = contexts[0].get('text', '')[:500]  # 최고 점수 컨텍스트만
+    
+    # 질문 유형 파악
+    if "얼마" in question or "금액" in question:
+        prompt_type = "숫자로만 답하세요 (예: 5천만원, 3개월)"
+    elif "무엇" in question or "정의" in question:
+        prompt_type = "명사로만 답하세요"
+    else:
+        prompt_type = "5단어 이내로 답하세요"
+    
+    prompt = f"""문맥: {context_text}
+
+질문: {question}
+
+{prompt_type}
+
+답:"""
     
     try:
-        resp = client.chat.completions.create(
-            model=model,
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
             messages=[
-                {"role": "system", "content": SYSTEM_BASE},
-                {"role": "user", "content": user}
+                {"role": "system", "content": "정확한 용어나 숫자만 답하세요."},
+                {"role": "user", "content": prompt}
             ],
-            temperature=0.1,
+            temperature=0,
+            max_tokens=20
         )
-        return resp.choices[0].message.content
+        
+        answer = response.choices[0].message.content.strip()
+        
+        # "없음", "정해진 금액 없음" 같은 답변 제거
+        if "없음" in answer or "정보" in answer:
+            # 컨텍스트에서 숫자 추출 시도
+            import re
+            numbers = re.findall(r'\d+[천만억]?[원월개]?', context_text)
+            if numbers:
+                return numbers[0]
+        
+        return answer
+        
     except Exception as e:
-        return f"오류 발생: {str(e)}"
+        return "오류"
 
-def answer_mcq(question: str, choices: List[str], hits: List[Dict], model: str = "gpt-4o-mini"):
-    client = _client_once()
-    contexts = build_context(hits)
-    choice_block = "\n".join([f"- {c}" for c in choices])
-    user = USER_TEMPLATE_MCQ.format(question=question, choices=choice_block, contexts=contexts)
-    resp = client.chat.completions.create(
-        model=model,
-        messages=[
-            {"role":"system","content":SYSTEM_BASE},
-            {"role":"user","content":user}
-        ],
-        temperature=0.1,
-    )
-    return resp.choices[0].message.content
+def generate_answer_mcq(question: str, choices: List[str], contexts: List[Dict]) -> str:
+    """사지선다형 - 선택지만 반환"""
+    if not choices:
+        return ""
+    
+    if not contexts:
+        return choices[0]  # 기본값
+    
+    context_text = " ".join([c.get('text', '')[:200] for c in contexts[:2]])
+    
+    # 선택지를 번호로
+    choices_text = "\n".join([f"{i+1}. {c}" for i, c in enumerate(choices)])
+    
+    # 단순 프롬프트
+    prompt = f"""문맥: {context_text}
+
+질문: {question}
+
+선택지:
+{choices_text}
+
+답 (번호만):"""
+    
+    try:
+        response = client.chat.completions.create(
+            model=GENERATION_MODEL,
+            messages=[
+                {"role": "system", "content": "번호만 답하세요. 1, 2, 3, 또는 4"},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0,
+            max_tokens=10
+        )
+        
+        answer = response.choices[0].message.content.strip()
+        
+        # 번호 추출
+        for i, choice in enumerate(choices, 1):
+            if str(i) in answer:
+                return choice
+        
+        # 첫 번째 선택지가 답에 있으면
+        for choice in choices:
+            if choice[:10] in answer or answer in choice:
+                return choice
+        
+        # 기본값
+        return choices[0]
+        
+    except Exception as e:
+        print(f"MCQ 생성 오류: {str(e)[:50]}")
+        return choices[0] if choices else ""

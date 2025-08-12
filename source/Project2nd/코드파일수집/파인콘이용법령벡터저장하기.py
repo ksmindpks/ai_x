@@ -30,11 +30,11 @@ class DocxToPineconeProcessor:
             index_name: Pinecone 인덱스 이름
         """
         self.index_name = index_name
-        self.chunk_size = 1500  # 토큰 단위
+        self.chunk_size = 2000  # 토큰 단위
         self.overlap_size = 100  # 오버랩 토큰
         self.batch_size = 75
-        self.min_paragraph_tokens = 50  # 최소 단락 토큰 수
-        self.max_paragraph_tokens = 2000  # 최대 단락 토큰 수
+        self.min_paragraph_tokens = 300  # 최소 단락 토큰 수
+        self.max_paragraph_tokens = 1500  # 최대 단락 토큰 수
         
         # API 클라이언트 초기화
         self._init_clients()

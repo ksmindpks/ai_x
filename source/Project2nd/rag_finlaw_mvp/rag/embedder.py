@@ -2,15 +2,23 @@ from typing import List
 from openai import OpenAI
 from config import OPENAI_API_KEY, EMBED_MODEL
 
-_client = None
-
-def _client_once():
-    global _client
-    if _client is None:
-        _client = OpenAI(api_key=OPENAI_API_KEY)
-    return _client
+client = OpenAI(api_key=OPENAI_API_KEY)
 
 def embed_texts(texts: List[str]) -> List[List[float]]:
-    client = _client_once()
-    resp = client.embeddings.create(model=EMBED_MODEL, input=texts)
-    return [d.embedding for d in resp.data]
+    """배치 임베딩 처리"""
+    if not texts:
+        return []
+    
+    # OpenAI는 최대 2048개 동시 처리
+    max_batch = 2048
+    all_embeddings = []
+    
+    for i in range(0, len(texts), max_batch):
+        batch = texts[i:i + max_batch]
+        response = client.embeddings.create(
+            model=EMBED_MODEL,
+            input=batch
+        )
+        all_embeddings.extend([d.embedding for d in response.data])
+    
+    return all_embeddings
