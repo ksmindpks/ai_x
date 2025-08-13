@@ -11,24 +11,22 @@ from pathlib import Path
 from rag.utils import load_excel, save_results
 from rag.evaluator import Evaluator
 from rag import retriever  # 하이브리드 retriever
+from config import DEBUG_HYBRID
 
 def debug_retrieve(query: str, top_k: int = 5):
-    """retriever.retrieve() 호출 + 점수 로그 출력"""
+    """상세 디버그 정보 출력"""
     results = retriever.retrieve(query, top_k=top_k)
-    print(f"\n[DEBUG] Query: {query}")
-    for r in results:
-        # retriever에서 meta 안에 점수 필드가 있다고 가정
-        bm25_score = r.get("bm25_score", None)
-        vec_score = r.get("vec_score", None)
-        final_score = r.get("score", None)
-        print(
-        f" - BM25 raw:{r.get('bm25_score_raw')}, "
-        f"BM25 norm:{r.get('bm25_score_norm')}, "
-        f"Vec raw:{r.get('vec_score_raw')}, "
-        f"Vec norm:{r.get('vec_score_norm')}, "
-        f"Final:{r.get('score')}, "
-        f"Text: {r['text'][:50]}..."
-        )
+    print(f"\n[DEBUG] Query: '{query[:50]}...'")
+    print(f"[Results] Found: {len(results)}")
+    
+    for i, r in enumerate(results[:3], 1):
+        print(f"  [{i}] Score: {r.get('score', 0):.3f}")
+        if 'bm25_score_raw' in r:
+            print(f"      BM25: raw={r['bm25_score_raw']:.3f}, norm={r.get('bm25_score_norm', 0):.3f}")
+        if 'vec_score_raw' in r:
+            print(f"      Vec:  raw={r['vec_score_raw']:.3f}, norm={r.get('vec_score_norm', 0):.3f}")
+        print(f"      Text: {r['text'][:100]}...")
+    
     return results
 
 def main():
@@ -65,10 +63,12 @@ def main():
 
     mcq_results = []
     if mcq_questions:
-        if args.debug:
-            for q in mcq_questions:
-                debug_retrieve(q["question"], top_k=7)
-        mcq_results, _ = evaluator.evaluate_all(mcq_questions, "mcq")
+        # 언패킹 오류 수정
+        mcq_results, stats = evaluator.evaluate_all(mcq_questions, "mcq")
+        # 또는
+        result_tuple = evaluator.evaluate_all(mcq_questions, "mcq")
+        mcq_results = result_tuple[0]
+        stats = result_tuple[1]
 
     short_results = []
     if short_questions:

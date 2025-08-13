@@ -1,0 +1,18 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Evaluate 법령문제",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/evaluate.py",
+            "args": [
+                "법령문제_법조문포함.xlsx",
+                "--mcq", "200",
+                "--short", "200",
+                "--debug"
+            ],
+            "console": "integratedTerminal"
+        }
+    ]
+}

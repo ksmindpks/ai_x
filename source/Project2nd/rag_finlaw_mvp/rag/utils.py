@@ -8,6 +8,21 @@ import re
 KO_STOPWORDS = {"은","는","이","가","을","를","의","에","에서","에게","으로","와","과","및","또는","도","만","보다"}
 PARENS = r"[()\[\]{}<>【】（）〈〉「」『』]"
 
+# --- [추가] 질의 전처리: 법령명/날짜/괄호 제거 등 ---
+def preprocess_query(q: str) -> str:
+    if not q:
+        return ""
+    q = q.replace("「", "").replace("」", "")
+    # ( ... ) 괄호 안 정보(법령 종류/호수/날짜 등) 제거
+    q = re.sub(r'\([^)]*\)', ' ', q)
+    # “~에 관한 법률/시행령/시행규칙” 꼬리표 과감히 제거 (키워드만 남기기)
+    q = re.sub(r'(에 관한 )?(법률|대통령령|총리령|부령|시행령|시행규칙)\b', ' ', q)
+    # 불필요 기호 삭제
+    q = re.sub(r'[\"“”\'·]', ' ', q)
+    # 다중 공백 정리
+    q = re.sub(r'\s+', ' ', q).strip()
+    return q
+
 def normalize_spaces(s: str) -> str:
     return re.sub(r"\s+", " ", (s or "")).strip()
 
@@ -132,20 +147,22 @@ def save_results(mcq_results: List[Dict], short_results: List[Dict], output_file
 
 def postprocess_answer(answer: str, question_type: str, context_text: str = "") -> str:
     answer = answer.strip()
+
     if question_type == "short":
-        # 숫자만 → 컨텍스트에서 숫자+단위 후보들 수집
+        # [1] 숫자만 → 컨텍스트에서 숫자+단위 후보 수집
         if re.fullmatch(r'\d+', answer):
             num = answer
             cands = re.findall(rf'{re.escape(num)}\s*([가-힣A-Za-z%]+)', context_text)
             if cands:
-                # 우선순위: (1) 길이 1~2 단위, (2) 등장 빈도, (3) 첫 등장
+                # 우선순위: (1) 단위 길이 짧음, (2) 등장 빈도, (3) 첫 등장
                 cands_sorted = sorted(cands, key=lambda u: (len(u) <= 2, -cands.count(u)), reverse=True)
                 return f"{num}{cands_sorted[0]}"
 
-        # 불필요 문구 제거
+        # [2] 불필요 문구 제거
         replacements = [
             ("정해진 금액 없음", ""),
             ("없음.", ""),
+            ("없음", ""),
             ("문서로 이루어져야 함", "문서"),
             ("채무자의 연체 상황", "연체"),
         ]
@@ -153,18 +170,31 @@ def postprocess_answer(answer: str, question_type: str, context_text: str = "") 
             if old in answer:
                 answer = new if new else answer.replace(old, "")
 
-        # 숫자 + 단위 추출
-        numbers = re.findall(r'\d+[천만억]?[원월년개일]?', answer)
+        # [3] 동의어 매핑
+        synonyms = {
+            "시정 요구": "시정명령",
+            "임치소": "보관소",
+            "금융위원회": "금융위",
+            "비공개정보": "비밀정보",
+            "소속금융회사": "계열금융회사"
+        }
+        if answer in synonyms:
+            answer = synonyms[answer]
+
+        # [4] 숫자 + 단위 추출
+        numbers = re.findall(r'\d+[천만억조]?[원월년개일호조항]?', answer)
         if numbers:
             return numbers[0]
 
-        # 단어 수 제한 완화 (최대 10단어)
+        # [5] 조사 제거 (마지막 조사)
+        answer = re.sub(r'(은|는|이|가|을|를|의|에|에서)$', '', answer)
+
+        # [6] 단어 수 제한 완화 (최대 10단어 → 5단어)
         words = answer.split()
-        if len(words) > 10:
-            return ' '.join(words[:10])
+        if len(words) > 5:
+            answer = ' '.join(words[:5])
 
     return answer.strip()
-
 
 def score_short(pred: str, gold: str) -> Tuple[float, float]:
     """EM, F1 반환 (정규화 + 숫자 관용 + 조사 제거)"""

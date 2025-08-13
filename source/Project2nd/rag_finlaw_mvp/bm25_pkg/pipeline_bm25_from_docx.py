@@ -1,24 +1,25 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-지정된 여러 폴더의 .docx 법령 파일을 조문/항 단위로 청크화하여 Parquet로 저장하고,
-이어 BM25 인덱스를 생성(bm25.pkl, meta.parquet, vocab.json, index_info.json)합니다.
+.docx → 문장기반 청크 → Parquet 저장 → BM25 인덱스 저장
 
-- 입력: 아래 CONFIG의 input_dirs 폴더들 (재귀 하위 탐색)
-- 출력:
-  1) ./out/law_chunks.parquet
-  2) ./out/bm25_index/ (bm25.pkl, meta.parquet, vocab.json, index_info.json)
+필요 패키지:
+  pip install python-docx rank-bm25 pandas pyarrow kiwipiepy
+
+실행 예:
+  python bm25_pkg/pipeline_bm25_from_docx.py
 """
 
 import os
 import re
 import sys
-import json
 import pickle
 from datetime import datetime
 from pathlib import Path
+from typing import List, Dict, Callable, Optional
 
 import pandas as pd
+from rank_bm25 import BM25Okapi
 
 # ====== CONFIG ======
 input_dirs = [
@@ -35,259 +36,238 @@ BM25_DIR = OUT_DIR / "bm25_index"
 TOKENIZER = "kiwi"   # "kiwi" 권장(미설치 시 자동 fallback), "simple" 선택 가능
 TOP_LIMIT = None      # 개발 테스트 시 일부만(예: 200) 처리하고 싶으면 숫자 지정
 
+# ====== CHUNKING PARAMS ======
+CHUNK_SIZE = 800      # 청크 최대 길이(문자)
+CHUNK_OVERLAP = 80    # 청크 중첩(문자)
+
 # ====== deps: python-docx, rank-bm25, pandas, pyarrow, (권장) kiwipiepy ======
+
+# .docx 파서
 try:
     from docx import Document
-except Exception:
-    print("ERROR: python-docx 미설치.  pip install python-docx", file=sys.stderr)
-    sys.exit(1)
-
-try:
-    from rank_bm25 import BM25Okapi
-except Exception:
-    print("ERROR: rank-bm25 미설치.  pip install rank-bm25", file=sys.stderr)
-    sys.exit(1)
+except Exception as e:
+    print("[ERROR] python-docx가 필요합니다. 설치: pip install python-docx", file=sys.stderr)
+    raise
 
 
-def tokenize_simple(text: str):
-    text = re.sub(r"[^\w\s]", " ", str(text))
-    text = re.sub(r"\s+", " ", text)
-    return text.lower().strip().split()
-
-
-def get_kiwi_tokenizer():
-    try:
-        from kiwipiepy import Kiwi
-        kiwi = Kiwi()
-
-        def _tok(text: str):
-            return [t.form for t in kiwi.tokenize(text)]
-        return _tok
-    except Exception:
-        print("WARN: kiwipiepy 사용 불가 → simple 토크나이저로 대체", file=sys.stderr)
-        return tokenize_simple
-
-
-def normalize_space(s: str) -> str:
-    s = s.replace("\r\n", "\n").replace("\r", "\n")
-    s = re.sub(r"\s+", " ", s)
+# ---------------------------
+# Utils
+# ---------------------------
+def normalize_text(s: str) -> str:
+    s = s.replace("\u200b", "").replace("\ufeff", "")
+    s = re.sub(r"[ \t]+", " ", s)
+    s = re.sub(r"\s+\n", "\n", s)
+    s = re.sub(r"\n{3,}", "\n\n", s)
     return s.strip()
 
 
-def guess_effective_from_from_filename(fname: str):
-    """
-    파일명에서 시행일을 추정 (예: (20250319), 2025-03-19, 2025.03.19 등)
-    """
-    base = Path(fname).stem
-    # 괄호 안 yyyymmdd
-    m = re.search(r"\((20\d{2}[.\-]?\d{2}[.\-]?\d{2})\)", base)
-    if not m:
-        m = re.search(r"(20\d{2}[.\-]?\d{2}[.\-]?\d{2})", base)
-    if m:
-        raw = re.sub(r"[.\-]", "", m.group(1))
-        if len(raw) == 8:
-            return f"{raw[:4]}-{raw[4:6]}-{raw[6:]}"
-    return None
+def split_sentences(text: str) -> List[str]:
+    """한국어/법령 문장 경계 대략치"""
+    text = text.strip()
+    # 마침표/물음표/느낌표/닫는 괄호 뒤 공백 등 기준
+    sentences = re.split(r"(?<=[\.!?])\s+|(?<=\))\s+(?=[가-힣A-Za-z0-9])", text)
+    return [s.strip() for s in sentences if s and s.strip()]
 
 
-def guess_law_name_from_filename(fname: str):
-    """
-    파일명에서 법령명 유추: 괄호류 제거
-    """
-    base = Path(fname).stem
-    # 괄호 블록 제거
-    name = re.sub(r"\(.*?\)", "", base)
-    return name.strip(" -_")
-
-
-def detect_law_form(name: str):
-    for k in ["시행령", "시행규칙", "법률", "규칙", "총리령", "대통령령", "부칙"]:
-        if k in name:
-            return k
-    return ""
-
-
-ARTICLE_RE = re.compile(r"^제\s*\d+(?:의\d+)?\s*조")
-CLAUSE_RE = re.compile(r"^\(\d+\)")  # (1), (2)...
-
-
-def iter_chunks_from_docx(docx_path: str):
-    """
-    .docx → 조문/항 단위 청크 생성.
-    반환 dict 필드:
-      _id, law_name, law_form, article_no, clause_no, section, text, effective_from, filename, chunk_index
-    """
-    doc = Document(docx_path)
-    fname = Path(docx_path).name
-    law_name = guess_law_name_from_filename(fname)
-    law_form = detect_law_form(law_name)
-    effective_from = guess_effective_from_from_filename(fname)
-
-    article_no = None
-    clause_no = None
-    section = "본칙"
-    buf = []
-    chunk_index = 0
-
-    def flush():
-        nonlocal buf, chunk_index
-        text = normalize_space(" ".join([t for t in buf if t.strip()]))
-        if text:
-            _id = f"{law_name}:{article_no or '0'}:{clause_no or '0'}:{chunk_index}"
-            yield {
-                "_id": _id,
-                "law_name": law_name,
-                "law_form": law_form,
-                "article_no": article_no,
-                "clause_no": clause_no,
-                "section": section,
-                "text": text,
-                "effective_from": effective_from,
-                "filename": fname,
-                "chunk_index": chunk_index,
-            }
-            chunk_index += 1
-        buf = []
-
-    for p in doc.paragraphs:
-        t = p.text.strip()
-        if not t:
+def chunk_by_sentences(text: str, max_chars: int, overlap: int) -> List[str]:
+    if not text:
+        return []
+    sents = split_sentences(text)
+    out, buf = [], ""
+    for sent in sents:
+        if not buf:
+            buf = sent
             continue
-
-        # 섹션 전환(간단 탐지: 부칙/별표/별지 키워드)
-        if any(x in t for x in ["부칙", "별표", "별지"]) and len(t) <= 12:
-            # 섹션 턴오버 전에 버퍼 flush
-            if buf:
-                for row in flush():
-                    yield row
-            section = "부칙" if "부칙" in t else ("별표/별지" if ("별표" in t or "별지" in t) else section)
-            article_no = None
-            clause_no = None
-            continue
-
-        if ARTICLE_RE.match(t):
-            if buf:
-                for row in flush():
-                    yield row
-            # 제○조(의○) 추출
-            m = re.search(r"제\s*([\d]+(?:의\d+)?)\s*조", t)
-            article_no = m.group(1) if m else None
-            clause_no = None
-            buf = [t]
-        elif CLAUSE_RE.match(t):
-            if buf:
-                for row in flush():
-                    yield row
-            cm = re.search(r"\((\d+)\)", t)
-            clause_no = cm.group(1) if cm else None
-            buf = [t]
+        if len(buf) + 1 + len(sent) <= max_chars:
+            buf = f"{buf} {sent}"
         else:
-            buf.append(t)
-
+            out.append(buf.strip())
+            if overlap > 0 and len(buf) > overlap:
+                buf = buf[-overlap:] + " " + sent
+            else:
+                buf = sent
     if buf:
-        for row in flush():
-            yield row
+        out.append(buf.strip())
+    return out
 
 
-from pathlib import Path
-
-def walk_docx_files(dirs):
-    seen = set()
-    for d in dirs:
-        base = Path(d)
-        if not base.exists():
-            print(f"[WARN] 폴더 없음: {d}", file=sys.stderr)
+def iter_docx_files(root_dirs: List[str]) -> List[Path]:
+    files, seen = [], set()
+    for d in root_dirs:
+        p = Path(d)
+        if not p.exists():
+            print(f"[WARN] 입력 폴더 없음: {p}")
             continue
-        for f in base.rglob("*"):
-            if f.is_file() and not f.name.startswith("~$") and f.suffix.lower() == ".docx":
-                key = str(f.resolve()).lower()
-                if key in seen:
-                    continue
-                seen.add(key)
-                yield str(f)  # python-docx가 읽기 쉬운 일반 경로 반환
-    if not seen:
-        print("[ERROR] .docx 파일을 하나도 찾지 못했습니다.", file=sys.stderr)
+        for fp in p.rglob("*.docx"):
+            if fp.name.startswith("~$"):  # 잠금 파일 무시
+                continue
+            key = str(fp.resolve()).lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            files.append(fp)
+    return sorted(files)
 
 
-def build_bm25(index_input: pd.DataFrame, out_dir: Path, tokenizer_name="kiwi"):
-    out_dir.mkdir(parents=True, exist_ok=True)
+def read_docx_text(path: Path) -> str:
+    try:
+        doc = Document(str(path))
+    except Exception as e:
+        print(f"[DOCX ERROR] {path.name}: {e}")
+        return ""
+    paras = [normalize_text(p.text) for p in doc.paragraphs if p.text and p.text.strip()]
+    text = "\n".join([p for p in paras if p])
+    return normalize_text(text)
 
-    # 토크나이저
-    tokenizer = get_kiwi_tokenizer() if tokenizer_name == "kiwi" else tokenize_simple
 
-    texts = list(index_input["text"].astype(str))
-    tokenized = [tokenizer(t) for t in texts]
-    bm25 = BM25Okapi(tokenized)
+# ---------------------------
+# Tokenizer
+# ---------------------------
+def _load_kiwi():
+    try:
+        from kiwipiepy import Kiwi
+        return Kiwi()
+    except Exception:
+        return None
 
-    vocab = {}
-    for toks in tokenized:
-        for w in toks:
-            vocab[w] = vocab.get(w, 0) + 1
 
-    with open(out_dir / "bm25.pkl", "wb") as f:
-        pickle.dump({"bm25": bm25, "ids": list(index_input["_id"]), "tokenized_corpus": tokenized}, f)
+def _load_okt():
+    try:
+        from konlpy.tag import Okt
+        return Okt()
+    except Exception:
+        return None
 
-    index_input.to_parquet(out_dir / "meta.parquet", index=False)
-    with open(out_dir / "vocab.json", "w", encoding="utf-8") as f:
-        json.dump(vocab, f, ensure_ascii=False)
 
-    info = {
-        "created_at": datetime.utcnow().isoformat() + "Z",
-        "rows": len(index_input),
-        "tokenizer": tokenizer_name,
-        "text_col": "text",
-        "id_col": "_id"
-    }
-    with open(out_dir / "index_info.json", "w", encoding="utf-8") as f:
-        json.dump(info, f, ensure_ascii=False, indent=2)
+def _load_mecab():
+    try:
+        from konlpy.tag import Mecab
+        return Mecab()
+    except Exception:
+        return None
 
-    print(f"[OK] BM25 인덱스 저장: {out_dir}")
+
+def build_tokenizer(name: str) -> Callable[[str], List[str]]:
+    name = (name or "kiwi").lower()
+
+    if name == "kiwi":
+        kiwi = _load_kiwi()
+        if kiwi is not None:
+            def tok(text: str) -> List[str]:
+                return [t.form for t in kiwi.tokenize(text, normalize_coda=True)]
+            return tok
+        print("[WARN] kiwi 로드 실패 → simple 토크나이저로 대체")
+
+    if name == "okt":
+        okt = _load_okt()
+        if okt is not None:
+            def tok(text: str) -> List[str]:
+                return okt.morphs(text)
+            return tok
+        print("[WARN] Okt 로드 실패 → simple 토크나이저로 대체")
+
+    if name == "mecab":
+        mecab = _load_mecab()
+        if mecab is not None:
+            def tok(text: str) -> List[str]:
+                return mecab.morphs(text)
+            return tok
+        print("[WARN] Mecab 로드 실패 → simple 토크나이저로 대체")
+
+    # 폴백: 한글/영문/숫자 토큰
+    def simple(text: str) -> List[str]:
+        return re.findall(r"[가-힣A-Za-z0-9]+", text)
+    return simple
+
+
+# ---------------------------
+# Pipeline
+# ---------------------------
+def make_corpus_from_docx(files: List[Path], chunk_size: int, chunk_overlap: int,
+                          top_limit: Optional[int] = None) -> List[Dict]:
+    corpus: List[Dict] = []
+    use_files = files[:top_limit] if top_limit else files
+    for i, fp in enumerate(use_files, 1):
+        raw = read_docx_text(fp)
+        if not raw:
+            continue
+        chunks = chunk_by_sentences(raw, max_chars=chunk_size, overlap=chunk_overlap)
+        for ci, ch in enumerate(chunks):
+            corpus.append({
+                "text": ch,
+                "filename": fp.name,
+                "filepath": str(fp),
+                "chunk_index": ci
+            })
+        if i % 20 == 0:
+            print(f"  - 진행: {i}/{len(use_files)} (누적 청크 {len(corpus):,}개) ...")
+    return corpus
+
+
+def build_bm25(corpus: List[Dict], tokenizer: Callable[[str], List[str]]) -> BM25Okapi:
+    tokenized_corpus = [tokenizer(c["text"]) for c in corpus]
+    return BM25Okapi(tokenized_corpus)
 
 
 def main():
+    print("=" * 70)
+    print(" BM25 인덱스 빌드 시작")
+    print("=" * 70)
+    print(f"[입력 폴더] {', '.join(input_dirs)}")
+    print(f"[출력 폴더] {OUT_DIR.resolve()}")
+    print(f"[Parquet]   {PARQUET_OUT}")
+    print(f"[BM25 DIR]  {BM25_DIR}")
+    print(f"[토크나이저] {TOKENIZER}")
+    print(f"[청크] size={CHUNK_SIZE}, overlap={CHUNK_OVERLAP}")
+    if TOP_LIMIT:
+        print(f"[LIMIT] 파일 상위 {TOP_LIMIT}개만 처리")
+
     OUT_DIR.mkdir(parents=True, exist_ok=True)
+    BM25_DIR.mkdir(parents=True, exist_ok=True)
 
-    rows = []
-    count = 0
-    for fp in walk_docx_files(input_dirs):
-        try:
-            for row in iter_chunks_from_docx(fp):
-                rows.append(row)
-                count += 1
-                if TOP_LIMIT and count >= TOP_LIMIT:
-                    break
-            if TOP_LIMIT and count >= TOP_LIMIT:
-                break
-        except Exception as e:
-            print(f"[WARN] {fp} 파싱 실패: {e}", file=sys.stderr)
+    # 1) 파일 수집
+    files = iter_docx_files(input_dirs)
+    print(f"[DOCX] 발견: {len(files):,}개")
 
-    if not rows:
-        print("ERROR: 청크를 하나도 만들지 못했습니다. 경로/권한/문서형식 확인 요망.", file=sys.stderr)
-        sys.exit(2)
+    if not files:
+        print("[ERROR] .docx 파일이 없습니다. 입력 경로를 확인하세요.", file=sys.stderr)
+        sys.exit(1)
 
-    df = pd.DataFrame(rows)
+    # 2) 청크 생성
+    print("[단계] .docx → 텍스트 → 청크")
+    corpus = make_corpus_from_docx(files, CHUNK_SIZE, CHUNK_OVERLAP, top_limit=TOP_LIMIT)
+    print(f"[결과] 청크: {len(corpus):,}개")
 
-    # 텍스트 중복 제거(해시 기준)
-    import hashlib
-    df["_txhash"] = df["text"].map(lambda s: hashlib.sha1(s.encode("utf-8")).hexdigest())
-    before = len(df)
-    df.drop_duplicates(subset=["_txhash"], inplace=True)
-    df.drop(columns=["_txhash"], inplace=True)
-    after = len(df)
-    print(f"[INFO] 중복 제거: {before} -> {after}")
+    if not corpus:
+        print("[ERROR] 유효한 청크가 없습니다.", file=sys.stderr)
+        sys.exit(1)
 
-    # 권장 컬럼 순서
-    ordered = ["_id","law_name","law_form","article_no","clause_no","section",
-               "effective_from","filename","chunk_index","text"]
-    cols = [c for c in ordered if c in df.columns] + [c for c in df.columns if c not in ordered]
-    df = df[cols]
-
-    # 저장(Parquet)
+    # 3) Parquet 저장
+    print("[단계] Parquet 저장")
+    df = pd.DataFrame(corpus)
     df.to_parquet(PARQUET_OUT, index=False)
-    print(f"[OK] 청크 저장: {PARQUET_OUT} (rows={len(df)})")
+    print(f"[저장] {PARQUET_OUT.resolve()}  ({PARQUET_OUT.stat().st_size:,} bytes)")
 
-    # BM25 인덱스 빌드
-    build_bm25(df, BM25_DIR, tokenizer_name=TOKENIZER)
+    # 4) BM25 인덱스 생성 & 저장
+    print("[단계] BM25 인덱스 생성")
+    tokenizer = build_tokenizer(TOKENIZER)
+    bm25 = build_bm25(corpus, tokenizer)
+    print("[완료] BM25Okapi 준비")
+
+    payload = {
+        "bm25": bm25,
+        "corpus": corpus,
+        "tokenizer": TOKENIZER.lower(),
+        "built_at": datetime.now().isoformat(timespec="seconds")
+    }
+    out_pkl = BM25_DIR / "bm25.pkl"
+    with open(out_pkl, "wb") as f:
+        pickle.dump(payload, f)
+
+    print(f"[저장] {out_pkl.resolve()}  ({out_pkl.stat().st_size:,} bytes)")
+    print("=" * 70)
+    print(" BM25 인덱스 빌드 완료")
+    print("=" * 70)
 
 
 if __name__ == "__main__":

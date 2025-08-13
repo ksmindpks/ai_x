@@ -1,3 +1,5 @@
+# config.py 최적 설정
+
 import os
 from dotenv import load_dotenv
 
@@ -12,22 +14,28 @@ if not OPENAI_API_KEY or not PINECONE_API_KEY:
 
 # Pinecone
 PINECONE_HOST = os.getenv("PINECONE_HOST")
-PINECONE_NAMESPACE = ""  # 빈 문자열 사용
+PINECONE_NAMESPACE = ""
+PINECONE_INDEX_NAME = os.getenv("PINECONE_INDEX", "codedoc-law-index")
 
-# Model
+# Model 설정 (최적 조합)
 EMBED_MODEL = "text-embedding-3-large"
 EMBED_DIM = 3072
-GENERATION_MODEL = "gpt-3.5-turbo"  # gpt-4는 너무 설명적, gpt-4o-mini → gpt-4o (품질 우선)
+GENERATION_MODEL = "gpt-4o-mini"  # 균형잡힌 성능
 
-# Evaluation
-DEFAULT_TOP_K = 7  # 5 → 7 (더 많은 컨텍스트)
-MAX_WORKERS = min(os.cpu_count() * 2, 20)
-BATCH_SIZE = 50
+# 검색 설정
+DEFAULT_TOP_K = 5  # 상위 5개
+MAX_WORKERS = min(os.cpu_count() * 2, 10)  # 적절한 병렬처리
+BATCH_SIZE = 30  # 배치 크기
 
-# BM25 Hybrid 설정
+# 하이브리드 설정 (벡터 중심)
 BM25_INDEX_DIR = os.getenv("BM25_INDEX_DIR", "./bm25_pkg/out/bm25_index")
-BM25_TOKENIZER = os.getenv("BM25_TOKENIZER", "kiwi")
-TOP_K_BM25 = int(os.getenv("TOP_K_BM25", 12))
-TOP_K_VEC = int(os.getenv("TOP_K_VEC", 12))
-WEIGHT_BM25 = float(os.getenv("WEIGHT_BM25", 0.6))
-WEIGHT_VEC = float(os.getenv("WEIGHT_VEC", 0.4))
+BM25_TOKENIZER = "kiwi"
+
+# 검색 가중치 (벡터 우선)
+TOP_K_BM25 = 8
+TOP_K_VEC = 10
+WEIGHT_BM25 = 0.2  # BM25 비중 낮춤
+WEIGHT_VEC = 0.8   # 벡터 비중 높임
+
+# 디버그
+DEBUG_HYBRID = os.getenv("DEBUG_HYBRID", "false").lower() in ("1", "true", "yes")
