@@ -30,10 +30,6 @@ cfg = HybridConfig(
 )
 retriever = HybridRetriever(cfg, embedder_fn)
 
-# ========================================
-# 2. retriever.py - 스키마 매핑 수정
-# ========================================
-
 def retrieve(query: str, top_k: int = 5) -> List[Dict]:
     """단일 질의 검색 - final_score 사용"""
     q = preprocess_query(query)
@@ -46,9 +42,8 @@ def retrieve(query: str, top_k: int = 5) -> List[Dict]:
     
     return results
 
-
 def retrieve_batch(queries: List[str], top_k: int = 7, debug: bool = DEBUG_HYBRID) -> List[List[Dict]]:
-    """배치 검색 - final_score 기준"""
+    """배치 검색 - 간소화된 디버그"""
     results_per_query = []
     
     for qi, query in enumerate(queries):
@@ -60,13 +55,12 @@ def retrieve_batch(queries: List[str], top_k: int = 7, debug: bool = DEBUG_HYBRI
             if "final_score" in r:
                 r["score"] = r["final_score"]
         
-        # 디버그 출력 (final_score 기준)
-        if debug and results:
+        # 간소화된 디버그 출력 (10개마다만)
+        if debug and qi % 10 == 0 and results:
             top = results[0]
-            print(f"[Q{qi}] '{q[:40]}...' "
-                  f"Final: {top.get('final_score', 0):.3f} "
-                  f"(BM25n: {top.get('bm25_score_norm', 0):.2f}, "
-                  f"Vecn: {top.get('vec_score_norm', 0):.2f})")
+            final_score = top.get('final_score', 0)
+            if DEBUG_HYBRID:
+                print(f"[Batch {qi:3d}] Final: {final_score:.3f}")
         
         results_per_query.append(results)
     

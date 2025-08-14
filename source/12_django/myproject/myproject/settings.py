@@ -48,6 +48,8 @@ INSTALLED_APPS = [
     "django_extensions", # 추가 앱 등록(django 5.2부터는 shell에도 model 자동 등록)
     "blog",
     "accounts",
+    "book",
+    "django.contrib.humanize", # intcomma(세자리마다 ,) 필터 사용
 ]
 
 MIDDLEWARE = [
