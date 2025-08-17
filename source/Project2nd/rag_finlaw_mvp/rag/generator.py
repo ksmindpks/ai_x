@@ -1,420 +1,405 @@
 # -*- coding: utf-8 -*-
-# rag/generator.py (상단 일부 교체/추가)
+"""
+rag/generator.py (improved v2, 2025-08-18)
+- 규칙 기반 우선, LLM은 선택적(키 없으면 자동 비활성)
+- 단답형: 정의/조문특정 패턴 확대 + 상위 문맥 4~5개까지 탐색 + 로컬 폴백 도입
+- 단답형 전체 try/except 가드로 generation_failed 방지
+- 사지선다: 컨텍스트 점수화 유지(안정성)
+"""
 
+from __future__ import annotations
 import re
+import logging
 from typing import List, Dict, Optional, Tuple
 
-# --- 안전한 config import (패키지/루트 모두 지원) ---
+# ---------------------- 설정 ----------------------
 try:
-    # 패키지 내부 ../config.py 형태
-    from ..config import OPENAI_API_KEY, DEBUG_HYBRID
+    from config import config
+    OPENAI_API_KEY = getattr(config, "openai_api_key", "")
+    DEBUG_MODE = bool(getattr(config, "debug_mode", False))
 except Exception:
-    try:
-        # 프로젝트 루트 config.py
-        from config import OPENAI_API_KEY, DEBUG_HYBRID
-    except Exception:
-        OPENAI_API_KEY = None
-        DEBUG_HYBRID = False
+    import os as _os
+    OPENAI_API_KEY = _os.getenv("OPENAI_API_KEY", "")
+    DEBUG_MODE = _os.getenv("DEBUG_MODE", "false").lower() in ("1","true","yes")
 
-# --- 안전한 utils import (패키지/루트 모두 지원) ---
+logging.basicConfig(level=logging.INFO if DEBUG_MODE else logging.WARNING)
+logger = logging.getLogger(__name__)
+
+# ---------------------- OpenAI (선택) ----------------------
 try:
-    # 같은 패키지 내 rag/utils.py
-    from .utils import (
-        enhanced_postprocess_answer,
-        analyze_question_intent,
-        validate_answer_by_intent,
-    )
-except Exception:
-    try:
-        # 프로젝트 루트 utils.py
-        from utils import (
-            enhanced_postprocess_answer,
-            analyze_question_intent,
-            validate_answer_by_intent,
-        )
-    except Exception as _e:
-        raise ImportError(
-            "utils 모듈을 찾을 수 없습니다. rag/utils.py 또는 프로젝트 루트의 utils.py 위치를 확인하세요."
-        ) from _e
+    from openai import OpenAI  # type: ignore
+    _CLIENT = OpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
+except Exception as _e:
+    logger.warning(f"OpenAI 사용 불가: {type(_e).__name__}: {_e}")
+    _CLIENT = None
 
-# OpenAI 클라이언트
+# ---------------------- utils (안전 폴백) ----------------------
 try:
-    from openai import OpenAI
-    client = OpenAI(api_key=OPENAI_API_KEY)
+    from .utils import extract_question_type, validate_answer_quality, enhanced_postprocess_answer
 except Exception:
-    # openai 미설치/키 미설정 시에도 import 에러로 죽지 않도록
-    client = None
+    def extract_question_type(q: str) -> str:
+        q = (q or "")
+        if re.search(r'(몇|얼마|기간|언제)', q): return 'period'
+        if re.search(r'(누구|기관|어디|담당)', q): return 'organization'
+        if re.search(r'제\d+조', q): return 'article_specific'
+        if re.search(r'(무엇|뜻|의미|정의)', q): return 'definition'
+        return 'general'
+    def validate_answer_quality(a: str, q: str, ctxs: List[Dict]) -> Tuple[bool,float,str]:
+        if not a: return (False, 0.0, "empty")
+        ln = len(a)
+        if ln < 1 or ln > 30: return (False, 0.0, "len")
+        present = any(a in (c.get("text","") or "") for c in (ctxs or []))
+        return (present, 0.6 if present else 0.4, "")
+    def enhanced_postprocess_answer(a: str, ctxs: List[Dict], q: Optional[str]=None, question_type: Optional[str]=None) -> str:
+        return a.strip()
 
-# -----------------------------
-# 공통 유틸
-# -----------------------------
-def _join_top_contexts(contexts: List[Dict], k: int = 3, each_limit: int = 800) -> str:
-    return "\n".join([c.get("text", "")[:each_limit] for c in contexts[:k]])
+# ---------------------- 경량 통계 ----------------------
+from copy import deepcopy as _dc
+_generation_stats = {"short_calls": 0, "mcq_calls": 0, "llm_calls": 0}
+def _bump(k:str): _generation_stats[k] = int(_generation_stats.get(k,0)) + 1
+def get_generation_stats(reset: bool = False):
+    snap = _dc(_generation_stats)
+    if reset:
+        for k in list(_generation_stats.keys()): _generation_stats[k] = 0
+    return snap
 
-def _strict_span_prompt(question: str, context_text: str, intent: dict) -> str:
-    guide_by_type = {
-        "period": "숫자와 단위를 함께 포함한 정확한 구절만 추출하세요. 예: '3개월', '30일', '25%'.",
-        "entity": "기관명/직책명의 정확한 표기를 그대로 추출하세요.",
-        "action": "구체적 조치/방법 표현만 추출하세요. 예: '지체 없이 시정 요구', '서면 또는 전자문서'.",
-        "content": "질문에 해당하는 정확한 내용 구절만 추출하세요.",
-        "general": "질문에 해당하는 정확한 내용 구절만 추출하세요.",
-    }
-    hint = guide_by_type.get(intent.get("type", "general"), guide_by_type["general"])
-    return f"""당신은 법령 스팬 추출기입니다. 아래 문맥에서 **질문에 해당하는 정확한 구절(스팬)**만 그대로 복사해 답하세요.
-문맥에 **그대로 존재하는 문자열**만 허용됩니다. 문맥에 없으면 '정보 불충분'으로 답하세요.
+# ---------------------- 공통 유틸/정규식 ----------------------
+_HANGUL_NOUNish = re.compile(r'[가-힣]{2,}')
+_NUM    = re.compile(r'\d{1,4}(?:\.\d+)?')
+_PCT    = re.compile(r'\d{1,3}\s*%')
+_PERIOD = re.compile(r'(\d{1,4})\s*(영업일|일|주|개월|달|월|년)\s*(?:이내|이상|초과|이하)?')
+_RANGE  = re.compile(r'(\d{1,4})\s*[-~]\s*(\d{1,4})\s*(일|주|개월|월|년)')
+_ARTICLE= re.compile(r'제(\d+)조(?:제(\d+)항)?(?:제(\d+)호)?')
+_ORG_SUFFIX = r'(?:위원회|감독원|장관|부장관|총재|은행|공사|청|부|처|원|법원|검찰청)'
+_ORG   = re.compile(rf'[가-힣]{{2,}}{_ORG_SUFFIX}')
 
-지침:
-1) 생성/의역 금지, 원문 스팬만 허용
-2) {hint}
-3) 답은 2~60자 이내의 한 줄
+# 정의 패턴 확대
+_DEF_PATTERNS = [
+    r'“?([^”\n]{2,30})”?\s*(?:란|이라\s*함|라\s*함)\s*([^.\n]{2,120}?)(?:이라\s*한다|로\s*한다|을\s*말한다|라고\s*한다|로\s*본다)',
+    r'“?([^”\n]{2,30})”?\s*(?:의\s*의미|의\s*정의)\s*는\s*([^.\n]{2,120}?)\s*(?:이다|로\s*한다)',
+    r'“?([^”\n]{2,30})”?\s*은\s*([^.\n]{2,120}?)\s*이다',
+    r'“?([^”\n]{2,30})”?\s*을\s*말한다\s*:\s*([^.\n]{2,120})',
+    r'“?([^”\n]{2,30})”?\s*이라\s*한다\s*:\s*([^.\n]{2,120})',
+]
+_INCLUDE_RULE = re.compile(r'“?([^”\n]{2,30})”?\s*에는\s*([^.\n]{2,120})\s*(?:등이|등을)?\s*포함된다')
 
-[문맥]
-{context_text}
+_JOSA_TAIL  = re.compile(r'(?:에|에서|으로|의|를|을|은|는|가|이|와|과)$')
+_PAREN_TRIM = re.compile(r'[「」“”"()]')
+_STOPWORDS  = {"사항","것","경우","등","자","때","해당","관련","규정"}
 
-[질문]
-{question}
+def _ctx_text(contexts: List[Dict], k:int=3, limit:int=1500) -> str:
+    parts = []
+    for c in contexts[:k]:
+        t = (c.get("text","") or "").strip()
+        if t: parts.append(t[:limit])
+    return "\n".join(parts)
 
-[정답]
-"""
+def _ctx_text_wide(contexts: List[Dict], qtype:str, limit:int=1800) -> str:
+    k = 5 if qtype in ("definition","article_specific") else 3
+    return _ctx_text(contexts, k=k, limit=limit)
 
-def _find_by_patterns(text: str, patterns: List[str]) -> Optional[str]:
-    for p in patterns or []:
-        m = re.findall(p, text)
-        if m:
-            ans = m[0]
-            if isinstance(ans, tuple):
-                ans = next((x for x in ans if x), "").strip()
-            if ans:
-                return ans.strip()
-    return None
+def _tokenize_words(s: str) -> List[str]:
+    if not s: return []
+    s = re.sub(r"[^0-9A-Za-z가-힣%]+", " ", s)
+    return [w for w in s.split() if len(w) >= 2]
 
-def _extract_nearby(text: str, keyword: str, radius: int) -> str:
-    i = text.find(keyword)
-    if i < 0:
-        return ""
-    s = max(0, i - radius)
-    e = min(len(text), i + len(keyword) + radius)
-    return text[s:e]
+def _count_occurrences(s: str, ctxs: List[Dict]) -> int:
+    if not s: return 0
+    return sum((c.get("text","") or "").count(s) for c in ctxs)
 
-# -----------------------------
-# 법령/조문 앵커링
-# -----------------------------
-def _extract_law_and_article(q: str) -> Tuple[str, List[str]]:
-    law = ""
-    m = re.search(r'「([^」]{4,80})」', q or "")
-    if m:
-        law = m.group(1)
-    arts = []
-    for a, b, c in re.findall(r'제(\d+)조(?:제(\d+)항)?(?:제(\d+)호)?', q or ""):
-        s = f"제{a}조" + (f"제{b}항" if b else "") + (f"제{c}호" if c else "")
-        arts.append(s)
-    return law, arts
+def _clean_phrase(s: str) -> str:
+    s = (s or "").strip()
+    s = _PAREN_TRIM.sub('', s)
+    s = re.sub(r'\s+', ' ', s)
+    for _ in range(2):
+        s = _JOSA_TAIL.sub('', s).strip()
+    for sw in list(_STOPWORDS):
+        s = re.sub(fr'{sw}$', '', s).strip()
+    return s[:30]
 
-def _prioritize_by_law_article(question: str, ctxs: List[Dict]) -> List[Dict]:
-    law, arts = _extract_law_and_article(question)
-    if not ctxs:
-        return ctxs
-    def hit(c):
-        t = c.get("text", "")
-        score = 0
-        if law and law in t: score += 2
-        for a in arts:
-            if a and a in t: score += 3
-        return score
-    scored = [(hit(c), c) for c in ctxs]
-    scored.sort(key=lambda x: x[0], reverse=True)
-    top = [c for s, c in scored if s > 0][:3]
-    if top:
-        rest = [c for s, c in scored if s == 0]
-        return top + rest
-    return [c for s, c in scored]
+def _article_tokens(s: str) -> List[str]:
+    toks = []
+    for a in _ARTICLE.findall(s or ""):
+        t = f"제{a[0]}조"
+        if a[1]: t += f"제{a[1]}항"
+        if a[2]: t += f"제{a[2]}호"
+        toks.append(t)
+    return toks
 
-# -----------------------------
-# 규칙 추출(Period/Entity/Action/Content)
-# -----------------------------
-def extract_period_enhanced(text: str, intent: dict, question: str) -> Optional[str]:
-    patterns = []
-    if "유예" in intent.get("context_clues", []):
-        patterns = [
-            r"유예\s*기간[은는]?\s*(\d+\s*(?:개월|일|년))",
-            r"(\d+\s*(?:개월|일|년))\s*(?:동안\s*)?유예",
-            r"유예[^.\n]{0,30}(\d+\s*(?:개월|일|년))",
-        ]
-    elif "담보조달" in question or "비율" in question:
-        patterns = [r"(\d+\s*%)", r"(\d+\s*퍼센트)"]
-    elif any(k in question for k in ["기간","며칠","며칠간","몇 일","몇 개월"]):
-        patterns = [r"(\d+\s*개월)", r"(\d+\s*일)", r"(\d+\s*년)"]
-    else:
-        patterns = [r"(\d+\s*개월)", r"(\d+\s*일)", r"(\d+\s*년)", r"(\d+\s*%)"]
+def _best_sentence_for_article(ctx: str, anchors: List[str]) -> str:
+    sents = re.split(r'(?<=[.다])\s+', ctx)
+    best, score = "", -1
+    for s in sents:
+        hit = sum(1 for a in anchors if a and a in s)
+        if hit > score:
+            best, score = s, hit
+    return best or ctx
 
-    # 후보 수집
-    cands = []
-    for p in patterns:
-        for m in re.finditer(p, text):
-            span = m.group(1) if m.groups() else m.group(0)
-            if span:
-                cands.append((m.start(), span.strip()))
-    if not cands:
+# ---------------------- 패턴 추출기 ----------------------
+class LocalPatternExtractor:
+    def extract(self, question: str, contexts: List[Dict], qtype: str) -> List[Tuple[str,float]]:
+        text = _ctx_text_wide(contexts, qtype, limit=2200)
+        cands: List[Tuple[str,float]] = []
+        if not text: return cands
+
+        if qtype == 'period':
+            for m in _RANGE.finditer(text):
+                cands.append((f"{m.group(1)}~{m.group(2)}{m.group(3)}", 0.86))
+            for m in _PERIOD.finditer(text):
+                cands.append((f"{m.group(1)}{m.group(2)}", 0.80))
+
+        elif qtype == 'organization':
+            for m in _ORG.finditer(text):
+                cands.append((m.group(), 0.80))
+
+        elif qtype == 'article_specific':
+            anchors = _article_tokens(question)
+            core = _best_sentence_for_article(text, anchors) if anchors else text
+            for m in _ARTICLE.finditer(core):
+                s = f"제{m.group(1)}조"
+                if m.group(2): s += f"제{m.group(2)}항"
+                if m.group(3): s += f"제{m.group(3)}호"
+                cands.append((s, 0.92))
+            for m in re.finditer(r'「([^」]{2,40})」', core):
+                cands.append((_clean_phrase(m.group(1)), 0.78))
+            for m in _PCT.finditer(core):
+                cands.append((m.group().replace(' ', ''), 0.70))
+
+# >>>>>>> generator.py PATCH A (definition 분기) START >>>>>>>
+        elif qtype == 'definition':
+            ctx = text
+            ask_term = bool(re.search(r'(무엇|뜻|의미|정의)', question or ''))
+            ask_body = bool(re.search(r'(요건|조건|내용|포함|해당)', question or ''))
+
+            term_hits: List[Tuple[str,float]] = []
+            body_hits: List[Tuple[str,float]] = []
+
+            for pat in _DEF_PATTERNS:
+                for m in re.finditer(pat, ctx):
+                    try:
+                        term = _clean_phrase(m.group(1))
+                        body = _clean_phrase(m.group(2))
+                    except Exception:
+                        continue
+                    if term: term_hits.append((term, 0.78))
+                    if body: body_hits.append((body, 0.89))
+
+            for m in _INCLUDE_RULE.finditer(ctx):
+                try:
+                    _t = _clean_phrase(m.group(1))
+                    _b = _clean_phrase(m.group(2))
+                except Exception:
+                    continue
+                if _b:
+                    body_hits.append((_b, 0.80))
+
+            # 질문 의도에 맞게 우선순위 합치기
+            picked: List[Tuple[str,float]] = []
+            if ask_term and not ask_body:
+                picked = term_hits + body_hits[:3]
+            elif ask_body and not ask_term:
+                picked = body_hits + term_hits[:2]
+            else:
+                picked = body_hits + term_hits
+
+            # 아래 공통 흐름으로 전달
+            cands.extend(picked)
+# <<<<<<< generator.py PATCH A (definition 분기) END <<<<<<<
+
+        else:  # general
+            for m in _PCT.finditer(text):
+                cands.append((m.group().replace(" ",""), 0.70))
+            for m in _NUM.finditer(text):
+                if len(m.group()) <= 6:
+                    cands.append((m.group(), 0.60))
+            for m in _HANGUL_NOUNish.finditer(text):
+                if 2 <= len(m.group()) <= 10 and m.group() not in _STOPWORDS:
+                    cands.append((m.group(), 0.56))
+
+        # 중복 제거 + 빈도/길이 보정
+        dedup: Dict[str,float] = {}
+        for s, sc in cands:
+            s = s.strip()
+            if not s: continue
+            if s not in dedup or sc > dedup[s]:
+                dedup[s] = sc
+
+        rescored: List[Tuple[str,float]] = []
+        for s, prior in dedup.items():
+            freq = _count_occurrences(s, contexts)
+            bonus = min(0.25, 0.05 * freq)
+            ln = len(s)
+            penalty = -0.05 if ln > 24 else 0.0
+            rescored.append((s, max(0.0, prior + bonus + penalty)))
+
+        rescored.sort(key=lambda x: (-x[1], len(x[0])))
+        return rescored[:12]
+
+# ---------------------- LLM 백업 ----------------------
+def _try_llm_short_answer(question: str, contexts: List[Dict]) -> Optional[str]:
+    if _CLIENT is None:
         return None
-
-    # 앵커어(기간/유예/비율/% 등)와의 거리
-    anchors = re.findall(r"(기간|유예|비율|퍼센트|%)", question) or ["기간", "비율"]
-    def near_score(pos: int) -> int:
-        best = 10**9
-        for a in anchors:
-            for m in re.finditer(re.escape(a), text):
-                best = min(best, abs(pos - m.start()))
-        return best
-
-    # 단위 선호도: intent.priority + 문맥 빈도
-    prio_units = intent.get("priority_patterns", [])
-    def unit_of(s: str) -> str:
-        if "개월" in s: return "개월"
-        if "일" in s: return "일"
-        if "년" in s: return "년"
-        if "%" in s or "퍼센트" in s: return "%"
-        return ""
-    unit_freq = {}
-    for _, sp in cands:
-        u = unit_of(sp)
-        if u:
-            unit_freq[u] = unit_freq.get(u, 0) + 1
-
-    def rank(c):
-        pos, sp = c
-        u = unit_of(sp)
-        rank_u = (0 if not prio_units else (-1 if any(u == pu for pu in prio_units) else 0)) + (-unit_freq.get(u, 0))
-        return (near_score(pos), rank_u, len(sp))
-
-    cands.sort(key=rank)
-    return cands[0][1] if cands else None
-
-def extract_entity_enhanced(text: str, intent: dict, question: str) -> Optional[str]:
-    # 동사 앵커 주변 우선 탐색
-    verbs = ["승인", "지정", "고시", "통지", "정하는", "관장", "관리", "감독"]
-    ent_pat = r"(기획재정부장관|금융위원회|한국은행총재|한국은행|새마을금고|임치소|신용협동조합|은행|금고|위원회)"
-    hits = []
-    for v in verbs:
-        for m in re.finditer(re.escape(v), text):
-            seg = _extract_nearby(text, v, 60)
-            mm = re.findall(ent_pat, seg)
-            if mm:
-                hits += [(abs(m.start() - text.find(x)), x) for x in mm]
-    if hits:
-        hits.sort(key=lambda x: x[0])
-        return hits[0][1]
-    return _find_by_patterns(text, [ent_pat])
-
-def extract_action_enhanced(text: str, intent: dict, question: str) -> Optional[str]:
-    ctx = intent.get("context_clues", [])
-    patterns = []
-    if "위법행위" in ctx:
-        patterns += [r"(지체\s*없이\s*(?:시정|정정|조치)\s*(?:요구|명령))", r"(즉시\s*중단\s*조치)"]
-    if "통지" in question or "방법" in question:
-        patterns += [r"(서면\s*(?:또는|및)\s*전자문서)", r"(서면\s*통지)", r"(전자문서\s*통지)"]
-    if "절차" in question or "승인" in question:
-        patterns += [r"(국무회의[^\n]{0,15}심의[^\n]{0,15}승인)", r"(대통령[^\n]{0,10}승인)", r"(신청서[^\n]{0,20}제출)"]
-    # 일반 규칙
-    patterns += [r"([가-힣\s]{2,20}(?:하여야|해야)\s*한다)"]
-    return _find_by_patterns(text, patterns)
-
-def extract_content_enhanced(text: str, intent: dict, question: str) -> Optional[str]:
-    patterns = []
-    target = intent.get("target")
-    if target == "consideration_object":
-        patterns = [
-            r"(개인금융채무자의\s*권익과\s*금융질서)",
-            r"([가-힣\s]{5,35})[을를]\s*(?:고려|반영)(?:해야|하여야)",
-        ]
-    elif target == "inclusion_content":
-        patterns = [
-            r"(업무의\s*분장\s*및\s*조직구조)",
-            r"(임원.*?직원.*?교육)",
-            r"(산출업무규정.*?내용)",
-            r"(정관\s*또는\s*이에\s*준하는\s*규정)",
-        ]
-    else:
-        patterns = [
-            r"란\s*([^.]{8,60})(?:이다|을\s*말한다)",
-            r"\"([^\"\n]{5,50})\"[이라고]?\s*(?:한다|정의)",
-            r"([가-힣\s]{5,40})(?:을|를)\s*(?:말한다|의미한다)",
-        ]
-    return _find_by_patterns(text, patterns)
-
-def extract_fallback(question: str, contexts: List[Dict]) -> Optional[str]:
-    text = "\n".join([c.get("text", "") for c in contexts[:2]])
-    patterns = [
-        r"(\d+\s*개월)", r"(\d+\s*일)", r"(\d+\s*%)",
-        r"(기획재정부장관)", r"(한국은행총재|한국은행)",
-        r"([가-힣]{3,10}\s*(?:조치|방법|내용))",
-    ]
-    return _find_by_patterns(text, patterns)
-
-# -----------------------------
-# LLM 추출
-# -----------------------------
-def extract_by_enhanced_llm(question: str, contexts: List[Dict], intent: dict) -> Optional[str]:
-    context_text = _join_top_contexts(contexts, k=3, each_limit=800)
-    prompt = _strict_span_prompt(question, context_text, intent)
     try:
-        res = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": "너는 법령 스팬 추출 전문가다. 문맥에 **존재하는 구절**만 그대로 복사해서 답한다."},
-                {"role": "user", "content": prompt},
-            ],
-            temperature=0,
-            max_tokens=80,
+        ctx = _ctx_text(contexts, k=2, limit=400)
+        prompt = (
+            "아래 문맥만 근거로, 질문에 대한 '아주 짧은 정답' 한 개만 한국어로 출력하세요.\n"
+            "불확실하면 '정보 없음'이라고만 쓰세요. 15자 이내.\n\n"
+            f"문맥:\n{ctx}\n\n질문: {question}\n정답:"
         )
-        ans = (res.choices[0].message.content or "").strip()
-        if ans and ans != "정보 불충분" and 2 <= len(ans) <= 60 and validate_answer_by_intent(ans, intent):
-            all_text = context_text
-            if (ans in all_text) or (ans.replace(" ", "") in all_text.replace(" ", "")):
-                return ans
+        resp = _CLIENT.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role":"user","content":prompt}],
+            temperature=0, max_tokens=20
+        )
+        ans = (resp.choices[0].message.content or "").strip()
+        if ans and ans != "정보 없음" and len(ans) <= 20:
+            return ans
     except Exception as e:
-        if DEBUG_HYBRID:
-            print(f"[LLM Short Error] {e}")
+        logger.warning(f"LLM short fallback 실패: {e}")
     return None
 
-# -----------------------------
-# Public API
-# -----------------------------
-def generate_answer_short(question: str, contexts: List[Dict]) -> str:
-    """단답형: LLM 1차 → 규칙 2차 → 폴백. 법령/조문 앵커링 적용."""
-    if not contexts:
-        return "정보 없음"
-
-    # 상위 컨텍스트 정렬 + 법령/조문 앵커링
-    good0 = [c for c in contexts if c.get("final_score", c.get("score", 0)) >= 0.35] or contexts[:3]
-    good = _prioritize_by_law_article(question, good0)
-
-    # 1) 의도 분석
-    intent = analyze_question_intent(question)
-
-    # 2) LLM 스팬 추출 (1차)
-    ans = extract_by_enhanced_llm(question, good, intent)
-    if ans:
-        return enhanced_postprocess_answer(ans, good, intent)
-
-    # 3) 규칙 추출 (2차)
+def _try_llm_mcq(question: str, choices: List[str], contexts: List[Dict]) -> Optional[str]:
+    if _CLIENT is None:
+        return None
     try:
-        # 조문 매칭 우선 텍스트
-        text_for_rules = good[0].get("text", "") if good else ""
-        if intent["type"] == "period":
-            ans = extract_period_enhanced(text_for_rules, intent, question)
-        elif intent["type"] == "entity":
-            ans = extract_entity_enhanced(text_for_rules, intent, question)
-        elif intent["type"] == "action":
-            ans = extract_action_enhanced(text_for_rules, intent, question)
-        else:
-            ans = extract_content_enhanced(text_for_rules, intent, question)
-        if ans:
-            return enhanced_postprocess_answer(ans, good, intent)
+        ctx = _ctx_text(contexts, k=2, limit=800)
+        opts = "\n".join(f"{i+1}. {c}" for i, c in enumerate(choices))
+        prompt = (
+            "아래 문맥만 근거로 가장 타당한 선택지 번호(1~4)만 출력하세요. 근거가 없으면 0을 출력.\n\n"
+            f"문맥:\n{ctx}\n\n질문:{question}\n선택지:\n{opts}\n\n정답 번호:"
+        )
+        resp = _CLIENT.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role":"user","content":prompt}],
+            temperature=0, max_tokens=5
+        )
+        out = (resp.choices[0].message.content or "").strip()
+        if out and out.isdigit():
+            n = int(out)
+            if 1 <= n <= len(choices):
+                return choices[n-1]
     except Exception as e:
-        if DEBUG_HYBRID:
-            print(f"[Rule Error] {e}")
+        logger.warning(f"LLM mcq fallback 실패: {e}")
+    return None
 
-    # 4) 폴백
-    ans = extract_fallback(question, good)
-    if ans:
-        return enhanced_postprocess_answer(ans, good, intent)
+# ---------------------- 로컬 폴백(LLM 없음용) ----------------------
+def _fallback_rule_based_short(question: str, contexts: List[Dict], qtype: str) -> Optional[str]:
+    """LLM이 없거나 후보가 없을 때 마지막으로 시도하는 규칙 기반 폴백."""
+    text = _ctx_text_wide(contexts, qtype, limit=2200)
+    if not text: return None
 
-    return "정보 불충분"
+    if qtype in ("definition", "article_specific"):
+        extractor = LocalPatternExtractor()
+        cands = extractor.extract(question, contexts, qtype)
+        if cands:
+            return _clean_phrase(cands[0][0])
 
-# -----------------------------
-# MCQ
-# -----------------------------
-def _score_choice_against_contexts(choice: str, contexts: List[Dict]) -> float:
-    """선택지 점수: 키워드 매칭 + 수치 매칭 + 위치 가중 + 커버리지 + generic penalty."""
-    ctx = _join_top_contexts(contexts, k=3, each_limit=600)
-    score = 0.0
+    m = _RANGE.search(text) or _PERIOD.search(text) or _PCT.search(text) or _NUM.search(text)
+    if m:
+        raw = m.group(0)
+        return _clean_phrase(raw.replace(" ", ""))
 
-    # 무의미 선택지 패널티
-    generic = {"법령", "규정", "기준", "내용", "정의"}
-    if choice.strip() in generic:
-        score -= 20.0
+    tokens = _tokenize_words(text)
+    if not tokens: return None
+    freq = {}
+    for w in tokens:
+        if w in _STOPWORDS: continue
+        freq[w] = freq.get(w, 0) + 1
+    best = max(freq.items(), key=lambda x: (x[1], -len(x[0])))[0] if freq else None
+    return _clean_phrase(best) if best else None
 
-    # 1) 정확 포함 보너스
-    if choice and choice in ctx:
-        score += 60.0
+# ---------------------- 단답형 ----------------------
+def generate_answer_short(question: str, contexts: List[Dict]) -> str:
+    _bump('short_calls')
+    try:
+        if not contexts:
+            return "정보 불충분"
 
-    # 2) 토큰 매칭(긴 키워드 가중)
-    words = re.findall(r"[가-힣]{2,}", choice or "")
-    for w in words:
-        if w in ctx:
-            score += min(len(w), 10) * 1.5
+        qtype = extract_question_type(question) or 'general'
+        px = LocalPatternExtractor()
+        candidates = px.extract(question, contexts, qtype)
 
-    # 3) 숫자/단위 매칭
-    nums = re.findall(r"\d+\s*(?:개월|일|년|%|퍼센트|만원|억원)?", choice or "")
-    for n in nums:
-        if n.strip() and n.strip() in ctx:
-            score += 25.0
+# >>>>>>> generator.py PATCH B (final score) START >>>>>>>
+        best, best_s = None, 0.0
+        for cand, prior in candidates[:8]:
+            ok, qual, _ = validate_answer_quality(cand, question, contexts)
+            if not ok:
+                continue
+            freq = _count_occurrences(cand, contexts)
+            type_bonus = 0.08 if qtype in ('period','organization','article_specific') else (0.04 if qtype=='definition' else 0.0)
+            final = prior*0.38 + qual*0.62 + min(0.20, 0.03*freq) + type_bonus
+            if final > best_s:
+                best, best_s = cand, final
+# <<<<<<< generator.py PATCH B (final score) END <<<<<<<
 
-    # 4) 위치 가중(앞쪽일수록 가점)
-    idx = ctx.find(choice) if choice else -1
-    if idx >= 0:
-        pos_bonus = max(0.0, 20.0 - (idx / max(1, len(ctx)) * 20.0))
-        score += pos_bonus
+        if (best is None or best_s < 0.55):
+            llm_ans = _try_llm_short_answer(question, contexts)
+            if llm_ans:
+                _bump('llm_calls')
+                ok, qual, _ = validate_answer_quality(llm_ans, question, contexts)
+                if ok:
+                    best, best_s = llm_ans, max(best_s, 0.60)
+            if best is None:
+                rb = _fallback_rule_based_short(question, contexts, qtype)
+                if rb:
+                    best, best_s = rb, max(best_s, 0.56)
 
-    # 5) 커버리지(선택지 토큰의 60% 이상이 문맥에 존재)
-    if words:
-        covered = sum(1 for w in words if w in ctx)
-        if covered / len(words) >= 0.6:
-            score += 20.0
+        if best:
+            best = _clean_phrase(best)
+            return enhanced_postprocess_answer(best, contexts, question, qtype)
 
-    return score
+        rb2 = _fallback_rule_based_short(question, contexts, qtype)
+        return rb2 or "정보 불충분"
+
+    except Exception as e:
+        logger.warning(f"[short] generation error: {type(e).__name__}: {e}")
+        return "정보 불충분"
+
+# ---------------------- 사지선다 ----------------------
+def _tokenize_for_overlap(s: str) -> List[str]:
+    return [w for w in _tokenize_words(s) if len(w) >= 2 and w not in _STOPWORDS]
+
+def _score_choice_against_context(choice: str, ctx_text: str) -> int:
+    s = 0
+    if not choice: return s
+    ch = choice.strip()
+    if not ch: return s
+
+    if ch in ctx_text: s += 120
+    if ch.replace(" ","") in ctx_text.replace(" ",""): s += 80
+
+    for m in _NUM.findall(ch):
+        if m in ctx_text: s += 30
+    for m in _PCT.findall(ch):
+        if m.replace(" ","") in ctx_text.replace(" ",""): s += 40
+    for m in _ARTICLE.findall(ch):
+        tok = f"제{m[0]}조"
+        if tok in ctx_text: s += 35
+    if _ORG.search(ch) and _ORG.search(ctx_text): s += 35
+
+    toks = set(_tokenize_for_overlap(ch))
+    hit = sum(1 for w in toks if w in ctx_text)
+    s += min(60, hit * 6)
+
+    if len(ch) > 40: s -= 10
+    return s
 
 def generate_answer_mcq(question: str, choices: List[str], contexts: List[Dict]) -> str:
-    """MCQ: 스코어 강화 + 근소 차이면 LLM 재판정."""
-    if not choices or not contexts:
-        return choices[0] if choices else ""
+    _bump('mcq_calls')
+    if not choices: return ""
+    if not contexts: return choices[0]
 
-    good = [c for c in contexts if c.get("final_score", c.get("score", 0)) >= 0.8] or contexts[:3]
-    scores = []
-    for i, choice in enumerate(choices):
-        s = _score_choice_against_contexts(choice, good)
-        scores.append((i, s, choice))
-    scores.sort(key=lambda x: x[1], reverse=True)
+    ctx_text = _ctx_text(contexts, k=3, limit=2000)
+    scored = [(_score_choice_against_context(ch, ctx_text), ch) for ch in choices]
+    scored.sort(key=lambda x: x[0], reverse=True)
+    top_score, top_choice = scored[0]
 
-    top_idx, top_score, top_choice = scores[0]
-    need_llm = False
-    if len(scores) >= 2 and (top_score - scores[1][1]) < 10.0:
-        need_llm = True
-    if top_score < 12.0:
-        need_llm = True
-
-    if not need_llm:
+    if top_score >= 90 and (len(scored) == 1 or top_score - scored[1][0] >= 15):
         return top_choice
 
-    # LLM 재판정
-    ctx = _join_top_contexts(good, k=3, each_limit=800)
-    prompt = f"""문맥을 바탕으로 가장 옳은 선택지를 하나 고르세요.
-각 선택지를 검토한 뒤 최종 번호만 답하세요. (1~{len(choices)} 중 하나)
-
-[문맥]
-{ctx}
-
-[질문]
-{question}
-
-[선택지]
-{chr(10).join([f"{i+1}. {c}" for i, c in enumerate(choices)])}
-
-[정답 번호]
-"""
-    try:
-        res = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0,
-            max_tokens=8,
-        )
-        ans = (res.choices[0].message.content or "").strip()
-        for i in range(1, len(choices) + 1):
-            if str(i) in ans:
-                return choices[i - 1]
-    except Exception as e:
-        if DEBUG_HYBRID:
-            print(f"[MCQ LLM Error] {e}")
+    llm_pick = _try_llm_mcq(question, choices, contexts)
+    if llm_pick:
+        _bump('llm_calls')
+        return llm_pick
 
     return top_choice

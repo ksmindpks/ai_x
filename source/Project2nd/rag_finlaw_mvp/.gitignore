@@ -4,5 +4,3 @@
 .env
 app/.ipynb_checkpoints/
 rag/.ipynb_checkpoints/
-VL_multiple_choice.json
-VL_span_extraction.json
