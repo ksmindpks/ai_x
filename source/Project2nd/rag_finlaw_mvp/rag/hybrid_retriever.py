@@ -1,292 +1,315 @@
 # -*- coding: utf-8 -*-
 """
 rag/hybrid_retriever.py
-- BM25 로더 강화: dict 포맷에서 bm25 없음 → 즉시 재구축 (rank_bm25 우선, 실패 시 MinimalBM25 폴백)
-- 디버그와 무관한 1회 경고(치명 상태 가시화)
-- Kiwi 토크나이저 우선, 실패 시 간단 토크나이저
-- PineconeWrapper는 선택 (없으면 벡터 검색 생략)
-- 기존 병합/정규화/인터페이스(search/search_batch, retrieve/retrieve_batch) 유지
+- BM25 + Vector 하이브리드
+- 개선: 쿼리 전처리(조문/기관 토큰 보존), 점수 정규화 안정화, 제목 부스팅, 가중치 조정, 디버그 지표
 """
-
 from __future__ import annotations
-import os, re, pickle, math, threading
-from dataclasses import dataclass
-from typing import List, Dict, Optional
-
-# ---------- Optional deps ----------
+# --- optional .env backup load (lightweight) ---
 try:
-    from rank_bm25 import BM25Okapi
+    import os
+    if not (os.getenv("UPSTAGE_API_KEY") or os.getenv("PINECONE_API_KEY")):
+        from dotenv import load_dotenv, find_dotenv
+        p = find_dotenv(usecwd=True)
+        if p:
+            load_dotenv(p, override=False)
 except Exception:
-    BM25Okapi = None
+    pass
+# -----------------------------------------------
 
-try:
-    from kiwipiepy import Kiwi
-    _KIWI = Kiwi()
-except Exception:
-    _KIWI = None
+import os, re, json, math, pickle
+from typing import List, Dict, Tuple, Any, Optional
+import concurrent.futures
 
-# ---------- Config ----------
-try:
-    from config import DEBUG_HYBRID
-    _DBG = bool(DEBUG_HYBRID)
-except Exception:
-    _DBG = os.getenv("DEBUG_HYBRID", "false").lower() in ("1", "true", "yes")
+# 환경/가중치 기본값 (config가 있으면 환경변수로 덮어쓰기 가능)
+TOP_K_BM25 = int(os.getenv("TOP_K_BM25") or 12)
+TOP_K_VEC  = int(os.getenv("TOP_K_VEC")  or 12)
+WEIGHT_BM25 = float(os.getenv("WEIGHT_BM25") or 0.55)
+WEIGHT_VEC  = float(os.getenv("WEIGHT_VEC")  or 0.45)
+FINAL_TOP_K = int(os.getenv("FINAL_TOP_K") or 7)
+DEBUG = (os.getenv("RETRIEVER_DEBUG") or "false").lower() in ("1","true","yes","y")
 
-# ---------- Tokenizer ----------
-def _tokenize_ko(text: str) -> List[str]:
-    if not text:
+# BM25 인덱스 경로
+BM25_PKL = os.getenv("BM25_PICKLE") or os.path.join(".", "bm25_pkg", "out", "bm25_index", "bm25.pkl")
+
+# Pinecone (벡터) 선택 사용
+USE_PINECONE = (os.getenv("USE_PINECONE") or "true").lower() in ("1","true","yes","y")
+PC_INDEX_NAME = os.getenv("PINECONE_INDEX") or "codedoc-law-upstage"
+PC_NAMESPACE  = os.getenv("PINECONE_NAMESPACE") or ""
+PC_CLOUD      = os.getenv("PINECONE_CLOUD", "aws")
+PC_REGION     = os.getenv("PINECONE_REGION", "us-east-1")
+
+# 임베딩(쿼리용) - Upstage 사용 예시 (langchain_upstage)
+_USE_UPSTAGE = (os.getenv("EMBED_PROVIDER") or "upstage").lower() == "upstage"
+_UP_MODEL = os.getenv("UPSTAGE_EMBEDDING_MODEL") or "solar-embedding-1-large"
+
+# ----------------------------- 토크나이저/전처리 -----------------------------
+
+def _preprocess_query(q: str) -> str:
+    q = (q or "").strip()
+    q = re.sub(r'[“”\"\'\(\)\[\]<>·•※]', ' ', q)
+    q = re.sub(r'\s+', ' ', q)
+
+    # keep: 제n조(의n), 제n항, 기관명 접미
+    keep = re.findall(r'(제\d+조(?:의\d+)?|제\d+항|[가-힣A-Za-z]{2,20}(?:위원회|부|청|원))', q)
+
+    # 말미 조사/어미 제거(가볍게)
+    q2 = re.sub(r'(을|를|은|는|이|가|의|에|에서|으로|에게)$', '', q)
+    words = [w for w in re.split(r'\s+', q2) if len(w) >= 2]
+
+    merged = []
+    seen = set()
+    for t in keep + words:
+        t = t.strip()
+        if t and t not in seen:
+            seen.add(t); merged.append(t)
+    return ' '.join(merged[:20])
+
+
+def _safe_minmax(scores: List[float]) -> List[float]:
+    if not scores:
         return []
-    # 법조 패턴 보강 토큰
-    arts = []
-    for a in re.findall(r'제(\d+)조(?:제(\d+)항)?(?:제(\d+)호)?', text):
-        t = f"제{a[0]}조"
-        if a[1]: t += f"제{a[1]}항"
-        if a[2]: t += f"제{a[2]}호"
-        arts.append(t)
-    if _KIWI is not None:
+    lo, hi = min(scores), max(scores)
+    if hi - lo < 1e-9:
+        return [0.5 for _ in scores]
+    return [(s - lo) / (hi - lo) for s in scores]
+
+# ----------------------------- BM25 로딩/검색 -----------------------------
+
+class _BM25Store:
+    def __init__(self, path: str):
+        self.ok = False
+        self.corpus: List[Dict[str, Any]] = []
+        self.model = None
+        self.tokenizer = None
         try:
-            toks = [t.form for t in _KIWI.tokenize(text)]
-        except Exception:
-            toks = []
-    else:
-        toks = re.sub(r"[^0-9A-Za-z가-힣%]+", " ", text).split()
-    stop = {'의','은','는','이','가','을','를','에','으로','와','과','및','또는','도','만','보다'}
-    toks = [t for t in toks if len(t) >= 2 and t not in stop]
-    return arts + toks
+            with open(path, "rb") as f:
+                data = pickle.load(f)
+            # 예상 포맷: dict { bm25, corpus, tokenizer, ... }
+            self.model = data.get("bm25")
+            self.corpus = data.get("corpus") or []
+            self.tokenizer = data.get("tokenizer")
+            self.ok = (self.model is not None) and bool(self.corpus)
+            if DEBUG:
+                print(f"[BM25] loaded docs={len(self.corpus)} ok={self.ok}")
+        except Exception as e:
+            if DEBUG:
+                print(f"[BM25] load failed: {e}")
 
-# ---------- MinimalBM25 (fallback) ----------
-class MinimalBM25:
-    def __init__(self, tokenized_corpus: List[List[str]], k1: float = 1.5, b: float = 0.75):
-        self.k1, self.b = k1, b
-        self.corpus = tokenized_corpus
-        self.N = len(tokenized_corpus)
-        self.doc_len = [len(d) for d in tokenized_corpus]
-        self.avgdl = (sum(self.doc_len) / self.N) if self.N else 0.0
-        df: Dict[str, int] = {}
-        for d in tokenized_corpus:
-            for t in set(d):
-                df[t] = df.get(t, 0) + 1
-        self.idf = {t: math.log(1 + (self.N - c + 0.5) / (c + 0.5)) for t, c in df.items()}
-
-    def get_scores(self, q: List[str]) -> List[float]:
-        if not self.N:
+    def search(self, query: str, k: int) -> List[Dict[str, Any]]:
+        if not self.ok:
             return []
-        scores = [0.0] * self.N
-        for qi in q:
-            idf = self.idf.get(qi)
-            if idf is None:
-                continue
-            for i, doc in enumerate(self.corpus):
-                tf = 0
-                for t in doc:
-                    if t == qi:
-                        tf += 1
-                if tf == 0:
-                    continue
-                denom = tf + self.k1 * (1 - self.b + self.b * (self.doc_len[i] / (self.avgdl or 1.0)))
-                scores[i] += idf * (tf * (self.k1 + 1)) / (denom or 1.0)
-        return scores
-
-# ---------- Pinecone wrapper ----------
-class PineconeWrapper:
-    def __init__(self, index): self.index = index
-    def vector_search(self, emb: List[float], top_k: int, namespace: str = "") -> List[Dict]:
-        if self.index is None: return []
+        q = _preprocess_query(query)
+        # 모델이 토큰화까지 내장일 수 있지만, 간단화: model.get_scores(q) 가정 or wrapper 필요
+        # 여기서는 저장된 model에 'get_top_n' 스타일이 있다고 가정:
         try:
-            res = self.index.query(vector=emb, top_k=top_k, include_metadata=True, namespace=namespace or None)
+            # 가정: self.model.get_top_n(query, documents, n=k)
+            docs = self.model.get_top_n(q, self.corpus, n=k)
             out = []
-            for m in getattr(res, "matches", []) or []:
-                md = getattr(m, "metadata", {}) or {}
-                txt = md.get("text") or md.get("content") or ""
-                out.append({"text": txt, "score": float(getattr(m, "score", 0.0)),
-                            "filename": md.get("filename"), "chunk_index": md.get("chunk_index", -1)})
+            for d in docs:
+                # d: corpus 항목 (text, title, filename, chunk_index, score?)
+                scr = d.get("score", 0.0)
+                out.append({
+                    "score": float(scr),
+                    "text": d.get("text", ""),
+                    "title": d.get("title", ""),
+                    "filename": d.get("filename", ""),
+                    "chunk_index": d.get("chunk_index", -1),
+                })
             return out
+        except Exception:
+            # 백업: corpus 전체에서 매우 단순 점수(키워드 매칭 수)
+            toks = set(q.split())
+            scored = []
+            for d in self.corpus:
+                t = (d.get("text","") or "")
+                hit = sum(1 for tk in toks if tk and tk in t)
+                if hit > 0:
+                    scored.append((hit, d))
+            scored.sort(key=lambda x: x[0], reverse=True)
+            out = []
+            for hit, d in scored[:k]:
+                out.append({
+                    "score": float(hit),
+                    "text": d.get("text",""),
+                    "title": d.get("title",""),
+                    "filename": d.get("filename",""),
+                    "chunk_index": d.get("chunk_index", -1),
+                })
+            return out
+
+
+# ----------------------------- 벡터 검색(Pinecone) -----------------------------
+
+_pc = None
+_pc_index = None
+_embedder = None
+
+def _ensure_pinecone():
+    global _pc, _pc_index
+    if not USE_PINECONE:
+        return
+    if _pc is None:
+        try:
+            from pinecone import Pinecone
+            _pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
+            _pc_index = _pc.Index(PC_INDEX_NAME)
         except Exception as e:
-            if _DBG: print(f"[HybridRetriever] Pinecone query error: {e}")
-            return []
+            if DEBUG:
+                print(f"[Vec] pinecone init failed: {e}")
+            _pc = None
+            _pc_index = None
 
-# ---------- Config dataclass ----------
-@dataclass
-class HybridConfig:
-    top_k_bm25: int = 7
-    top_k_vec: int = 15
-    weight_bm25: float = 0.5
-    weight_vec: float = 0.5
-    namespace: str = ""
-    debug: bool = False
-    bm25_pickle_path: str = os.getenv("BM25_PICKLE_PATH", "./bm25_pkg/out/bm25_index/bm25.pkl")
+def _ensure_embedder():
+    global _embedder
+    if _embedder is None:
+        try:
+            if _USE_UPSTAGE:
+                from langchain_upstage import UpstageEmbeddings
+                _embedder = UpstageEmbeddings(model=_UP_MODEL)
+            else:
+                # 필요시 다른 임베딩 프로바이더 연결
+                from langchain_upstage import UpstageEmbeddings
+                _embedder = UpstageEmbeddings(model=_UP_MODEL)
+        except Exception as e:
+            if DEBUG:
+                print(f"[Vec] embedder init failed: {e}")
+            _embedder = None
 
-# ---------- Retriever ----------
+def _vec_search(query: str, k: int) -> List[Dict[str, Any]]:
+    _ensure_pinecone()
+    _ensure_embedder()
+    if not (_pc_index and _embedder):
+        return []
+    try:
+        qv = _embedder.embed_query(_preprocess_query(query))
+        res = _pc_index.query(vector=qv, top_k=k, include_metadata=True, namespace=PC_NAMESPACE)
+        out = []
+        for m in res.matches or []:
+            md = m.metadata or {}
+            out.append({
+                "score": float(m.score or 0.0),
+                "text": md.get("text_preview","") or md.get("text","") or "",
+                "title": md.get("title","") or "",
+                "filename": md.get("source_path","") or "",
+                "chunk_index": int(md.get("chunk_id",-1)),
+            })
+        return out
+    except Exception as e:
+        if DEBUG:
+            print(f"[Vec] query failed: {e}")
+        return []
+
+
+# ----------------------------- 하이브리드 -----------------------------
+
 class HybridRetriever:
-    def __init__(self, cfg: HybridConfig, pinecone_wrapper: Optional[PineconeWrapper] = None):
-        self.cfg = cfg
-        self._pcw = pinecone_wrapper
-        self._bm25 = None
-        self._bm25_docs: List[str] = []
-        self._bm25_ready = False
-        self._bm25_lock = threading.Lock()
-        self._warned_once = False
+    def __init__(self,
+                 top_k_bm25: int = TOP_K_BM25,
+                 top_k_vec: int  = TOP_K_VEC,
+                 k_final: int    = FINAL_TOP_K,
+                 w_bm25: float   = WEIGHT_BM25,
+                 w_vec: float    = WEIGHT_VEC,
+                 debug: bool     = DEBUG):
+        self.k_bm25 = top_k_bm25
+        self.k_vec  = top_k_vec
+        self.k_final = k_final
+        self.w_bm25 = w_bm25
+        self.w_vec  = w_vec
+        self.debug  = debug
 
-    def _log(self, msg: str):
-        if self.cfg.debug:
-            print(msg)
+        self.bm25 = _BM25Store(BM25_PKL)
 
-    def _warn_once(self, msg: str):
-        if not self._warned_once:
-            print(msg)  # 디버그 불문 1회 경고
-            self._warned_once = True
+        if self.debug:
+            print(f"[HybridRetriever] init: bm25_ok={self.bm25.ok} k_bm25={self.k_bm25} "
+                  f"k_vec={self.k_vec} w=({self.w_bm25},{self.w_vec})")
 
-    def _load_bm25(self):
-        if self._bm25_ready: return
-        with self._bm25_lock:
-            if self._bm25_ready: return
-            pkl = os.path.abspath(self.cfg.bm25_pickle_path)
-            try:
-                self._log(f"[HybridRetriever] BM25 file: {pkl}")
-                if os.path.exists(pkl):
-                    self._log(f"[HybridRetriever] BM25 size: {os.path.getsize(pkl):,} bytes")
-                with open(pkl, "rb") as f:
-                    obj = pickle.load(f)
-
-                # dict 포맷 우선: {'bm25': ?, 'corpus': [...]}
-                if isinstance(obj, dict) and ("corpus" in obj or "docs" in obj):
-                    corpus = obj.get("corpus") or obj.get("docs") or []
-                    # 문자열/딕셔너리 모두 허용
-                    texts = []
-                    for d in corpus:
-                        if isinstance(d, str):
-                            texts.append(d)
-                        elif isinstance(d, dict):
-                            texts.append(d.get("text", ""))
-                        else:
-                            texts.append(str(d))
-                    self._bm25_docs = texts
-                    bm25_obj = obj.get("bm25", None)
-                    if not bm25_obj:
-                        toks = [_tokenize_ko(t) for t in self._bm25_docs]
-                        if BM25Okapi is not None:
-                            try:
-                                bm25_obj = BM25Okapi(toks)
-                                self._log(f"[HybridRetriever] BM25 rebuilt via rank_bm25 (n={len(texts):,})")
-                            except Exception as e:
-                                self._log(f"[HybridRetriever] rank_bm25 rebuild failed: {e}")
-                                bm25_obj = None
-                        if bm25_obj is None:
-                            bm25_obj = MinimalBM25(toks)
-                            self._warn_once(f"[WARN] BM25 rebuilt via MinimalBM25 (n={len(texts):,})")
-                    self._bm25 = bm25_obj
-
-                # rank_bm25 객체 자체가 저장된 경우
-                elif (BM25Okapi is not None) and isinstance(obj, BM25Okapi):
-                    self._bm25 = obj
-                    docs = getattr(obj, "corpus", None)
-                    if isinstance(docs, list):
-                        self._bm25_docs = [" ".join(d) if isinstance(d, list) else str(d) for d in docs]
-
-                # 덕 타이핑
-                elif hasattr(obj, "get_scores"):
-                    self._bm25 = obj
-                    docs = getattr(obj, "corpus", None) or getattr(obj, "docs", None)
-                    if isinstance(docs, list):
-                        self._bm25_docs = [" ".join(d) if isinstance(d, list) else str(d) for d in docs]
-
-                # 리스트만 저장된 경우: corpus로 간주
-                elif isinstance(obj, list):
-                    self._bm25_docs = [str(x) for x in obj]
-                    toks = [_tokenize_ko(t) for t in self._bm25_docs]
-                    if BM25Okapi is not None:
-                        self._bm25 = BM25Okapi(toks)
-                        self._log(f"[HybridRetriever] BM25 built via rank_bm25 (n={len(obj):,})")
-                    else:
-                        self._bm25 = MinimalBM25(toks)
-                        self._warn_once(f"[WARN] BM25 built via MinimalBM25 (n={len(obj):,})")
-                else:
-                    raise RuntimeError("Unknown BM25 pickle format")
-
-                self._bm25_ready = True
-                self._log(f"[HybridRetriever] Loaded BM25 with {len(self._bm25_docs):,} documents")
-                if not self._bm25:
-                    self._warn_once("[WARN] BM25 객체가 준비되지 않음(검색 불가)")
-            except Exception as e:
-                self._bm25_ready = False
-                self._warn_once(f"[WARN] BM25 로드 실패: {e} (경로: {pkl})")
-
-    def _bm25_search(self, query: str, top_k: int) -> List[Dict]:
-        self._load_bm25()
-        if not self._bm25 or not self._bm25_docs:
-            self._warn_once("[WARN] BM25 not ready — 빈 결과 반환")
+    def search(self, query: str, k_final: Optional[int] = None) -> List[Dict[str, Any]]:
+        if not query:
             return []
+
+        kb = self.k_bm25
+        kv = self.k_vec
+        kf = k_final if k_final is not None else self.k_final
+
+        bm25_res = self.bm25.search(query, kb) if self.bm25.ok else []
+        vec_res  = _vec_search(query, kv)
+
+        # 정규화
+        bm25_norm = _safe_minmax([r["score"] for r in bm25_res]) if bm25_res else []
+        vec_norm  = _safe_minmax([r["score"] for r in vec_res]) if vec_res else []
+
+        chunks: Dict[Tuple[str,int], Dict[str, Any]] = {}
+
+        # BM25 반영
+        for i, r in enumerate(bm25_res):
+            key = (r.get("filename",""), int(r.get("chunk_index",-1)))
+            base = chunks.get(key) or {
+                "text": r.get("text",""),
+                "title": r.get("title",""),
+                "filename": r.get("filename",""),
+                "chunk_index": int(r.get("chunk_index",-1)),
+                "bm25_score_raw": 0.0,
+                "vec_score_raw": 0.0,
+                "score": 0.0,
+            }
+            base["bm25_score_raw"] = float(r["score"])
+            base["score"] += self.w_bm25 * (bm25_norm[i] if i < len(bm25_norm) else 0.0)
+            chunks[key] = base
+
+        # Vec 반영
+        for i, r in enumerate(vec_res):
+            key = (r.get("filename",""), int(r.get("chunk_index",-1)))
+            base = chunks.get(key) or {
+                "text": r.get("text",""),
+                "title": r.get("title",""),
+                "filename": r.get("filename",""),
+                "chunk_index": int(r.get("chunk_index",-1)),
+                "bm25_score_raw": 0.0,
+                "vec_score_raw": 0.0,
+                "score": 0.0,
+            }
+            base["vec_score_raw"] = float(r["score"])
+            base["score"] += self.w_vec * (vec_norm[i] if i < len(vec_norm) else 0.0)
+            chunks[key] = base
+
+        # 제목 부스팅(간단): 쿼리 토큰 중 일부가 title에 있으면 +0.05
+        qtok = set(_preprocess_query(query).split())
+        for k, v in chunks.items():
+            title = (v.get("title","") or "")
+            hit = any(t in title for t in qtok if t)
+            if hit:
+                v["score"] += 0.05
+
+        merged = list(chunks.values())
+        merged.sort(key=lambda x: x["score"], reverse=True)
+        out = merged[:kf]
+
+        if self.debug:
+            bm25_n = sum(1 for v in chunks.values() if v["bm25_score_raw"] > 0)
+            vec_n  = sum(1 for v in chunks.values() if v["vec_score_raw"]  > 0)
+            print(f"[Mix] bm25_hits={bm25_n}, vec_hits={vec_n}, "
+                  f"w_bm25={self.w_bm25:.2f}, w_vec={self.w_vec:.2f}, k_final={kf}, out={len(out)}")
+        return out
+
+    # 일괄 질의(멀티스레드)
+    def search_batch(self, queries: List[str], k_final: Optional[int] = None, workers: int = 8) -> List[List[Dict[str, Any]]]:
+        if not queries:
+            return []
+        out: List[List[Dict[str, Any]]] = [[] for _ in range(len(queries))]
+        kf = k_final if k_final is not None else self.k_final
         try:
-            qtok = _tokenize_ko(query)
-            scores = self._bm25.get_scores(qtok)
-            idxs = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)[:top_k]
-            return [{"text": self._bm25_docs[i], "bm25_score": float(scores[i])} for i in idxs if scores[i] > 0.0]
+            with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as ex:
+                fut2i = {ex.submit(self.search, q, kf): i for i, q in enumerate(queries)}
+                for fut in concurrent.futures.as_completed(fut2i):
+                    i = fut2i[fut]
+                    try:
+                        out[i] = fut.result() or []
+                    except Exception as e:
+                        if DEBUG:
+                            print(f"[Retriever] batch item {i} error: {e}")
+                        out[i] = []
         except Exception as e:
-            self._warn_once(f"[WARN] BM25 search error: {e}")
-            return []
-
-    def _vec_search(self, query: str, top_k: int) -> List[Dict]:
-        if self._pcw is None:
-            return []
-        try:
-            # 지연 임포트: embedder가 없으면 조용히 폴백
-            try:
-                from .embedder import embed_texts as _embed
-            except Exception:
-                from embedder import embed_texts as _embed  # type: ignore
-            emb = _embed([query])[0]
-            return self._pcw.vector_search(emb, top_k=top_k, namespace=self.cfg.namespace)
-        except Exception as e:
-            if _DBG: print(f"[HybridRetriever] Vector search error: {e}")
-            return []
-
-    @staticmethod
-    def _normalize(xs: List[float]) -> List[float]:
-        if not xs: return []
-        lo, hi = min(xs), max(xs)
-        if hi <= lo: return [1.0] * len(xs)
-        return [(x - lo) / (hi - lo) for x in xs]
-
-    def _merge(self, bm25_hits: List[Dict], vec_hits: List[Dict], top_k: int) -> List[Dict]:
-        pool: Dict[str, Dict] = {}
-        for h in bm25_hits:
-            t = h.get("text", "")
-            pool.setdefault(t, {"text": t, "bm25_score": 0.0, "vec_score": 0.0})
-            pool[t]["bm25_score"] = max(pool[t]["bm25_score"], float(h.get("bm25_score", 0.0)))
-        for h in vec_hits:
-            t = h.get("text", "")
-            pool.setdefault(t, {"text": t, "bm25_score": 0.0, "vec_score": 0.0})
-            pool[t]["vec_score"] = max(pool[t]["vec_score"], float(h.get("score", 0.0)))
-        items = list(pool.values())
-        bm = self._normalize([it["bm25_score"] for it in items])
-        vc = self._normalize([it["vec_score"] for it in items])
-        for i, it in enumerate(items):
-            it["final_score"] = self.cfg.weight_bm25 * bm[i] + self.cfg.weight_vec * vc[i]
-        items.sort(key=lambda x: x["final_score"], reverse=True)
-        return items[:max(1, top_k)]
-
-    # ---------- Public ----------
-    def retrieve(self, query: str, top_k: int = 7, debug: bool = False) -> List[Dict]:
-        q = re.sub(r'「[^」]{60,}」', "", query or "")
-        bm25_hits = self._bm25_search(q, self.cfg.top_k_bm25 if top_k is None else top_k)
-        vec_hits  = self._vec_search(q, self.cfg.top_k_vec if top_k is None else max(top_k, 5))
-        merged = self._merge(bm25_hits, vec_hits, top_k=top_k or 7)
-        if (self.cfg.debug or debug) and merged:
-            self._log(f"[HybridRetriever] top score: {merged[0].get('final_score',0):.3f}")
-        return merged
-
-    def retrieve_batch(self, queries: List[str], top_k: int = 7, debug: bool = False) -> List[List[Dict]]:
-        return [self.retrieve(q, top_k=top_k, debug=(debug and (i % 20 == 0))) for i, q in enumerate(queries)]
-
-    # ---------- Backward compat ----------
-    def search(self, query: str, top_k_bm25: int = None, top_k_vec: int = None, debug: bool = False):
-        tb = top_k_bm25 or self.cfg.top_k_bm25
-        tv = top_k_vec   or self.cfg.top_k_vec
-        bm25_hits = self._bm25_search(query, tb)
-        vec_hits  = self._vec_search(query, tv)
-        return self._merge(bm25_hits, vec_hits, top_k=max(tb, tv, 7))
-
-    def search_batch(self, queries, top_k_bm25: int = None, top_k_vec: int = None, debug: bool = False):
-        tb = top_k_bm25 or self.cfg.top_k_bm25
-        tv = top_k_vec   or self.cfg.top_k_vec
-        return [self.search(q, tb, tv, debug=(debug and (i % 20 == 0))) for i, q in enumerate(queries)]
+            if DEBUG:
+                print(f"[Retriever] batch failed: {e}")
+        return out

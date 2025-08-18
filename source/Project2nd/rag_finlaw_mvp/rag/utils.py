@@ -1374,50 +1374,105 @@ def extract_question_type(q: str) -> str:
 
 
 # ===== 공개 API: 품질 검증 =====
+# utils.py의 validate_answer_quality 함수 개선
 def validate_answer_quality(ans: str, question: str, contexts: List[Dict]) -> Tuple[bool, float, str]:
     """
-    느슨한 포함(공백/문장부호/조사 무시) + 유형 가중으로 품질 점수 산출.
+    느슨한 포함(공백/부호/조사 무시) + 유형 가중 + 부분 포함 보정(특히 definition/general).
     반환: (is_ok, quality_score[0~1], reason)
     """
     if not ans:
         return (False, 0.0, 'empty')
 
     qtype = extract_question_type(question or '')
-    # 표시 문자열(사람이 볼 형태)과 검증 키(붙여쓰기/표준화) 분리
+
+    # 표시/검증 키 분리 정규화
     ans_disp = _normalize_display(ans)
     ans_key  = _normalize_common(ans_disp)
     if not ans_key:
         return (False, 0.0, 'empty')
 
-    # 컨텍스트 전체를 하나로 합쳐 느슨 매칭
-    ctx_join = ' '.join((c.get('text', '') or '') for c in (contexts or []))
+    # 컨텍스트 결합 및 정규화
+    ctx_join = ' '.join((c.get('text','') or '') for c in (contexts or []))
     ctx_key  = _normalize_common(ctx_join)
 
+    # 1) 강한 포함
     present = ans_key in ctx_key
 
-    # 길이/유형 가중
+    # 2) 부분 포함(특히 정의/일반형에서 관대)
+    partial_present = False
+    if not present:
+        # 핵심 어절 2글자+만 추출해서 50% 이상 매칭이면 부분 포함으로 간주
+        words = re.findall(r'[가-힣]{2,}', ans_disp)
+        words = [w for w in words if len(w) >= 2]
+        if words:
+            hit = sum(1 for w in words if _normalize_common(w) in ctx_key)
+            need = max(1, int(len(words) * (0.5 if qtype in ('definition','general') else 0.6)))
+            partial_present = hit >= need
+
     ln = len(ans_disp)
-    base = 0.55 if present else 0.35
-    if qtype in ('period', 'article_specific'):
+
+    # 기본 점수
+    if present:
+        base = 0.64
+    elif partial_present:
+        base = 0.54
+    else:
+        # 유형별 기본 바닥치
+        base = 0.42 if qtype in ('definition','general') else 0.36
+
+    # 유형 가중
+    if qtype == 'period':
+        base += 0.12
+    elif qtype == 'article_specific':
         base += 0.10
     elif qtype == 'organization':
         base += 0.08
-    # 너무 긴 답변 패널티 회피: 2~12자 보너스
-    if 2 <= ln <= 12:
+    elif qtype == 'definition':
+        base += 0.06
+    elif qtype == 'general':
+        base += 0.05
+
+    # 길이 보정: 유형별로 적정 길이에 가점
+    if qtype in ('definition','general'):
+        if 3 <= ln <= 24:
+            base += 0.08
+        elif 2 <= ln <= 32:
+            base += 0.04
+    else:
+        if 2 <= ln <= 16:
+            base += 0.06
+        elif 2 <= ln <= 22:
+            base += 0.03
+
+    # 패턴 가점
+    if re.search(r'\d', ans):          # 숫자 포함
+        base += 0.05
+    if re.search(r'제\d+조', ans):     # 조문
+        base += 0.08
+    if re.search(r'[가-힣]+(위원회|감독원|장관|청|부|원)$', ans):  # 기관명
         base += 0.06
 
-    return (base >= 0.5, min(1.0, base), '')
+    final_score = min(1.0, base)
+
+    # 통과 임계값: 정의/일반은 살짝 완화
+    pass_cut = 0.48 if qtype not in ('definition','general') else 0.46
+
+    return (final_score >= pass_cut, final_score, '')
 
 
 # ===== 공개 API: 후처리 =====
 def enhanced_postprocess_answer(ans: str, contexts: List[Dict], question: Optional[str]=None, question_type: Optional[str]=None) -> str:
     qtype = question_type or extract_question_type(question or '')
     s = ans or ''
-    if qtype == 'organization':
-        s = _org_soft_normalize(s)
     s = _normalize_display(s)
-    if len(s) > 30:
-        s = s[:30]
+
+    # 말미 조사/구두점 정리(정보 보존적)
+    s = re.sub(r'[.;,\s]+$', '', s)                # 끝의 구두점/공백 제거
+    s = re.sub(r'(을|를|은|는|가|이|의)$', '', s)  # 말미 조사 1회 제거
+
+    # 긴 답변 잘림 방지: 60자로 완화
+    if len(s) > 60:
+        s = s[:60]
     return s
 
 # >>>>>>>>>>>>>>>>>>>>>>> utils.py PATCH START <<<<<<<<<<<<<<<<<<<<<<

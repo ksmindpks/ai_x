@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     "accounts",
     "book",
     "django.contrib.humanize", # intcomma(세자리마다 ,) 필터 사용
+    "article", # GenericView 이용(paging 처리), 파일첨부(ch08)
 ]
 
 MIDDLEWARE = [

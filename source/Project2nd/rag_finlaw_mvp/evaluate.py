@@ -7,6 +7,34 @@ evaluate.py - 성능 강화 최종 버전 (오류 수정)
 - 의미있는 성능 지표 추가
 - 실시간 상세 모니터링
 """
+# ================== .env bootstrap (no new file) ==================
+# 이 블록은 다른 어떤 import보다 위에 있어야 합니다.
+try:
+    import os
+    from pathlib import Path
+    def _load_env_once():
+        try:
+            from dotenv import load_dotenv, find_dotenv
+        except Exception:
+            return  # python-dotenv 미설치면 조용히 패스
+
+        here = Path(__file__).resolve()
+        # 우선순위: CWD/.env -> 이 파일 상위 폴더들/.env -> 자동탐색(find_dotenv)
+        tried = [
+            Path.cwd() / ".env",
+            here.parent / ".env",
+            here.parent.parent / ".env",
+        ]
+        for p in tried:
+            if p.exists():
+                load_dotenv(dotenv_path=str(p), override=False)
+        found = find_dotenv(usecwd=True)
+        if found:
+            load_dotenv(found, override=False)
+    _load_env_once()
+except Exception:
+    pass
+# =================================================================
 
 import os
 import argparse

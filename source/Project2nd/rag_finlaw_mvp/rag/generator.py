@@ -1,405 +1,256 @@
 # -*- coding: utf-8 -*-
 """
-rag/generator.py (improved v2, 2025-08-18)
-- 규칙 기반 우선, LLM은 선택적(키 없으면 자동 비활성)
-- 단답형: 정의/조문특정 패턴 확대 + 상위 문맥 4~5개까지 탐색 + 로컬 폴백 도입
-- 단답형 전체 try/except 가드로 generation_failed 방지
-- 사지선다: 컨텍스트 점수화 유지(안정성)
+rag/generator.py
+- 규칙 기반 우선 + LLM 폴백(컨텍스트 근거 강제) + 품질 검증
+- 기존 외부 유틸 의존도를 낮추고, 최소한의 내장 검증으로 안전 작동
 """
-
 from __future__ import annotations
-import re
-import logging
-from typing import List, Dict, Optional, Tuple
-
-# ---------------------- 설정 ----------------------
+# --- optional .env backup load (lightweight) ---
 try:
-    from config import config
-    OPENAI_API_KEY = getattr(config, "openai_api_key", "")
-    DEBUG_MODE = bool(getattr(config, "debug_mode", False))
+    import os
+    if not (os.getenv("OPENAI_API_KEY") or os.getenv("UPSTAGE_API_KEY") or os.getenv("PINECONE_API_KEY")):
+        from dotenv import load_dotenv, find_dotenv
+        p = find_dotenv(usecwd=True)
+        if p:
+            load_dotenv(p, override=False)
 except Exception:
-    import os as _os
-    OPENAI_API_KEY = _os.getenv("OPENAI_API_KEY", "")
-    DEBUG_MODE = _os.getenv("DEBUG_MODE", "false").lower() in ("1","true","yes")
+    pass
+# -----------------------------------------------
 
-logging.basicConfig(level=logging.INFO if DEBUG_MODE else logging.WARNING)
-logger = logging.getLogger(__name__)
+import os, re, unicodedata
+from typing import List, Dict, Tuple, Optional, Any
 
-# ---------------------- OpenAI (선택) ----------------------
-try:
-    from openai import OpenAI  # type: ignore
-    _CLIENT = OpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
-except Exception as _e:
-    logger.warning(f"OpenAI 사용 불가: {type(_e).__name__}: {_e}")
-    _CLIENT = None
+# === 설정: 환경변수 또는 기본값 ===
+ANS_CONF_TH = float(os.getenv("ANSWER_CONF_THRESHOLD") or 0.42)
+LLM_FBK_TH  = float(os.getenv("LLM_FALLBACK_THRESHOLD") or 0.42)
+LLM_MAX_CTX = int(os.getenv("LLM_MAX_CTX") or 6)
+USE_LLM_FB  = (os.getenv("USE_LLM_FALLBACK") or "true").lower() in ("1","true","yes","y")
 
-# ---------------------- utils (안전 폴백) ----------------------
-try:
-    from .utils import extract_question_type, validate_answer_quality, enhanced_postprocess_answer
-except Exception:
-    def extract_question_type(q: str) -> str:
-        q = (q or "")
-        if re.search(r'(몇|얼마|기간|언제)', q): return 'period'
-        if re.search(r'(누구|기관|어디|담당)', q): return 'organization'
-        if re.search(r'제\d+조', q): return 'article_specific'
-        if re.search(r'(무엇|뜻|의미|정의)', q): return 'definition'
-        return 'general'
-    def validate_answer_quality(a: str, q: str, ctxs: List[Dict]) -> Tuple[bool,float,str]:
-        if not a: return (False, 0.0, "empty")
-        ln = len(a)
-        if ln < 1 or ln > 30: return (False, 0.0, "len")
-        present = any(a in (c.get("text","") or "") for c in (ctxs or []))
-        return (present, 0.6 if present else 0.4, "")
-    def enhanced_postprocess_answer(a: str, ctxs: List[Dict], q: Optional[str]=None, question_type: Optional[str]=None) -> str:
-        return a.strip()
+# LLM 브릿지
+from .llm_bridge import llm_available, ask_json, ctx_join_for_llm
 
-# ---------------------- 경량 통계 ----------------------
-from copy import deepcopy as _dc
-_generation_stats = {"short_calls": 0, "mcq_calls": 0, "llm_calls": 0}
-def _bump(k:str): _generation_stats[k] = int(_generation_stats.get(k,0)) + 1
-def get_generation_stats(reset: bool = False):
-    snap = _dc(_generation_stats)
-    if reset:
-        for k in list(_generation_stats.keys()): _generation_stats[k] = 0
-    return snap
+# ---------------------------------------------------------
+# 간단 정규화/검증 유틸 (외부 utils 없이 최소 동작 보장)
+# ---------------------------------------------------------
+_WS = re.compile(r"\s+")
 
-# ---------------------- 공통 유틸/정규식 ----------------------
-_HANGUL_NOUNish = re.compile(r'[가-힣]{2,}')
-_NUM    = re.compile(r'\d{1,4}(?:\.\d+)?')
-_PCT    = re.compile(r'\d{1,3}\s*%')
-_PERIOD = re.compile(r'(\d{1,4})\s*(영업일|일|주|개월|달|월|년)\s*(?:이내|이상|초과|이하)?')
-_RANGE  = re.compile(r'(\d{1,4})\s*[-~]\s*(\d{1,4})\s*(일|주|개월|월|년)')
-_ARTICLE= re.compile(r'제(\d+)조(?:제(\d+)항)?(?:제(\d+)호)?')
-_ORG_SUFFIX = r'(?:위원회|감독원|장관|부장관|총재|은행|공사|청|부|처|원|법원|검찰청)'
-_ORG   = re.compile(rf'[가-힣]{{2,}}{_ORG_SUFFIX}')
-
-# 정의 패턴 확대
-_DEF_PATTERNS = [
-    r'“?([^”\n]{2,30})”?\s*(?:란|이라\s*함|라\s*함)\s*([^.\n]{2,120}?)(?:이라\s*한다|로\s*한다|을\s*말한다|라고\s*한다|로\s*본다)',
-    r'“?([^”\n]{2,30})”?\s*(?:의\s*의미|의\s*정의)\s*는\s*([^.\n]{2,120}?)\s*(?:이다|로\s*한다)',
-    r'“?([^”\n]{2,30})”?\s*은\s*([^.\n]{2,120}?)\s*이다',
-    r'“?([^”\n]{2,30})”?\s*을\s*말한다\s*:\s*([^.\n]{2,120})',
-    r'“?([^”\n]{2,30})”?\s*이라\s*한다\s*:\s*([^.\n]{2,120})',
-]
-_INCLUDE_RULE = re.compile(r'“?([^”\n]{2,30})”?\s*에는\s*([^.\n]{2,120})\s*(?:등이|등을)?\s*포함된다')
-
-_JOSA_TAIL  = re.compile(r'(?:에|에서|으로|의|를|을|은|는|가|이|와|과)$')
-_PAREN_TRIM = re.compile(r'[「」“”"()]')
-_STOPWORDS  = {"사항","것","경우","등","자","때","해당","관련","규정"}
-
-def _ctx_text(contexts: List[Dict], k:int=3, limit:int=1500) -> str:
-    parts = []
-    for c in contexts[:k]:
-        t = (c.get("text","") or "").strip()
-        if t: parts.append(t[:limit])
-    return "\n".join(parts)
-
-def _ctx_text_wide(contexts: List[Dict], qtype:str, limit:int=1800) -> str:
-    k = 5 if qtype in ("definition","article_specific") else 3
-    return _ctx_text(contexts, k=k, limit=limit)
-
-def _tokenize_words(s: str) -> List[str]:
-    if not s: return []
-    s = re.sub(r"[^0-9A-Za-z가-힣%]+", " ", s)
-    return [w for w in s.split() if len(w) >= 2]
-
-def _count_occurrences(s: str, ctxs: List[Dict]) -> int:
-    if not s: return 0
-    return sum((c.get("text","") or "").count(s) for c in ctxs)
-
-def _clean_phrase(s: str) -> str:
-    s = (s or "").strip()
-    s = _PAREN_TRIM.sub('', s)
-    s = re.sub(r'\s+', ' ', s)
-    for _ in range(2):
-        s = _JOSA_TAIL.sub('', s).strip()
-    for sw in list(_STOPWORDS):
-        s = re.sub(fr'{sw}$', '', s).strip()
-    return s[:30]
-
-def _article_tokens(s: str) -> List[str]:
-    toks = []
-    for a in _ARTICLE.findall(s or ""):
-        t = f"제{a[0]}조"
-        if a[1]: t += f"제{a[1]}항"
-        if a[2]: t += f"제{a[2]}호"
-        toks.append(t)
-    return toks
-
-def _best_sentence_for_article(ctx: str, anchors: List[str]) -> str:
-    sents = re.split(r'(?<=[.다])\s+', ctx)
-    best, score = "", -1
-    for s in sents:
-        hit = sum(1 for a in anchors if a and a in s)
-        if hit > score:
-            best, score = s, hit
-    return best or ctx
-
-# ---------------------- 패턴 추출기 ----------------------
-class LocalPatternExtractor:
-    def extract(self, question: str, contexts: List[Dict], qtype: str) -> List[Tuple[str,float]]:
-        text = _ctx_text_wide(contexts, qtype, limit=2200)
-        cands: List[Tuple[str,float]] = []
-        if not text: return cands
-
-        if qtype == 'period':
-            for m in _RANGE.finditer(text):
-                cands.append((f"{m.group(1)}~{m.group(2)}{m.group(3)}", 0.86))
-            for m in _PERIOD.finditer(text):
-                cands.append((f"{m.group(1)}{m.group(2)}", 0.80))
-
-        elif qtype == 'organization':
-            for m in _ORG.finditer(text):
-                cands.append((m.group(), 0.80))
-
-        elif qtype == 'article_specific':
-            anchors = _article_tokens(question)
-            core = _best_sentence_for_article(text, anchors) if anchors else text
-            for m in _ARTICLE.finditer(core):
-                s = f"제{m.group(1)}조"
-                if m.group(2): s += f"제{m.group(2)}항"
-                if m.group(3): s += f"제{m.group(3)}호"
-                cands.append((s, 0.92))
-            for m in re.finditer(r'「([^」]{2,40})」', core):
-                cands.append((_clean_phrase(m.group(1)), 0.78))
-            for m in _PCT.finditer(core):
-                cands.append((m.group().replace(' ', ''), 0.70))
-
-# >>>>>>> generator.py PATCH A (definition 분기) START >>>>>>>
-        elif qtype == 'definition':
-            ctx = text
-            ask_term = bool(re.search(r'(무엇|뜻|의미|정의)', question or ''))
-            ask_body = bool(re.search(r'(요건|조건|내용|포함|해당)', question or ''))
-
-            term_hits: List[Tuple[str,float]] = []
-            body_hits: List[Tuple[str,float]] = []
-
-            for pat in _DEF_PATTERNS:
-                for m in re.finditer(pat, ctx):
-                    try:
-                        term = _clean_phrase(m.group(1))
-                        body = _clean_phrase(m.group(2))
-                    except Exception:
-                        continue
-                    if term: term_hits.append((term, 0.78))
-                    if body: body_hits.append((body, 0.89))
-
-            for m in _INCLUDE_RULE.finditer(ctx):
-                try:
-                    _t = _clean_phrase(m.group(1))
-                    _b = _clean_phrase(m.group(2))
-                except Exception:
-                    continue
-                if _b:
-                    body_hits.append((_b, 0.80))
-
-            # 질문 의도에 맞게 우선순위 합치기
-            picked: List[Tuple[str,float]] = []
-            if ask_term and not ask_body:
-                picked = term_hits + body_hits[:3]
-            elif ask_body and not ask_term:
-                picked = body_hits + term_hits[:2]
-            else:
-                picked = body_hits + term_hits
-
-            # 아래 공통 흐름으로 전달
-            cands.extend(picked)
-# <<<<<<< generator.py PATCH A (definition 분기) END <<<<<<<
-
-        else:  # general
-            for m in _PCT.finditer(text):
-                cands.append((m.group().replace(" ",""), 0.70))
-            for m in _NUM.finditer(text):
-                if len(m.group()) <= 6:
-                    cands.append((m.group(), 0.60))
-            for m in _HANGUL_NOUNish.finditer(text):
-                if 2 <= len(m.group()) <= 10 and m.group() not in _STOPWORDS:
-                    cands.append((m.group(), 0.56))
-
-        # 중복 제거 + 빈도/길이 보정
-        dedup: Dict[str,float] = {}
-        for s, sc in cands:
-            s = s.strip()
-            if not s: continue
-            if s not in dedup or sc > dedup[s]:
-                dedup[s] = sc
-
-        rescored: List[Tuple[str,float]] = []
-        for s, prior in dedup.items():
-            freq = _count_occurrences(s, contexts)
-            bonus = min(0.25, 0.05 * freq)
-            ln = len(s)
-            penalty = -0.05 if ln > 24 else 0.0
-            rescored.append((s, max(0.0, prior + bonus + penalty)))
-
-        rescored.sort(key=lambda x: (-x[1], len(x[0])))
-        return rescored[:12]
-
-# ---------------------- LLM 백업 ----------------------
-def _try_llm_short_answer(question: str, contexts: List[Dict]) -> Optional[str]:
-    if _CLIENT is None:
-        return None
-    try:
-        ctx = _ctx_text(contexts, k=2, limit=400)
-        prompt = (
-            "아래 문맥만 근거로, 질문에 대한 '아주 짧은 정답' 한 개만 한국어로 출력하세요.\n"
-            "불확실하면 '정보 없음'이라고만 쓰세요. 15자 이내.\n\n"
-            f"문맥:\n{ctx}\n\n질문: {question}\n정답:"
-        )
-        resp = _CLIENT.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role":"user","content":prompt}],
-            temperature=0, max_tokens=20
-        )
-        ans = (resp.choices[0].message.content or "").strip()
-        if ans and ans != "정보 없음" and len(ans) <= 20:
-            return ans
-    except Exception as e:
-        logger.warning(f"LLM short fallback 실패: {e}")
-    return None
-
-def _try_llm_mcq(question: str, choices: List[str], contexts: List[Dict]) -> Optional[str]:
-    if _CLIENT is None:
-        return None
-    try:
-        ctx = _ctx_text(contexts, k=2, limit=800)
-        opts = "\n".join(f"{i+1}. {c}" for i, c in enumerate(choices))
-        prompt = (
-            "아래 문맥만 근거로 가장 타당한 선택지 번호(1~4)만 출력하세요. 근거가 없으면 0을 출력.\n\n"
-            f"문맥:\n{ctx}\n\n질문:{question}\n선택지:\n{opts}\n\n정답 번호:"
-        )
-        resp = _CLIENT.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role":"user","content":prompt}],
-            temperature=0, max_tokens=5
-        )
-        out = (resp.choices[0].message.content or "").strip()
-        if out and out.isdigit():
-            n = int(out)
-            if 1 <= n <= len(choices):
-                return choices[n-1]
-    except Exception as e:
-        logger.warning(f"LLM mcq fallback 실패: {e}")
-    return None
-
-# ---------------------- 로컬 폴백(LLM 없음용) ----------------------
-def _fallback_rule_based_short(question: str, contexts: List[Dict], qtype: str) -> Optional[str]:
-    """LLM이 없거나 후보가 없을 때 마지막으로 시도하는 규칙 기반 폴백."""
-    text = _ctx_text_wide(contexts, qtype, limit=2200)
-    if not text: return None
-
-    if qtype in ("definition", "article_specific"):
-        extractor = LocalPatternExtractor()
-        cands = extractor.extract(question, contexts, qtype)
-        if cands:
-            return _clean_phrase(cands[0][0])
-
-    m = _RANGE.search(text) or _PERIOD.search(text) or _PCT.search(text) or _NUM.search(text)
-    if m:
-        raw = m.group(0)
-        return _clean_phrase(raw.replace(" ", ""))
-
-    tokens = _tokenize_words(text)
-    if not tokens: return None
-    freq = {}
-    for w in tokens:
-        if w in _STOPWORDS: continue
-        freq[w] = freq.get(w, 0) + 1
-    best = max(freq.items(), key=lambda x: (x[1], -len(x[0])))[0] if freq else None
-    return _clean_phrase(best) if best else None
-
-# ---------------------- 단답형 ----------------------
-def generate_answer_short(question: str, contexts: List[Dict]) -> str:
-    _bump('short_calls')
-    try:
-        if not contexts:
-            return "정보 불충분"
-
-        qtype = extract_question_type(question) or 'general'
-        px = LocalPatternExtractor()
-        candidates = px.extract(question, contexts, qtype)
-
-# >>>>>>> generator.py PATCH B (final score) START >>>>>>>
-        best, best_s = None, 0.0
-        for cand, prior in candidates[:8]:
-            ok, qual, _ = validate_answer_quality(cand, question, contexts)
-            if not ok:
-                continue
-            freq = _count_occurrences(cand, contexts)
-            type_bonus = 0.08 if qtype in ('period','organization','article_specific') else (0.04 if qtype=='definition' else 0.0)
-            final = prior*0.38 + qual*0.62 + min(0.20, 0.03*freq) + type_bonus
-            if final > best_s:
-                best, best_s = cand, final
-# <<<<<<< generator.py PATCH B (final score) END <<<<<<<
-
-        if (best is None or best_s < 0.55):
-            llm_ans = _try_llm_short_answer(question, contexts)
-            if llm_ans:
-                _bump('llm_calls')
-                ok, qual, _ = validate_answer_quality(llm_ans, question, contexts)
-                if ok:
-                    best, best_s = llm_ans, max(best_s, 0.60)
-            if best is None:
-                rb = _fallback_rule_based_short(question, contexts, qtype)
-                if rb:
-                    best, best_s = rb, max(best_s, 0.56)
-
-        if best:
-            best = _clean_phrase(best)
-            return enhanced_postprocess_answer(best, contexts, question, qtype)
-
-        rb2 = _fallback_rule_based_short(question, contexts, qtype)
-        return rb2 or "정보 불충분"
-
-    except Exception as e:
-        logger.warning(f"[short] generation error: {type(e).__name__}: {e}")
-        return "정보 불충분"
-
-# ---------------------- 사지선다 ----------------------
-def _tokenize_for_overlap(s: str) -> List[str]:
-    return [w for w in _tokenize_words(s) if len(w) >= 2 and w not in _STOPWORDS]
-
-def _score_choice_against_context(choice: str, ctx_text: str) -> int:
-    s = 0
-    if not choice: return s
-    ch = choice.strip()
-    if not ch: return s
-
-    if ch in ctx_text: s += 120
-    if ch.replace(" ","") in ctx_text.replace(" ",""): s += 80
-
-    for m in _NUM.findall(ch):
-        if m in ctx_text: s += 30
-    for m in _PCT.findall(ch):
-        if m.replace(" ","") in ctx_text.replace(" ",""): s += 40
-    for m in _ARTICLE.findall(ch):
-        tok = f"제{m[0]}조"
-        if tok in ctx_text: s += 35
-    if _ORG.search(ch) and _ORG.search(ctx_text): s += 35
-
-    toks = set(_tokenize_for_overlap(ch))
-    hit = sum(1 for w in toks if w in ctx_text)
-    s += min(60, hit * 6)
-
-    if len(ch) > 40: s -= 10
+def _clean(s: str) -> str:
+    s = s or ""
+    s = unicodedata.normalize("NFKC", s)
+    s = s.strip()
+    s = _WS.sub(" ", s)
     return s
 
-def generate_answer_mcq(question: str, choices: List[str], contexts: List[Dict]) -> str:
-    _bump('mcq_calls')
-    if not choices: return ""
-    if not contexts: return choices[0]
+def _contains_span(answer: str, contexts: List[Dict[str, Any]]) -> bool:
+    """컨텍스트 내에 answer가 부분 문자열로 존재하는지(완화 매칭)."""
+    a = _clean(answer)
+    if not a:
+        return False
+    for c in (contexts or []):
+        t = _clean(c.get("text","") or "")
+        if a and a in t:
+            return True
+    return False
 
-    ctx_text = _ctx_text(contexts, k=3, limit=2000)
-    scored = [(_score_choice_against_context(ch, ctx_text), ch) for ch in choices]
-    scored.sort(key=lambda x: x[0], reverse=True)
-    top_score, top_choice = scored[0]
+def validate_answer_quality(answer: str, question: str, contexts: List[Dict[str, Any]]) -> Tuple[bool, float, Dict]:
+    """
+    아주 단순한 품질 검증:
+    - 컨텍스트 내 스팬 포함 여부
+    - 길이/문장부호 이상치 간단 패널티
+    """
+    ans = _clean(answer)
+    if not ans:
+        return False, 0.0, {"reason": "empty"}
 
-    if top_score >= 90 and (len(scored) == 1 or top_score - scored[1][0] >= 15):
-        return top_choice
+    span_ok = _contains_span(ans, contexts)
+    score = 0.0
+    if span_ok:
+        score += 0.6
+    # 길이 패널티(너무 김/너무 짧음)
+    L = len(ans)
+    if 1 <= L <= 64:
+        score += 0.3
+    else:
+        score -= 0.1
 
-    llm_pick = _try_llm_mcq(question, choices, contexts)
-    if llm_pick:
-        _bump('llm_calls')
-        return llm_pick
+    # 기호 과다 사용 패널티
+    if re.search(r"[{}<>|\\^~]", ans):
+        score -= 0.2
 
-    return top_choice
+    score = max(0.0, min(1.0, score))
+    return (score >= LLM_FBK_TH), score, {"span_ok": span_ok, "len": L}
+
+# ---------------------------------------------------------
+# 규칙 기반(단답형) 베이스라인: 간단 키워드/조문 추출
+# ---------------------------------------------------------
+_PAT_ARTICLE = re.compile(r"(제\s*\d+\s*조(?:의\s*\d+)?)(?:\s*\(?\d+\)?\s*항)?")
+_PAT_PERIOD  = re.compile(r"(\d{4}\s*년\s*\d{1,2}\s*월(?:\s*\d{1,2}\s*일)?)")
+_PAT_ORG     = re.compile(r"([가-힣A-Za-z]{2,20}(위원회|부|청|원|공사|공단))")
+
+def _rule_candidates_short(question: str, contexts: List[Dict[str, Any]]) -> List[Tuple[str, float]]:
+    """
+    아주 가벼운 규칙 후보들: 조문, 기간, 기관명
+    스코어는 경험적 가중치
+    """
+    q = _clean(question)
+    texts = " ".join([_clean(c.get("text","") or "") for c in (contexts or [])])
+
+    cands: List[Tuple[str, float]] = []
+
+    for m in _PAT_ARTICLE.finditer(texts):
+        cands.append((m.group(1), 0.55))
+    for m in _PAT_PERIOD.finditer(texts):
+        cands.append((m.group(1), 0.50))
+    for m in _PAT_ORG.finditer(texts):
+        cands.append((m.group(1), 0.45))
+
+    # 상위 5개만
+    uniq = []
+    seen = set()
+    for a, s in sorted(cands, key=lambda x: x[1], reverse=True):
+        if a not in seen:
+            seen.add(a)
+            uniq.append((a, s))
+        if len(uniq) >= 5:
+            break
+    return uniq
+
+
+# ---------------------------------------------------------
+# LLM 폴백
+# ---------------------------------------------------------
+def _try_llm_short_answer(question: str, contexts: List[Dict[str, Any]]) -> Optional[str]:
+    if not llm_available():
+        return None
+
+    sys_p = (
+        "당신은 한국어 법령 QA 보조자입니다. 다음 CONTEXT에 근거하여 질문에 답하세요. "
+        "정답이 CONTEXT에 없으면 반드시 '정보 없음'이라고만 답하세요. "
+        "정답은 1줄의 짧은 문자열로만 주세요."
+    )
+    ctx = ctx_join_for_llm(contexts, LLM_MAX_CTX)
+    usr_p = (
+        f"QUESTION:\n{question}\n\n"
+        f"CONTEXT:\n{ctx}\n\n"
+        "JSON으로만 응답하세요. 스키마: {\"answer\": string}\n"
+        "제한사항:\n"
+        "- CONTEXT에 없는 내용은 쓰지 않음\n"
+        "- 가능하면 CONTEXT의 표현을 그대로 사용\n"
+        "- 한 줄 요약 형태, 어미/조사 최소화\n"
+    )
+    obj = ask_json(sys_p, usr_p, {"answer": ""})
+    if not obj:
+        return None
+    ans = _clean(obj.get("answer","") or "")
+    if ans in ("", "정보없음", "정보 없음", "모름", "해당 없음"):
+        return None
+    return ans
+
+
+def _try_llm_mcq(question: str, choices: List[str], contexts: List[Dict[str, Any]]) -> Optional[int]:
+    if not llm_available():
+        return None
+
+    sys_p = (
+        "당신은 한국어 법령 MCQ 보조자입니다. CONTEXT에 근거하여 정답 보기의 인덱스(0~n-1)만 고르세요. "
+        "근거가 없으면 '정보 없음'이라고만 답하세요."
+    )
+    ctx = ctx_join_for_llm(contexts, LLM_MAX_CTX)
+    cs = "\n".join([f"{i}. {c}" for i, c in enumerate(choices)])
+    usr_p = (
+        f"QUESTION:\n{question}\n\nCHOICES:\n{cs}\n\nCONTEXT:\n{ctx}\n\n"
+        "JSON 스키마: {\"index\": string}\n"
+        "조건: 반드시 choices 중 하나의 인덱스만, 숫자 문자열로."
+    )
+    obj = ask_json(sys_p, usr_p, {"index": ""})
+    if not obj:
+        return None
+    m = re.search(r"\d+", obj.get("index",""))
+    if not m:
+        return None
+    k = int(m.group(0))
+    return k if 0 <= k < len(choices) else None
+
+
+# ---------------------------------------------------------
+# Public API
+# ---------------------------------------------------------
+def generate_answer_short(question: str, contexts: List[Dict[str, Any]]) -> Tuple[str, float, Dict]:
+    """
+    규칙 기반 후보를 먼저 시도하고, 자신감이 낮으면 LLM 폴백.
+    최종 채택 전에는 항상 validate로 컨텍스트 근거 확인.
+    """
+    # 규칙 기반 후보
+    rule_cands = _rule_candidates_short(question, contexts)
+    rule_ans, rule_score = ("", 0.0)
+    if rule_cands:
+        # 가장 높은 후보 검증
+        a0, s0 = rule_cands[0]
+        ok, qs, meta = validate_answer_quality(a0, question, contexts)
+        if ok:
+            rule_ans, rule_score = a0, max(s0, qs)
+        else:
+            rule_ans, rule_score = a0, s0 * 0.6  # 낮춤
+
+    # 자신감 충분하면 규칙으로 종결
+    if rule_score >= ANS_CONF_TH:
+        return rule_ans, rule_score, {"route": "rule"}
+
+    # LLM 폴백
+    if USE_LLM_FB:
+        cand = _try_llm_short_answer(question, contexts)
+        if cand:
+            ok, qs, meta = validate_answer_quality(cand, question, contexts)
+            if ok and qs >= max(rule_score, LLM_FBK_TH):
+                return cand, qs, {"route": "llm"}
+
+    # 폴백 실패 → 규칙(저신뢰)
+    return (rule_ans or ""), rule_score, {"route": "rule-fallback"}
+
+
+def generate_answer_mcq(question: str, choices: List[str], contexts: List[Dict[str, Any]]) -> Tuple[int, float, Dict]:
+    """
+    MCQ: 간단 규칙(컨텍스트 포함률) → 부족하면 LLM 폴백 → 검증
+    """
+    # 아주 간단한 규칙: 각 보기 텍스트가 컨텍스트 내에 얼마나 노출되는지 카운트
+    scores = []
+    for i, ch in enumerate(choices):
+        ch_clean = _clean(ch)
+        cnt = 0
+        for c in (contexts or []):
+            t = _clean(c.get("text","") or "")
+            if ch_clean and ch_clean in t:
+                cnt += 1
+        scores.append((i, float(cnt)))
+
+    scores.sort(key=lambda x: x[1], reverse=True)
+    rule_idx, rule_score = (scores[0] if scores else (0, 0.0))
+    # 정규화 감각
+    if scores and scores[0][1] > 0:
+        rule_score = min(1.0, 0.4 + 0.1 * scores[0][1])
+
+    if rule_score >= ANS_CONF_TH:
+        return rule_idx, rule_score, {"route": "rule"}
+
+    if USE_LLM_FB:
+        li = _try_llm_mcq(question, choices, contexts)
+        if li is not None:
+            # 검증: 선택지 텍스트를 단답 검증으로 점수화
+            pred = choices[li]
+            ok, qs, meta = validate_answer_quality(pred, question, contexts)
+            if ok and qs >= max(rule_score, LLM_FBK_TH):
+                return li, qs, {"route": "llm"}
+
+    return rule_idx, rule_score, {"route": "rule-fallback"}
+
+
+def get_generation_stats() -> Dict[str, Any]:
+    """
+    외부에서 수집용(간단 placeholder)
+    """
+    return {
+        "llm_enabled": llm_available(),
+        "ans_conf_th": ANS_CONF_TH,
+        "llm_fallback_th": LLM_FBK_TH,
+        "llm_max_ctx": LLM_MAX_CTX,
+    }
