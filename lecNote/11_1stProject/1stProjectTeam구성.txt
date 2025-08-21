@@ -1,0 +1,14 @@
+1조(FlowCast-따릉이 재배치 전략 유도 시스템) :  박선우	정종혁	김도현	조명환
+	https://github.com/devna0111/FlowCast
+
+2조(직파머스-농수산물 수요공급예측) :  박진성	박동현	심재성	주용곤
+	https://github.com/tangerineTaste/JikFarm
+
+3조(SOOM-장마철침수예측) : 정서희	고정현	김영신	장슬찬
+	https://github.com/SeohuiJeong0420/crew_soom.git
+
+3조(코딩싹-외국인 목적별 입국자 예측 시스템) : 	김진경	장선호	한창희	김민준
+	https://github.com/codingSsakAi/1stProject.git
+
+5조(Deep-Dish-음식이미지 관련정보 도출) : 	최장호	박광수	유성미	김경태	양예인
+	https://github.com/cwal8202/Deep-Dish
