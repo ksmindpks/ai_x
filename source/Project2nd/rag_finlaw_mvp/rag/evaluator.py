@@ -1,1064 +1,623 @@
-# -*- coding: utf-8 -*-
 """
-rag/evaluator.py - 성능 모니터링 강화 버전
-주요 개선사항:
-1. MCQ 의미있는 성능 지표 추가
-2. 난이도별 상세 분석
-3. 실시간 성능 추적 개선
+evaluator.py - 로그 시스템 통합 및 디버깅 정보 강화
 """
-
-from __future__ import annotations
-import os, re
 import time
-import math
-import random
-import traceback
-import threading
-import queue
-from dataclasses import dataclass
-from typing import List, Dict, Tuple, Optional, Iterator
-import concurrent.futures as cf
-from collections import deque, defaultdict
+import pandas as pd
+import re
 import numpy as np
+from pathlib import Path
+from datetime import datetime
+from typing import List, Dict, Any, Tuple, Callable, Optional
 
-# 안전 import
-from .retriever import retrieve, retrieve_batch
-from .generator import generate_answer_mcq, generate_answer_short, get_generation_stats
-from .utils import load_excel, save_results, calculate_accuracy, score_short, normalize_for_em
+from rag.utils import (
+    load_excel_data, save_evaluation_results,
+    calculate_enhanced_exact_match, calculate_enhanced_f1_score,
+    parse_mcq_answer, SearchResult
+)
 
-# Config import
-try:
-    from config import config
-    PERFORMANCE_CONFIG = config.performance
-    DEBUG_MODE = config.debug_mode
-except ImportError:
-    class DefaultConfig:
-        openai_concurrency = 32
-        max_workers = 16
-        batch_size = 64
-        max_retry_attempts = 3
-        retry_base_delay = 0.15
-        request_timeout = 20
+def log_message(log_type, message, module="EVALUATOR"):
+    """통합된 로그 함수 - 3단계 분류"""
+    print(f"[{module}-{log_type.upper()}] {message}")
     
-    PERFORMANCE_CONFIG = DefaultConfig()
-    DEBUG_MODE = os.getenv("DEBUG_MODE", "false").lower() in ("1", "true", "yes")
+    # 웹 인터페이스로 전달 시도
+    try:
+        import streamlit as st
+        if hasattr(st, 'session_state') and hasattr(st.session_state, 'global_log_callback'):
+            callback = st.session_state.global_log_callback
+            if callable(callback):
+                callback(log_type, message, module, "evaluation")
+    except Exception:
+        pass
 
-# tqdm 선택적 사용
-try:
-    from tqdm import tqdm
-    _HAS_TQDM = True
-except ImportError:
-    _HAS_TQDM = False
+class UnifiedEvaluator:
+    """디버깅 정보 강화된 평가기"""
     
-    class DummyTqdm:
-        def __init__(self, total=None, desc="", **kwargs):
-            self.n = 0
-            self.total = total or 0
-            self.desc = desc
+    def __init__(self, config=None, retriever=None, llm=None):
+        log_message("INFO", "평가기 초기화 중...")
         
-        def update(self, n=1):
-            self.n += n
-        
-        def close(self):
-            pass
-        
-        def __enter__(self):
-            return self
-        
-        def __exit__(self, *args):
-            pass
-    
-    tqdm = DummyTqdm
-
-@dataclass
-class EnhancedEvaluationStats:
-    """향상된 평가 통계"""
-    total_questions: int = 0
-    processed_questions: int = 0
-    successful_questions: int = 0
-    failed_questions: int = 0
-    
-    # MCQ 특화 지표
-    mcq_exact_matches: int = 0
-    mcq_context_utilizations: int = 0
-    mcq_high_confidence_selections: int = 0
-    mcq_difficulty_performance: Dict = None
-    
-    # 단답형 특화 지표
-    short_exact_matches: int = 0
-    short_partial_matches: int = 0
-    info_insufficient: int = 0
-    generation_failed: int = 0
-    validation_failed: int = 0
-    
-    # 성능 지표
-    total_time: float = 0.0
-    search_time: float = 0.0
-    generation_time: float = 0.0
-    
-    avg_search_score: float = 0.0
-    avg_response_time: float = 0.0
-    throughput: float = 0.0
-    
-    # 품질 지표
-    avg_context_quality: float = 0.0
-    context_utilization_rate: float = 0.0
-    high_confidence_rate: float = 0.0
-    
-    # 정확도
-    accuracy: float = 0.0
-    em_score: float = 0.0
-    f1_score: float = 0.0
-    
-    def __post_init__(self):
-        if self.mcq_difficulty_performance is None:
-            self.mcq_difficulty_performance = defaultdict(lambda: {'total': 0, 'correct': 0, 'avg_confidence': 0.0})
-
-class EnhancedPerformanceMonitor:
-    """향상된 성능 모니터링"""
-    
-    def __init__(self):
-        self.stats = EnhancedEvaluationStats()
-        self.lock = threading.Lock()
-        
-        self.start_time = time.time()
-        self.last_report_time = self.start_time
-        self.report_interval = 25  # 25초마다 보고
-        
-        self.recent_times = deque(maxlen=50)
-        self.recent_scores = deque(maxlen=50)
-        self.recent_results = deque(maxlen=100)
-        self.confidence_scores = deque(maxlen=100)
-        self.context_quality_scores = deque(maxlen=100)
-        
-        # MCQ 특화 추적
-        self.mcq_choice_analysis = []
-        self.mcq_context_matches = []
-        
-        # 단답형 특화 추적
-        self.short_answer_types = defaultdict(int)
-        self.short_em_scores = []
-    
-    def update_mcq_progress(self, processed: int, total: int, 
-                           question: str, choices: List[str], selected: str, correct: str,
-                           contexts: List[Dict], search_time: float = 0, 
-                           generation_time: float = 0, difficulty: str = ""):
-        """MCQ 진행상황 업데이트 - 강화된 버전"""
-        with self.lock:
-            self.stats.processed_questions = processed
-            self.stats.total_questions = total
+        if retriever and llm:
+            self.retriever = retriever
+            self.llm = llm
+            self.config = config if config else getattr(retriever, 'config', None)
+            log_message("SUCCESS", "기존 RAG 인스턴스 재사용")
+        else:
+            if not config:
+                from config import get_config
+                config = get_config()
             
-            current_time = time.time()
+            self.config = config
+            from rag.hybrid_retriever import HybridRetriever
+            from rag.llm_bridge import HybridLLM
             
-            # 기본 시간 추적
-            if search_time > 0:
-                self.stats.search_time += search_time
-            if generation_time > 0:
-                self.stats.generation_time += generation_time
+            self.retriever = HybridRetriever(config)
+            self.llm = HybridLLM(config)
+            log_message("SUCCESS", "새 RAG 인스턴스 생성")
+        
+        # 법령 용어 사전
+        self.legal_synonyms = {
+            "중기부": "중소벤처기업부",
+            "금위": "금융위원회",
+            "금감원": "금융감독원",
+            "공정위": "공정거래위원회",
+        }
+        
+        # 평가 통계 초기화
+        self.eval_stats = {
+            'mcq_error_patterns': {
+                'search_failure': 0,
+                'choice_mapping': 0,
+                'context_quality': 0,
+                'negative_detection': 0
+            },
+            'short_error_patterns': {
+                'no_search_results': 0,
+                'low_bm25_score': 0,
+                'extraction_failure': 0,
+                'context_mismatch': 0
+            },
+            'search_quality_issues': 0,
+            'total_questions': 0
+        }
+        
+        log_message("SUCCESS", "초기화 완료")
+
+    def evaluate_mcq_batch(self, questions: List[Dict], max_questions: int = None, 
+                          progress_callback: Optional[Callable] = None) -> Tuple[float, List[Dict]]:
+        """MCQ 배치 평가 - 강화된 디버깅 로그"""
+        if max_questions:
+            questions = questions[:max_questions]
+        
+        if not questions:
+            log_message("FAILURE", "MCQ 질문이 없음")
+            return 0.0, []
+        
+        log_message("INFO", f"MCQ 평가 시작: {len(questions)}개 문제")
+        start_time = time.time()
+        
+        correct = 0
+        results = []
+        
+        for i, q in enumerate(questions):
+            if progress_callback:
+                progress = (i / len(questions)) * 100
+                progress_callback(f"MCQ 진행: {i+1}/{len(questions)} ({progress:.1f}%)")
             
-            # MCQ 특화 분석
-            is_correct = (selected == correct) if correct else False
+            item_start = time.time()
+            question_preview = q['question'][:50] + "..." if len(q['question']) > 50 else q['question']
+            log_message("INFO", f"MCQ-{i+1} 처리 시작: '{question_preview}'")
+            
+            # MCQ 검색: BM25(3) + Vector(9) = 10개
+            search_results = self.retriever.search(q['question'], question_type="MCQ")
+            
+            # 검색 품질 분석
+            search_quality = self._analyze_search_quality(search_results, "MCQ")
+            if search_quality['has_issues']:
+                self.eval_stats['search_quality_issues'] += 1
+                log_message("FAILURE", f"MCQ-{i+1} 검색 품질 문제: {search_quality['issues']}")
+            
+            log_message("INFO", f"MCQ-{i+1} 검색 완료: {len(search_results)}개 "
+                       f"(BM25최고={search_quality['bm25_max']:.2f}, Vec최고={search_quality['vector_max']:.2f})")
+            
+            # 부정형 질문 감지
+            is_negative_question = self._detect_negative_question(q['question'])
+            if is_negative_question:
+                log_message("INFO", f"MCQ-{i+1} 부정형 질문 감지")
+            
+            # 컨텍스트 선택 및 품질 평가
+            context = self._select_mcq_context(q['question'], search_results)
+            context_quality = self._assess_context_quality(context, q['question'])
+            
+            # LLM 처리
+            choices_dict = {chr(65+i): choice for i, choice in enumerate(q['choices'])}
+            llm_response = self.llm.call_mcq(q['question'], choices_dict, context)
+            
+            # 답변 파싱
+            expected_format = q.get('answer_format', 'number')
+            predicted = parse_mcq_answer(llm_response, expected_format)
+            correct_answer = str(q.get('answer', '1')).strip()
+            
+            is_correct = (predicted == correct_answer)
             if is_correct:
-                self.stats.mcq_exact_matches += 1
-                if difficulty:
-                    self.stats.mcq_difficulty_performance[difficulty]['correct'] += 1
-            
-            if difficulty:
-                self.stats.mcq_difficulty_performance[difficulty]['total'] += 1
-            
-            # 컨텍스트 활용도 분석
-            context_text = ' '.join([c.get('text', '') for c in contexts])
-            context_utilized = selected in context_text
-            if context_utilized:
-                self.stats.mcq_context_utilizations += 1
-            
-            # 검색 품질 분석
-            if contexts:
-                search_score = contexts[0].get('final_score', 0) if contexts else 0
-                self.recent_scores.append(search_score)
-                self.context_quality_scores.append(search_score)
-                
-                # 고품질 컨텍스트 판정 (점수 > 1.5)
-                if search_score > 1.5:
-                    self.stats.mcq_high_confidence_selections += 1
-            
-            # 선택 분석 저장
-            choice_analysis = {
-                'question_type': self._classify_mcq_question(question),
-                'selected': selected,
-                'correct': correct,
-                'is_correct': is_correct,
-                'context_utilized': context_utilized,
-                'num_choices': len(choices),
-                'difficulty': difficulty,
-                'search_score': contexts[0].get('final_score', 0) if contexts else 0
-            }
-            self.mcq_choice_analysis.append(choice_analysis)
-            
-            self.recent_times.append(current_time)
-            
-            # 주기적 보고
-            if current_time - self.last_report_time >= self.report_interval:
-                self._print_enhanced_mcq_progress_report()
-                self.last_report_time = current_time
-    
-    def update_short_progress(self, processed: int, total: int,
-                             question: str, prediction: str, answer: str,
-                             contexts: List[Dict], search_time: float = 0, 
-                             generation_time: float = 0, difficulty: str = ""):
-        """단답형 진행상황 업데이트 - 강화된 버전"""
-        with self.lock:
-            self.stats.processed_questions = processed
-            self.stats.total_questions = total
-            
-            current_time = time.time()
-            
-            # 기본 시간 추적
-            if search_time > 0:
-                self.stats.search_time += search_time
-            if generation_time > 0:
-                self.stats.generation_time += generation_time
-            
-            # 단답형 특화 분석
-            if prediction == "정보 불충분":
-                self.stats.info_insufficient += 1
-                self.short_answer_types['info_insufficient'] += 1
-            elif prediction and prediction.strip():
-                # EM/F1 점수 계산
-                em, f1 = score_short(prediction, answer)
-                self.short_em_scores.append(em)
-                
-                if em >= 0.9:
-                    self.stats.short_exact_matches += 1
-                    self.short_answer_types['exact_match'] += 1
-                elif em >= 0.3:
-                    self.stats.short_partial_matches += 1
-                    self.short_answer_types['partial_match'] += 1
-                else:
-                    self.short_answer_types['low_match'] += 1
-                
-                self.stats.successful_questions += 1
+                correct += 1
+                log_message("SUCCESS", f"MCQ-{i+1} 정답: {predicted}")
             else:
-                self.stats.generation_failed += 1
-                self.short_answer_types['generation_failed'] += 1
+                # 오답 원인 분석
+                error_type = self._analyze_mcq_error(search_quality, context_quality, 
+                                                   is_negative_question, q['question'], 
+                                                   choices_dict, predicted, correct_answer)
+                self.eval_stats['mcq_error_patterns'][error_type] += 1
+                
+                log_message("FAILURE", f"MCQ-{i+1} 오답: 예측={predicted}, 정답={correct_answer}, "
+                           f"오류유형={error_type}, 컨텍스트품질={context_quality:.2f}")
+            
+            item_time = time.time() - item_start
+            
+            # 결과 저장
+            results.append({
+                'question': q['question'][:100],
+                'predicted': predicted,
+                'correct': correct_answer,
+                'is_correct': is_correct,
+                'choices': q['choices'],
+                'llm_response': llm_response[:100],
+                'response_time': item_time,
+                'search_results_count': len(search_results),
+                'bm25_max_score': search_quality['bm25_max'],
+                'vector_max_score': search_quality['vector_max'],
+                'context_quality': context_quality,
+                'is_negative_question': is_negative_question,
+                'error_type': error_type if not is_correct else 'correct',
+                'context_preview': context[:200]
+            })
+        
+        accuracy = correct / len(questions)
+        total_time = time.time() - start_time
+        
+        # 오답 패턴 분석 결과 출력
+        self._log_error_pattern_analysis("MCQ", len(questions) - correct)
+        
+        log_message("SUCCESS", f"MCQ 완료: 정확도 {accuracy:.1%} ({correct}/{len(questions)}) - {total_time:.1f}초")
+        
+        return accuracy, results
+
+    def evaluate_short_batch(self, questions: List[Dict], max_questions: int = None,
+                            progress_callback: Optional[Callable] = None) -> Tuple[float, float, List[Dict]]:
+        """단답형 배치 평가 - 강화된 디버깅 로그"""
+        if max_questions:
+            questions = questions[:max_questions]
+        
+        if not questions:
+            log_message("FAILURE", "단답형 질문이 없음")
+            return 0.0, 0.0, []
+        
+        log_message("INFO", f"단답형 평가 시작: {len(questions)}개 문제")
+        start_time = time.time()
+        
+        em_correct = 0
+        f1_total = 0.0
+        results = []
+        
+        for i, q in enumerate(questions):
+            if progress_callback:
+                progress = (i / len(questions)) * 100
+                progress_callback(f"단답형 진행: {i+1}/{len(questions)} ({progress:.1f}%)")
+            
+            item_start = time.time()
+            question_preview = q['question'][:50] + "..." if len(q['question']) > 50 else q['question']
+            log_message("INFO", f"SHORT-{i+1} 처리 시작: '{question_preview}'")
+            
+            # 단답형 검색: BM25(5) + Vector(7) = 10개
+            search_results = self.retriever.search(q['question'], question_type="short")
             
             # 검색 품질 분석
-            if contexts:
-                search_score = contexts[0].get('final_score', 0) if contexts else 0
-                self.recent_scores.append(search_score)
-                self.context_quality_scores.append(search_score)
+            search_quality = self._analyze_search_quality(search_results, "short")
             
-            # 질문 유형 분석
-            question_type = self._classify_short_question(question)
+            if len(search_results) == 0:
+                log_message("FAILURE", f"SHORT-{i+1} 심각한 문제: 검색 결과 없음")
+                self.eval_stats['short_error_patterns']['no_search_results'] += 1
+                
+                results.append(self._create_failed_short_result(q, "no_search_results"))
+                continue
             
-            self.recent_times.append(current_time)
+            if search_quality['bm25_max'] < 0.5:
+                self.eval_stats['short_error_patterns']['low_bm25_score'] += 1
+                log_message("FAILURE", f"SHORT-{i+1} BM25 점수 부족: {search_quality['bm25_max']:.2f}")
             
-            # 주기적 보고
-            if current_time - self.last_report_time >= self.report_interval:
-                self._print_enhanced_short_progress_report()
-                self.last_report_time = current_time
-    
-    def _classify_mcq_question(self, question: str) -> str:
-        """MCQ 질문 유형 분류"""
-        if re.search(r'제\d+조', question):
-            return "article_specific"
-        elif re.search(r'(기간|얼마|몇)', question):
-            return "period"
-        elif re.search(r'(누구|누가|기관|담당)', question):
-            return "organization"
-        elif re.search(r'(무엇|어떤)', question):
-            return "definition"
-        else:
-            return "general"
-    
-    def _classify_short_question(self, question: str) -> str:
-        """단답형 질문 유형 분류"""
-        if re.search(r'(기간|얼마|몇.*개월|몇.*년|몇.*일)', question):
-            return "period"
-        elif re.search(r'(누구|누가|어디|기관|담당)', question):
-            return "organization"
-        elif re.search(r'(무엇|어떤.*것|정의|의미)', question):
-            return "definition"
-        elif re.search(r'제\d+조', question):
-            return "article_specific"
-        else:
-            return "general"
-    
-    def _print_enhanced_mcq_progress_report(self):
-        """향상된 MCQ 진행상황 보고"""
-        if self.stats.total_questions == 0:
-            return
-        
-        elapsed = time.time() - self.start_time
-        progress = self.stats.processed_questions / self.stats.total_questions
-        
-        # 처리 속도 계산
-        if len(self.recent_times) >= 2:
-            recent_elapsed = self.recent_times[-1] - self.recent_times[0]
-            speed = len(self.recent_times) / max(recent_elapsed, 0.1)
-        else:
-            speed = 0
-        
-        # 예상 남은 시간
-        remaining = self.stats.total_questions - self.stats.processed_questions
-        eta = remaining / max(speed, 0.1)
-        
-        # 현재까지 정확도
-        current_accuracy = self.stats.mcq_exact_matches / max(1, self.stats.processed_questions)
-        
-        # 평균 검색 점수
-        avg_score = np.mean(list(self.recent_scores)) if self.recent_scores else 0
-        
-        # 컨텍스트 활용률
-        context_rate = self.stats.mcq_context_utilizations / max(1, self.stats.processed_questions)
-        
-        print(f"\n[MCQ 진행상황] {progress:.1%} ({self.stats.processed_questions:,}/{self.stats.total_questions:,})")
-        print(f"  속도: {speed:.1f}개/초, 예상잔여: {eta/60:.1f}분")
-        print(f"  현재 정확도: {current_accuracy:.1%}, 컨텍스트 활용률: {context_rate:.1%}")
-        print(f"  평균 검색점수: {avg_score:.3f}, 경과시간: {elapsed/60:.1f}분")
-        
-        # 난이도별 성능 (데이터가 있는 경우)
-        if any(perf['total'] > 0 for perf in self.stats.mcq_difficulty_performance.values()):
-            print(f"  난이도별 정확도:", end="")
-            for diff, perf in self.stats.mcq_difficulty_performance.items():
-                if perf['total'] > 0:
-                    acc = perf['correct'] / perf['total']
-                    print(f" {diff}:{acc:.1%}", end="")
-            print()
-    
-    def _print_enhanced_short_progress_report(self):
-        """향상된 단답형 진행상황 보고"""
-        if self.stats.total_questions == 0:
-            return
-        
-        elapsed = time.time() - self.start_time
-        progress = self.stats.processed_questions / self.stats.total_questions
-        
-        # 처리 속도 계산
-        if len(self.recent_times) >= 2:
-            recent_elapsed = self.recent_times[-1] - self.recent_times[0]
-            speed = len(self.recent_times) / max(recent_elapsed, 0.1)
-        else:
-            speed = 0
-        
-        # 예상 남은 시간
-        remaining = self.stats.total_questions - self.stats.processed_questions
-        eta = remaining / max(speed, 0.1)
-        
-        # 현재까지 EM 점수
-        current_em = np.mean(self.short_em_scores) if self.short_em_scores else 0
-        
-        # 평균 검색 점수
-        avg_score = np.mean(list(self.recent_scores)) if self.recent_scores else 0
-        
-        # 답변 유형별 분포
-        total_processed = self.stats.processed_questions
-        exact_rate = self.stats.short_exact_matches / max(1, total_processed)
-        partial_rate = self.stats.short_partial_matches / max(1, total_processed)
-        info_rate = self.stats.info_insufficient / max(1, total_processed)
-        
-        print(f"\n[단답형 진행상황] {progress:.1%} ({self.stats.processed_questions:,}/{self.stats.total_questions:,})")
-        print(f"  속도: {speed:.1f}개/초, 예상잔여: {eta/60:.1f}분")
-        print(f"  현재 EM: {current_em:.1%}, 평균 검색점수: {avg_score:.3f}")
-        print(f"  답변 분포: 정확{exact_rate:.1%} 부분{partial_rate:.1%} 불충분{info_rate:.1%}")
-        print(f"  경과시간: {elapsed/60:.1f}분")
-    
-    def finalize(self):
-        """최종 통계 계산 - 강화된 버전"""
-        with self.lock:
-            self.stats.total_time = time.time() - self.start_time
+            log_message("INFO", f"SHORT-{i+1} 검색 완료: {len(search_results)}개 "
+                       f"(BM25최고={search_quality['bm25_max']:.2f}, Vec최고={search_quality['vector_max']:.2f})")
             
-            if self.stats.processed_questions > 0:
-                self.stats.throughput = self.stats.processed_questions / self.stats.total_time
-                self.stats.avg_response_time = self.stats.total_time / self.stats.processed_questions * 1000
+            # 단답형 파이프라인
+            predicted, pipeline_info = self._process_short_pipeline_enhanced(q['question'], search_results)
             
-            if self.recent_scores:
-                self.stats.avg_search_score = np.mean(list(self.recent_scores))
+            # 정답 비교
+            correct_answer = str(q.get('answer', '정보부족')).strip()
             
-            if self.context_quality_scores:
-                self.stats.avg_context_quality = np.mean(list(self.context_quality_scores))
+            # 법령 용어 정규화
+            predicted_normalized = self._normalize_legal_answer(predicted)
+            correct_normalized = self._normalize_legal_answer(correct_answer)
             
-            # MCQ 특화 지표 계산
-            if self.stats.processed_questions > 0:
-                self.stats.context_utilization_rate = self.stats.mcq_context_utilizations / self.stats.processed_questions
-                self.stats.high_confidence_rate = self.stats.mcq_high_confidence_selections / self.stats.processed_questions
+            # EM/F1 계산
+            em_score = calculate_enhanced_exact_match(predicted_normalized, correct_normalized)
+            f1_score = calculate_enhanced_f1_score(predicted_normalized, correct_normalized)
             
-            # Generator 통계 가져오기
-            try:
-                gen_stats = get_generation_stats()
-                if gen_stats:
-                    # 새로운 통계 구조에서 데이터 추출
-                    mcq_stats = gen_stats.get('mcq_accuracy', 0)
-                    short_stats = gen_stats.get('short_success_rate', 0)
-                    self.stats.accuracy = mcq_stats
-            except Exception:
-                pass
-    
-    def get_detailed_analysis(self) -> Dict:
-        """상세 분석 결과 반환"""
-        analysis = {
-            "총 처리 문제": self.stats.processed_questions,
-            "처리 속도": f"{self.stats.throughput:.1f}개/초",
-            "평균 응답시간": f"{self.stats.avg_response_time:.1f}ms",
-            "평균 검색 점수": f"{self.stats.avg_search_score:.3f}",
-            "평균 컨텍스트 품질": f"{self.stats.avg_context_quality:.3f}"
-        }
+            if em_score:
+                em_correct += 1
+                log_message("SUCCESS", f"SHORT-{i+1} 정답: '{predicted}' (EM=1.0, F1={f1_score:.2f})")
+            else:
+                # 실패 원인 분석
+                error_type = self._analyze_short_error(predicted, search_quality, pipeline_info)
+                self.eval_stats['short_error_patterns'][error_type] += 1
+                
+                log_message("FAILURE", f"SHORT-{i+1} 오답: 예측='{predicted}', 정답='{correct_answer}', "
+                           f"오류유형={error_type}, EM={em_score}, F1={f1_score:.2f}")
+            
+            f1_total += f1_score
+            item_time = time.time() - item_start
+            
+            # 결과 저장
+            results.append({
+                'question': q['question'][:100],
+                'predicted': predicted,
+                'predicted_normalized': predicted_normalized,
+                'correct': correct_answer,
+                'correct_normalized': correct_normalized,
+                'em_score': 1.0 if em_score else 0.0,
+                'f1_score': f1_score,
+                'response_time': item_time,
+                'search_results_count': len(search_results),
+                'bm25_max_score': search_quality['bm25_max'],
+                'vector_max_score': search_quality['vector_max'],
+                'pipeline_method': pipeline_info.get('method', 'standard'),
+                'chunks_used': pipeline_info.get('chunks_used', 0),
+                'error_type': error_type if not em_score else 'correct'
+            })
         
-        # MCQ 분석
-        if self.mcq_choice_analysis:
-            mcq_total = len(self.mcq_choice_analysis)
-            mcq_correct = sum(1 for a in self.mcq_choice_analysis if a['is_correct'])
-            context_utilized = sum(1 for a in self.mcq_choice_analysis if a['context_utilized'])
-            
-            analysis["MCQ 분석"] = {
-                "정확도": f"{mcq_correct/mcq_total:.1%}" if mcq_total > 0 else "0%",
-                "컨텍스트 활용률": f"{context_utilized/mcq_total:.1%}" if mcq_total > 0 else "0%",
-                "고품질 선택률": f"{self.stats.high_confidence_rate:.1%}"
-            }
-            
-            # 질문 유형별 분석
-            type_performance = defaultdict(lambda: {'total': 0, 'correct': 0})
-            for analysis_item in self.mcq_choice_analysis:
-                qtype = analysis_item['question_type']
-                type_performance[qtype]['total'] += 1
-                if analysis_item['is_correct']:
-                    type_performance[qtype]['correct'] += 1
-            
-            analysis["MCQ 질문유형별"] = {
-                qtype: f"{perf['correct']}/{perf['total']} ({perf['correct']/perf['total']:.1%})" 
-                if perf['total'] > 0 else "0/0"
-                for qtype, perf in type_performance.items()
-            }
+        em_avg = em_correct / len(questions) if questions else 0
+        f1_avg = f1_total / len(questions) if questions else 0
+        total_time = time.time() - start_time
         
-        # 단답형 분석
-        if self.short_em_scores:
-            avg_em = np.mean(self.short_em_scores)
-            analysis["단답형 분석"] = {
-                "평균 EM": f"{avg_em:.1%}",
-                "정확 매칭": f"{self.stats.short_exact_matches}개",
-                "부분 매칭": f"{self.stats.short_partial_matches}개",
-                "정보 불충분": f"{self.stats.info_insufficient}개"
-            }
-            
-            # 답변 유형 분포
-            analysis["단답형 답변유형"] = dict(self.short_answer_types)
+        # 오답 패턴 분석 결과 출력
+        self._log_error_pattern_analysis("SHORT", len(questions) - em_correct)
         
-        return analysis
+        log_message("SUCCESS", f"단답형 완료: EM={em_avg:.1%}, F1={f1_avg:.1%} - {total_time:.1f}초")
+        
+        return em_avg, f1_avg, results
 
-class HighPerformanceEvaluator:
-    """성능 모니터링 강화된 평가기"""
-    
-    def __init__(self, xlsx_path: str, mcq_n: int, short_n: int, workers: int = None, debug: bool = False):
-        self.xlsx_path = xlsx_path
-        self.mcq_n = mcq_n
-        self.short_n = short_n
-        self.workers = workers or PERFORMANCE_CONFIG.max_workers
-        self.debug = debug
+    def evaluate_file(self, file_path: str, mcq_limit: int = None, short_limit: int = None,
+                     progress_callback: Optional[Callable] = None) -> Dict[str, Any]:
+        """전체 파일 평가 - 통계 정보 강화"""
+        log_message("INFO", f"파일 평가 시작: {Path(file_path).name}")
         
-        # 강화된 모니터링
-        self.monitor = EnhancedPerformanceMonitor()
-        
-        # 오류 복구
-        self.max_retries = PERFORMANCE_CONFIG.max_retry_attempts
-        self.retry_delay = PERFORMANCE_CONFIG.retry_base_delay
-        
-        # 배치 처리 설정
-        self.batch_size = min(PERFORMANCE_CONFIG.batch_size, max(8, self.workers * 2))
-    
-    def evaluate_all(self, items: List[Dict], mode: str) -> Tuple[List[Dict], Dict]:
-        """강화된 전체 평가 실행"""
-        if mode == "mcq":
-            return self._evaluate_mcq_enhanced(items)
-        elif mode == "short":
-            return self._evaluate_short_enhanced(items)
-        else:
-            raise ValueError("mode must be 'mcq' or 'short'")
-    
-    def _evaluate_mcq_enhanced(self, items: List[Dict]) -> Tuple[List[Dict], Dict]:
-        """강화된 MCQ 평가"""
-        n = min(self.mcq_n or len(items), len(items))
-        items = items[:n]
-        
-        print(f"\n사지선다형 평가 시작: {n:,}개 문제")
-        print(f"  향상된 성능 모니터링 활성화")
-        
-        # 결과 저장소
-        results = [None] * n
-        search_scores = []
-        difficulty_stats = defaultdict(lambda: {'total': 0, 'correct': 0})
-        
-        self.monitor.stats.total_questions = n
-        
-        # 배치 검색 실행
-        search_start = time.time()
-        questions = [item["question"] for item in items]
-        
-        try:
-            contexts_list = retrieve_batch(questions, top_k=7, debug=False)
-            if not contexts_list or len(contexts_list) != len(questions):
-                raise ValueError("배치 검색 실패")
-        except Exception as e:
-            if DEBUG_MODE:
-                print(f"[MCQ] 배치 검색 실패, 개별 검색으로 전환: {e}")
-            contexts_list = []
-            for question in questions:
-                try:
-                    ctx = retrieve(question, top_k=7, debug=False)
-                    contexts_list.append(ctx)
-                except Exception:
-                    contexts_list.append([])
-        
-        search_time = time.time() - search_start
-        
-        # 강화된 생성 단계
-        generation_start = time.time()
-        
-        def process_mcq_item_enhanced(i: int) -> bool:
-            start_time = time.time()
-            success = False
-            
-            try:
-                item = items[i]
-                contexts = contexts_list[i] if i < len(contexts_list) else []
-                
-                search_score = self._extract_top_score(contexts)
-                search_scores.append(search_score)
-                
-                choices = item.get("choices", [])
-                question = item["question"]
-                correct_answer = item.get("answer", "")
-                difficulty = item.get("meta", {}).get("difficulty", "미분류")
-                
-                # 강화된 MCQ 생성
-                prediction = generate_answer_mcq(question, choices, contexts)
-                
-                if prediction:
-                    success = True
-                    is_correct = (prediction == correct_answer)
-                    if is_correct:
-                        difficulty_stats[difficulty]['correct'] += 1
-                    difficulty_stats[difficulty]['total'] += 1
-                else:
-                    prediction = choices[0] if choices else ""
-                
-                results[i] = {
-                    "question": question,
-                    "choices": choices,
-                    "answer": correct_answer,
-                    "prediction": prediction,
-                    "metadata": item.get("meta", {}),
-                    "search_score": search_score,
-                    "difficulty": difficulty,
-                    "context_quality": search_score
-                }
-                
-                # 강화된 진행 상황 업데이트
-                processed = sum(1 for r in results if r is not None)
-                self.monitor.update_mcq_progress(
-                    processed, n, question, choices, prediction, correct_answer,
-                    contexts, 0, time.time() - start_time, difficulty
-                )
-                
-            except Exception as e:
-                if self.debug:
-                    print(f"[MCQ-Error] idx={i}: {e}")
-                
-                # 기본값으로 결과 생성
-                item = items[i]
-                choices = item.get("choices", [])
-                difficulty = item.get("meta", {}).get("difficulty", "미분류")
-                difficulty_stats[difficulty]['total'] += 1
-                
-                results[i] = {
-                    "question": item["question"],
-                    "choices": choices,
-                    "answer": item.get("answer", ""),
-                    "prediction": choices[0] if choices else "",
-                    "metadata": item.get("meta", {}),
-                    "search_score": 0.0,
-                    "difficulty": difficulty,
-                    "context_quality": 0.0
-                }
-            
-            return success
-        
-        # 병렬 실행
-        with cf.ThreadPoolExecutor(max_workers=self.workers) as executor:
-            list(executor.map(process_mcq_item_enhanced, range(n)))
-        
-        generation_time = time.time() - generation_start
-        
-        # 강화된 통계 계산
-        done_results = [r for r in results if r is not None]
-        accuracy = calculate_accuracy(done_results)
-        
-        self.monitor.finalize()
-        
-        # 상세 통계 생성
-        stats = self._create_enhanced_mcq_stats(done_results, search_time, generation_time, search_scores, difficulty_stats)
-        stats['acc'] = accuracy
-        
-        # 강화된 결과 출력
-        self._print_enhanced_mcq_results(done_results, stats, difficulty_stats)
-        
-        return done_results, stats
-    
-    def _evaluate_short_enhanced(self, items: List[Dict]) -> Tuple[List[Dict], Dict]:
-        """강화된 단답형 평가"""
-        n = min(self.short_n or len(items), len(items))
-        items = items[:n]
-        
-        print(f"\n단답형 평가 시작: {n:,}개 문제")
-        print(f"  정밀도 향상 모듈 활성화")
-        
-        # 결과 저장소
-        results = [None] * n
-        search_scores = []
-        em_scores = []
-        f1_scores = []
-        answer_type_stats = defaultdict(int)
-        question_type_stats = defaultdict(lambda: {'total': 0, 'em_sum': 0.0})
-        
-        self.monitor.stats.total_questions = n
-        
-        # 배치 검색 실행
-        search_start = time.time()
-        questions = [item["question"] for item in items]
-        
-        try:
-            contexts_list = retrieve_batch(questions, top_k=7, debug=False)
-            if not contexts_list or len(contexts_list) != len(questions):
-                raise ValueError("배치 검색 실패")
-        except Exception as e:
-            if DEBUG_MODE:
-                print(f"[Short] 배치 검색 실패, 개별 검색으로 전환: {e}")
-            contexts_list = []
-            for question in questions:
-                try:
-                    ctx = retrieve(question, top_k=7, debug=False)
-                    contexts_list.append(ctx)
-                except Exception:
-                    contexts_list.append([])
-        
-        search_time = time.time() - search_start
-        
-        # 강화된 생성 단계
-        generation_start = time.time()
-        
-        def process_short_item_enhanced(i: int) -> bool:
-            start_time = time.time()
-            success = False
-            
-            try:
-                item = items[i]
-                contexts = contexts_list[i] if i < len(contexts_list) else []
-                
-                search_score = self._extract_top_score(contexts)
-                search_scores.append(search_score)
-                
-                question = item["question"]
-                correct_answer = item.get("answer", "")
-                difficulty = item.get("meta", {}).get("difficulty", "미분류")
-                
-                # 질문 유형 분류
-                question_type = self._classify_question_type(question)
-                question_type_stats[question_type]['total'] += 1
-                
-                # 강화된 단답형 생성
-                prediction = generate_answer_short(question, contexts)
-                
-                # 결과 분석
-                if prediction == "정보 불충분":
-                    answer_type_stats['info_insufficient'] += 1
-                    em, f1 = 0.0, 0.0
-                elif prediction and prediction.strip():
-                    success = True
-                    em, f1 = score_short(prediction, correct_answer)
-                    
-                    # 답변 유형 분류
-                    if em >= 0.9:
-                        answer_type_stats['exact_match'] += 1
-                    elif em >= 0.3:
-                        answer_type_stats['partial_match'] += 1
-                    else:
-                        answer_type_stats['low_match'] += 1
-                else:
-                    answer_type_stats['generation_failed'] += 1
-                    prediction = "정보 불충분"
-                    em, f1 = 0.0, 0.0
-                
-                em_scores.append(em)
-                f1_scores.append(f1)
-                question_type_stats[question_type]['em_sum'] += em
-                
-                results[i] = {
-                    "question": question,
-                    "answer": correct_answer,
-                    "prediction": prediction,
-                    "metadata": item.get("meta", {}),
-                    "search_score": search_score,
-                    "em_score": em,
-                    "f1_score": f1,
-                    "difficulty": difficulty,
-                    "question_type": question_type,
-                    "answer_type": self._classify_answer_type(prediction)
-                }
-                
-                # 강화된 진행 상황 업데이트
-                processed = sum(1 for r in results if r is not None)
-                self.monitor.update_short_progress(
-                    processed, n, question, prediction, correct_answer,
-                    contexts, 0, time.time() - start_time, difficulty
-                )
-                
-            except Exception as e:
-                if self.debug:
-                    print(f"[Short-Error] idx={i}: {e}")
-                
-                # 기본값으로 결과 생성
-                item = items[i]
-                difficulty = item.get("meta", {}).get("difficulty", "미분류")
-                question_type = self._classify_question_type(item["question"])
-                
-                question_type_stats[question_type]['total'] += 1
-                answer_type_stats['generation_failed'] += 1
-                
-                results[i] = {
-                    "question": item["question"],
-                    "answer": item.get("answer", ""),
-                    "prediction": "정보 불충분",
-                    "metadata": item.get("meta", {}),
-                    "search_score": 0.0,
-                    "em_score": 0.0,
-                    "f1_score": 0.0,
-                    "difficulty": difficulty,
-                    "question_type": question_type,
-                    "answer_type": "generation_failed"
-                }
-                
-                em_scores.append(0.0)
-                f1_scores.append(0.0)
-            
-            return success
-        
-        # 병렬 실행
-        with cf.ThreadPoolExecutor(max_workers=self.workers) as executor:
-            list(executor.map(process_short_item_enhanced, range(n)))
-        
-        generation_time = time.time() - generation_start
-        
-        # 강화된 통계 계산
-        done_results = [r for r in results if r is not None]
-        
-        self.monitor.finalize()
-        
-        # 상세 통계 생성
-        stats = self._create_enhanced_short_stats(
-            done_results, search_time, generation_time, search_scores, 
-            em_scores, f1_scores, answer_type_stats, question_type_stats
-        )
-        
-        # 강화된 결과 출력
-        self._print_enhanced_short_results(done_results, stats, answer_type_stats, question_type_stats)
-        
-        return done_results, stats
-    
-    def _create_enhanced_mcq_stats(self, results: List[Dict], search_time: float, 
-                                  generation_time: float, search_scores: List[float],
-                                  difficulty_stats: Dict) -> Dict:
-        """강화된 MCQ 통계 생성"""
-        stats = {
-            "n": len(results),
-            "time_search": search_time,
-            "time_gen": generation_time,
-            "time_total": search_time + generation_time,
-            "speed": len(results) / max(search_time + generation_time, 0.001),
-            "avg_search_score": np.mean(search_scores) if search_scores else 0.0,
-            "throughput": self.monitor.stats.throughput,
-            "avg_response_time": self.monitor.stats.avg_response_time,
-            "context_utilization_rate": self.monitor.stats.context_utilization_rate,
-            "high_confidence_rate": self.monitor.stats.high_confidence_rate,
-            "difficulty_breakdown": dict(difficulty_stats)
-        }
-        
-        # 품질 분석 추가
-        if results:
-            context_quality_scores = [r.get('context_quality', 0) for r in results]
-            stats['avg_context_quality'] = np.mean(context_quality_scores)
-            
-            # 고품질 컨텍스트 비율
-            high_quality_count = sum(1 for score in context_quality_scores if score > 1.5)
-            stats['high_quality_context_rate'] = high_quality_count / len(results)
-        
-        return stats
-    
-    def _create_enhanced_short_stats(self, results: List[Dict], search_time: float, 
-                                    generation_time: float, search_scores: List[float],
-                                    em_scores: List[float], f1_scores: List[float],
-                                    answer_type_stats: Dict, question_type_stats: Dict) -> Dict:
-        """강화된 단답형 통계 생성"""
-        stats = {
-            "n": len(results),
-            "time_search": search_time,
-            "time_gen": generation_time,
-            "time_total": search_time + generation_time,
-            "speed": len(results) / max(search_time + generation_time, 0.001),
-            "avg_search_score": np.mean(search_scores) if search_scores else 0.0,
-            "throughput": self.monitor.stats.throughput,
-            "avg_response_time": self.monitor.stats.avg_response_time,
-            "EM": np.mean(em_scores) if em_scores else 0.0,
-            "F1": np.mean(f1_scores) if f1_scores else 0.0,
-            "answer_type_breakdown": dict(answer_type_stats),
-            "question_type_breakdown": dict(question_type_stats)
-        }
-        
-        # 추가 분석
-        if results:
-            info_insufficient_count = sum(1 for r in results if r.get('prediction') == "정보 불충분")
-            stats['info_insufficient_count'] = info_insufficient_count
-            stats['info_insufficient_rate'] = info_insufficient_count / len(results)
-            
-            # EM 점수 분포
-            em_distribution = {
-                'perfect': sum(1 for em in em_scores if em >= 0.95),
-                'excellent': sum(1 for em in em_scores if 0.8 <= em < 0.95),
-                'good': sum(1 for em in em_scores if 0.5 <= em < 0.8),
-                'fair': sum(1 for em in em_scores if 0.2 <= em < 0.5),
-                'poor': sum(1 for em in em_scores if em < 0.2)
-            }
-            stats['em_distribution'] = em_distribution
-            
-            # 품질 점수 계산
-            context_quality_scores = [r.get('search_score', 0) for r in results]
-            stats['avg_context_quality'] = np.mean(context_quality_scores)
-        
-        return stats
-    
-    def _print_enhanced_mcq_results(self, results: List[Dict], stats: Dict, difficulty_stats: Dict):
-        """강화된 MCQ 결과 출력"""
-        print(f"\nMCQ 평가 완료:")
-        print(f"  정확도: {stats.get('acc', 0):.1%}")
-        print(f"  처리속도: {stats['speed']:.1f}개/초")
-        print(f"  평균 검색점수: {stats['avg_search_score']:.3f}")
-        print(f"  평균 컨텍스트 품질: {stats.get('avg_context_quality', 0):.3f}")
-        print(f"  컨텍스트 활용률: {stats.get('context_utilization_rate', 0):.1%}")
-        print(f"  고신뢰도 선택률: {stats.get('high_confidence_rate', 0):.1%}")
-        
-        # 난이도별 성능
-        if difficulty_stats and any(d['total'] > 0 for d in difficulty_stats.values()):
-            print(f"  난이도별 정확도:")
-            for diff, perf in difficulty_stats.items():
-                if perf['total'] > 0:
-                    acc = perf['correct'] / perf['total']
-                    print(f"    {diff}: {acc:.1%} ({perf['correct']}/{perf['total']})")
-        
-        # Generator 성능 정보
-        try:
-            gen_stats = get_generation_stats()
-            if gen_stats:
-                mcq_accuracy = gen_stats.get('mcq_accuracy', 0)
-                context_util = gen_stats.get('mcq_context_utilization', 0)
-                avg_confidence = gen_stats.get('mcq_avg_confidence', 0)
-                
-                print(f"  Generator 통계:")
-                print(f"    정확도: {mcq_accuracy:.1%}")
-                print(f"    컨텍스트 활용: {context_util:.1%}")
-                print(f"    평균 신뢰도: {avg_confidence:.3f}")
-        except Exception:
-            pass
-    
-    def _print_enhanced_short_results(self, results: List[Dict], stats: Dict, 
-                                     answer_type_stats: Dict, question_type_stats: Dict):
-        """강화된 단답형 결과 출력"""
-        print(f"\n단답형 평가 완료:")
-        print(f"  EM 점수: {stats['EM']:.1%}")
-        print(f"  F1 점수: {stats['F1']:.1%}")
-        print(f"  처리속도: {stats['speed']:.1f}개/초")
-        print(f"  평균 검색점수: {stats['avg_search_score']:.3f}")
-        print(f"  평균 컨텍스트 품질: {stats.get('avg_context_quality', 0):.3f}")
-        
-        # 답변 유형별 분포
-        if answer_type_stats:
-            total = sum(answer_type_stats.values())
-            print(f"  답변 유형 분포:")
-            for answer_type, count in answer_type_stats.items():
-                print(f"    {answer_type}: {count}개 ({count/total:.1%})")
-        
-        # EM 점수 분포
-        em_dist = stats.get('em_distribution', {})
-        if em_dist:
-            total = sum(em_dist.values())
-            print(f"  EM 점수 분포:")
-            for category, count in em_dist.items():
-                print(f"    {category}: {count}개 ({count/total:.1%})")
-        
-        # 질문 유형별 성능
-        if question_type_stats:
-            print(f"  질문 유형별 평균 EM:")
-            for qtype, data in question_type_stats.items():
-                if data['total'] > 0:
-                    avg_em = data['em_sum'] / data['total']
-                    print(f"    {qtype}: {avg_em:.1%} ({data['total']}개)")
-        
-        # 상세 실패 분석
-        info_insufficient_count = stats.get('info_insufficient_count', 0)
-        info_rate = stats.get('info_insufficient_rate', 0)
-        print(f"  정보 불충분: {info_insufficient_count}개 ({info_rate:.1%})")
-        
-        # Generator 성능 정보
-        try:
-            gen_stats = get_generation_stats()
-            if gen_stats:
-                success_rate = gen_stats.get('short_success_rate', 0)
-                validation_rate = gen_stats.get('short_validation_pass_rate', 0)
-                avg_time = gen_stats.get('short_avg_generation_time', 0)
-                
-                print(f"  Generator 통계:")
-                print(f"    성공률: {success_rate:.1%}")
-                print(f"    검증 통과율: {validation_rate:.1%}")
-                print(f"    평균 생성시간: {avg_time:.1f}ms")
-        except Exception:
-            pass
-    
-    def _classify_question_type(self, question: str) -> str:
-        """질문 유형 분류"""
-        if re.search(r'(기간|얼마|몇.*개월|몇.*년|몇.*일)', question):
-            return "period"
-        elif re.search(r'(누구|누가|어디|기관|담당)', question):
-            return "organization"
-        elif re.search(r'(무엇|어떤.*것|정의|의미)', question):
-            return "definition"
-        elif re.search(r'제\d+조', question):
-            return "article_specific"
-        else:
-            return "general"
-    
-    def _classify_answer_type(self, answer: str) -> str:
-        """답변 유형 분류"""
-        if answer == "정보 불충분":
-            return "insufficient_info"
-        elif re.search(r'\d+(?:개월|년|일|월|%)', answer):
-            return "numeric"
-        elif re.search(r'(장관|위원회|감독원|은행|청|부)', answer):
-            return "organization"
-        elif len(answer) >= 10:
-            return "detailed"
-        else:
-            return "simple"
-    
-    def _extract_top_score(self, contexts: List[Dict]) -> float:
-        """최고 검색 점수 추출"""
-        if not contexts:
-            return 0.0
-        
-        first_ctx = contexts[0]
-        return float(first_ctx.get("final_score") or first_ctx.get("score") or 0.0)
-    
-    def run(self) -> str:
-        """강화된 전체 평가 실행"""
-        print("\n" + "="*60)
-        print(" RAG 성능 강화 평가 시스템")
-        print("="*60)
+        eval_start_time = time.time()
+        self.eval_stats['total_questions'] = 0
         
         # 데이터 로드
-        print(f"\n파일 로드: {self.xlsx_path}")
-        mcq_items, short_items = load_excel(self.xlsx_path)
-        print(f"사지선다형: {len(mcq_items):,}개 중 {self.mcq_n:,}개 평가")
-        print(f"단답형: {len(short_items):,}개 중 {self.short_n:,}개 평가")
+        log_message("INFO", "데이터 로드 중...")
+        mcq_questions, short_questions = load_excel_data(file_path, mcq_limit, short_limit)
+        
+        if not mcq_questions and not short_questions:
+            log_message("FAILURE", "평가할 질문이 없습니다.")
+            return {}
+        
+        total_questions = len(mcq_questions) + len(short_questions)
+        self.eval_stats['total_questions'] = total_questions
+        
+        log_message("SUCCESS", f"데이터 로드 완료: MCQ {len(mcq_questions)}개, 단답형 {len(short_questions)}개")
         
         # MCQ 평가
-        if mcq_items and self.mcq_n > 0:
-            mcq_results, mcq_stats = self._evaluate_mcq_enhanced(mcq_items)
-        else:
-            mcq_results, mcq_stats = [], {}
+        mcq_accuracy = 0.0
+        mcq_results = []
+        if mcq_questions:
+            log_message("INFO", "MCQ 평가 실행 중...")
+            mcq_accuracy, mcq_results = self.evaluate_mcq_batch(
+                mcq_questions, mcq_limit, progress_callback
+            )
         
-        # Short 평가
-        if short_items and self.short_n > 0:
-            short_results, short_stats = self._evaluate_short_enhanced(short_items)
-        else:
-            short_results, short_stats = [], {}
+        # 단답형 평가
+        short_em = short_f1 = 0.0
+        short_results = []
+        if short_questions:
+            log_message("INFO", "단답형 평가 실행 중...")
+            short_em, short_f1, short_results = self.evaluate_short_batch(
+                short_questions, short_limit, progress_callback
+            )
         
-        # 결과 저장
-        output_file = save_results(mcq_results, short_results)
+        total_eval_time = time.time() - eval_start_time
         
-        # 종합 분석 출력
-        self._print_comprehensive_analysis(mcq_results, short_results, mcq_stats, short_stats)
+        # 결과 정리
+        evaluation_results = {
+            'mcq_accuracy': mcq_accuracy,
+            'short_em': short_em,
+            'short_f1': short_f1,
+            'mcq_total': len(mcq_results),
+            'short_total': len(short_results),
+            'total_questions': len(mcq_results) + len(short_results),
+            'mcq_results': mcq_results,
+            'short_results': short_results,
+            'source_file': Path(file_path).name,
+            'total_time': total_eval_time,
+            'evaluation_stats': self.eval_stats.copy()  # 통계 정보 추가
+        }
         
-        print(f"\n결과 저장: {output_file}")
-        print("="*60)
-        
-        return output_file
-    
-    def _print_comprehensive_analysis(self, mcq_results: List[Dict], short_results: List[Dict],
-                                     mcq_stats: Dict, short_stats: Dict):
-        """종합 분석 출력"""
-        print("\n" + "="*60)
-        print(" 종합 성능 분석")
-        print("="*60)
-        
-        total_questions = len(mcq_results) + len(short_results)
-        total_time = mcq_stats.get('time_total', 0) + short_stats.get('time_total', 0)
-        
-        print(f"총 평가 문제: {total_questions:,}개")
-        print(f"총 소요 시간: {total_time/60:.1f}분")
-        print(f"전체 처리속도: {total_questions/max(total_time, 0.001):.1f}개/초")
-        
-        if mcq_results:
-            mcq_acc = mcq_stats.get('acc', 0)
-            context_util = mcq_stats.get('context_utilization_rate', 0)
-            high_conf = mcq_stats.get('high_confidence_rate', 0)
-            
-            print(f"\nMCQ 종합 성능:")
-            print(f"  정확도: {mcq_acc:.1%}")
-            print(f"  컨텍스트 활용률: {context_util:.1%}")
-            print(f"  고신뢰도 선택률: {high_conf:.1%}")
-            
-            # 목표 달성 평가
-            target_mcq = 0.65
-            if mcq_acc >= target_mcq:
-                print(f"  목표 달성! (목표: {target_mcq:.1%})")
-            else:
-                improvement_needed = target_mcq - mcq_acc
-                print(f"  목표까지: {improvement_needed:.1%}p 개선 필요 (목표: {target_mcq:.1%})")
-        
-        if short_results:
-            short_em = short_stats.get('EM', 0)
-            short_f1 = short_stats.get('F1', 0)
-            info_rate = short_stats.get('info_insufficient_rate', 0)
-            
-            print(f"\n단답형 종합 성능:")
-            print(f"  EM 점수: {short_em:.1%}")
-            print(f"  F1 점수: {short_f1:.1%}")
-            print(f"  정보 불충분률: {info_rate:.1%}")
-            
-            # 목표 달성 평가
-            target_em = 0.20
-            target_info = 0.05
-            
-            if short_em >= target_em:
-                print(f"  EM 목표 달성! (목표: {target_em:.1%})")
-            else:
-                improvement_needed = target_em - short_em
-                print(f"  EM 목표까지: {improvement_needed:.1%}p 개선 필요 (목표: {target_em:.1%})")
-            
-            if info_rate <= target_info:
-                print(f"  정보 불충분 목표 달성! (목표: ≤{target_info:.1%})")
-            else:
-                print(f"  정보 불충분률 개선 필요 (목표: ≤{target_info:.1%})")
-        
-        # 상세 분석 결과
-        detailed_analysis = self.monitor.get_detailed_analysis()
-        if detailed_analysis:
-            print(f"\n상세 분석:")
-            for category, data in detailed_analysis.items():
-                print(f"  {category}:")
-                if isinstance(data, dict):
-                    for key, value in data.items():
-                        print(f"    {key}: {value}")
-                else:
-                    print(f"    {data}")
+        self._print_final_summary(evaluation_results)
+        log_message("SUCCESS", "전체 평가 완료")
+        return evaluation_results
 
-# 호환성을 위한 기존 클래스
-class Evaluator(HighPerformanceEvaluator):
-    """기존 인터페이스 호환성"""
-    pass
+    def _analyze_search_quality(self, search_results: List[SearchResult], question_type: str) -> Dict[str, Any]:
+        """검색 품질 분석"""
+        quality_info = {
+            'bm25_max': 0.0,
+            'vector_max': 0.0,
+            'has_issues': False,
+            'issues': []
+        }
+        
+        if not search_results:
+            quality_info['has_issues'] = True
+            quality_info['issues'].append("검색결과없음")
+            return quality_info
+        
+        bm25_scores = []
+        vector_scores = []
+        metadata_issues = 0
+        
+        for r in search_results:
+            if hasattr(r, 'metadata') and r.metadata:
+                bm25_scores.append(r.metadata.get('bm25_contribution', 0))
+                vector_scores.append(r.metadata.get('vector_contribution', 0))
+            else:
+                bm25_scores.append(0)
+                vector_scores.append(0)
+                metadata_issues += 1
+        
+        quality_info['bm25_max'] = max(bm25_scores) if bm25_scores else 0
+        quality_info['vector_max'] = max(vector_scores) if vector_scores else 0
+        
+        # 품질 문제 감지
+        if metadata_issues > len(search_results) // 2:
+            quality_info['has_issues'] = True
+            quality_info['issues'].append(f"메타데이터부족({metadata_issues}개)")
+        
+        if quality_info['bm25_max'] == 0 and quality_info['vector_max'] == 0:
+            quality_info['has_issues'] = True
+            quality_info['issues'].append("모든점수0")
+        
+        return quality_info
+
+    def _analyze_mcq_error(self, search_quality: Dict, context_quality: float,
+                          is_negative: bool, question: str, choices: Dict, 
+                          predicted: str, correct: str) -> str:
+        """MCQ 오답 원인 분석"""
+        # 1. 검색 실패형
+        if search_quality['bm25_max'] < 5.0 and search_quality['vector_max'] < 1.0:
+            return 'search_failure'
+        
+        # 2. 부정형 질문 감지 실패
+        if is_negative and not self._check_negative_processing_in_context(choices):
+            return 'negative_detection'
+        
+        # 3. 컨텍스트 품질 문제
+        if context_quality < 0.4:
+            return 'context_quality'
+        
+        # 4. 선택지 매핑 오류
+        return 'choice_mapping'
+
+    def _analyze_short_error(self, predicted: str, search_quality: Dict, pipeline_info: Dict) -> str:
+        """단답형 오답 원인 분석"""
+        if len(predicted.strip()) <= 3 or "정보 부족" in predicted:
+            return 'extraction_failure'
+        
+        if search_quality['bm25_max'] < 0.5:
+            return 'low_bm25_score'
+        
+        return 'context_mismatch'
+
+    def _log_error_pattern_analysis(self, question_type: str, total_errors: int):
+        """오답 패턴 분석 결과 로그"""
+        if total_errors <= 0:
+            return
+        
+        if question_type == "MCQ":
+            patterns = self.eval_stats['mcq_error_patterns']
+        else:
+            patterns = self.eval_stats['short_error_patterns']
+        
+        error_summary = f"{question_type} 오답 패턴 분석 (총 {total_errors}개): "
+        error_details = []
+        
+        for pattern, count in patterns.items():
+            if count > 0:
+                percentage = (count / total_errors) * 100
+                error_details.append(f"{pattern}={count}개({percentage:.1f}%)")
+        
+        if error_details:
+            error_summary += ", ".join(error_details)
+            log_message("INFO", error_summary)
+
+    def _create_failed_short_result(self, question: Dict, error_type: str) -> Dict:
+        """실패한 단답형 결과 생성"""
+        return {
+            'question': question['question'][:100],
+            'predicted': "검색실패",
+            'predicted_normalized': "검색실패",
+            'correct': question.get('answer', '정보부족'),
+            'correct_normalized': question.get('answer', '정보부족'),
+            'em_score': 0.0,
+            'f1_score': 0.0,
+            'response_time': 0.0,
+            'search_results_count': 0,
+            'bm25_max_score': 0.0,
+            'vector_max_score': 0.0,
+            'pipeline_method': "failed",
+            'chunks_used': 0,
+            'error_type': error_type
+        }
+
+    def _detect_negative_question(self, question: str) -> bool:
+        """부정형 질문 감지"""
+        negative_indicators = [
+            "포함되지 않는", "해당하지 않는", "맞지 않는", "아닌 것",
+            "제외되는", "틀린 것", "잘못된 것", "예외"
+        ]
+        
+        for indicator in negative_indicators:
+            if indicator in question:
+                return True
+        
+        if re.search(r"다음.*?중.*?(?:아닌|않은|없는)", question):
+            return True
+        
+        return False
+
+    def _check_negative_processing_in_context(self, choices: Dict) -> bool:
+        """부정형 질문 처리가 제대로 되었는지 확인"""
+        # 간단한 휴리스틱: 대부분의 선택지가 언급되었는지 확인
+        return len(choices) >= 3  # 임시 구현
+
+    def _select_mcq_context(self, question: str, search_results: List[SearchResult]) -> str:
+        """MCQ 컨텍스트 선택"""
+        if not search_results:
+            return "관련 정보를 찾을 수 없습니다."
+        
+        selected_chunks = search_results[:3]
+        context_parts = []
+        
+        for i, chunk in enumerate(selected_chunks, 1):
+            context_parts.append(f"[참고자료 {i}]\n{chunk.content}")
+        
+        return "\n\n".join(context_parts)
+
+    def _process_short_pipeline_enhanced(self, question: str, search_results: List[SearchResult]) -> Tuple[str, Dict]:
+        """향상된 단답형 파이프라인"""
+        if not search_results:
+            return "정보 부족", {'method': 'no_results', 'chunks_used': 0}
+        
+        # BM25 점수 기반 동적 청크 개수 결정
+        bm25_scores = []
+        for r in search_results:
+            if hasattr(r, 'metadata') and r.metadata:
+                bm25_scores.append(r.metadata.get('bm25_contribution', 0))
+            else:
+                bm25_scores.append(0)
+        
+        bm25_max = max(bm25_scores) if bm25_scores else 0
+        
+        # 조문 참조 질문 감지
+        is_article_ref = "제" in question and "조에서" in question
+        
+        # 동적 청크 개수 결정
+        if bm25_max > 100:
+            chunk_count = 5
+        elif is_article_ref:
+            chunk_count = 4
+        else:
+            chunk_count = 3
+        
+        # 상위 청크들로 컨텍스트 구성
+        context_parts = []
+        for i, result in enumerate(search_results[:chunk_count]):
+            context_parts.append(result.content)
+        
+        full_context = "\n".join(context_parts)
+        
+        # LLM 호출
+        try:
+            predicted = self.llm.call_short(question, full_context)
+        except Exception as e:
+            log_message("FAILURE", f"LLM 호출 실패: {e}")
+            predicted = "처리 실패"
+        
+        pipeline_info = {
+            'method': 'enhanced',
+            'chunks_used': chunk_count,
+            'bm25_max': bm25_max,
+            'is_article_ref': is_article_ref
+        }
+        
+        return predicted, pipeline_info
+
+    def _assess_context_quality(self, context: str, question: str) -> float:
+        """컨텍스트 품질 평가"""
+        if not context or len(context.strip()) < 20:
+            return 0.0
+        
+        # 질문 키워드 추출
+        question_keywords = set(re.findall(r'[가-힣]{3,}|\d+(?:년|개월|일)|\d+(?:억|만)?원|제\d+조', question))
+        context_keywords = set(re.findall(r'[가-힣]{3,}|\d+(?:년|개월|일)|\d+(?:억|만)?원|제\d+조', context))
+        
+        if not question_keywords:
+            return 0.5
+        
+        # 키워드 매칭률
+        overlap = len(question_keywords & context_keywords)
+        keyword_score = overlap / len(question_keywords) if question_keywords else 0
+        
+        # 컨텍스트 길이 점수
+        if 100 <= len(context) <= 1000:
+            length_score = 1.0
+        elif 50 <= len(context) < 100 or 1000 < len(context) <= 2000:
+            length_score = 0.7
+        else:
+            length_score = 0.3
+        
+        # 법령 패턴 점수
+        legal_count = sum(1 for pattern in ['제', '조', '항', '호', '법률'] if pattern in context)
+        legal_score = min(1.0, legal_count / 3)
+        
+        return min(1.0, keyword_score * 0.5 + length_score * 0.3 + legal_score * 0.2)
+
+    def _normalize_legal_answer(self, text: str) -> str:
+        """법령 답변 정규화"""
+        if not text:
+            return ""
+        
+        text = str(text).strip()
+        text = re.sub(r'\s+', ' ', text)
+        text = re.sub(r'제\s*(\d+)\s*조', r'제\1조', text)
+        text = re.sub(r'(\d+)\s*(년|개월|일)', r'\1\2', text)
+        text = re.sub(r'(\d+)\s*(억|만)?\s*원', r'\1\2원', text)
+        
+        # 동의어 처리
+        for old_term, new_term in self.legal_synonyms.items():
+            text = text.replace(old_term, new_term)
+        
+        # 불필요한 문구 제거
+        for phrase in ['답변:', '답:', '정답:', '결론:', '따라서']:
+            text = text.replace(phrase, '')
+        
+        return text.strip()
+
+    def _print_final_summary(self, results: Dict[str, Any]):
+        """최종 평가 결과 요약"""
+        total_q = results.get('total_questions', 0)
+        mcq_acc = results.get('mcq_accuracy', 0)
+        short_em = results.get('short_em', 0)
+        short_f1 = results.get('short_f1', 0)
+        total_time = results.get('total_time', 0)
+        
+        # 통계 정보 출력
+        stats = results.get('evaluation_stats', {})
+        search_issues = stats.get('search_quality_issues', 0)
+        
+        log_message("SUCCESS", "="*60)
+        log_message("SUCCESS", f"최종 결과: 총 {total_q}문제")
+        log_message("SUCCESS", f"MCQ 정확도: {mcq_acc:.1%}")
+        log_message("SUCCESS", f"단답형 EM: {short_em:.1%}, F1: {short_f1:.1%}")
+        log_message("SUCCESS", f"실행 시간: {total_time:.1f}초")
+        log_message("INFO", f"검색 품질 문제: {search_issues}건")
+        log_message("SUCCESS", "="*60)
+
+    def save_results(self, results: Dict[str, Any], output_file: str = None, source_file: str = None) -> str:
+        """결과 저장"""
+        try:
+            from rag.utils import save_evaluation_results
+            saved_file = save_evaluation_results(results, output_file)
+            if saved_file:
+                log_message("SUCCESS", f"결과 저장 완료: {saved_file}")
+            else:
+                log_message("FAILURE", "결과 저장 실패")
+            return saved_file
+        except Exception as e:
+            log_message("FAILURE", f"결과 저장 오류: {e}")
+            return None
