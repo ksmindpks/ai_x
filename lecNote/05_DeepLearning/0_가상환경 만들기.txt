@@ -1,10 +1,10 @@
 ※ 가상환경 만들기(ml-dl-nlp / llm)
 
-(현재 존재하는 가상환경 목록 확인) conda env list
+(현재 존재하는 가상환경 목록 확인) conda env list (conda info --envs)
 (가상환경 생성:-n은 --name을 의미) conda create -n ml-dl-nlp python=3.10 
 
 (생성한 가상환경으로 전환) conda activate ml-dl-nlp 
-(pip 최신버전으로 업데이트) python.exe -m pip install --upgrade pip 
+(pip 최신버전으로 업데이트) python -m pip install --upgrade pip 
 pip install jupyter numpy==1.23.5 pandas==1.5.3  matplotlib==3.7.0 seaborn==0.12.2 scikit-learn==1.2.1
 pip install tensorflow==2.10.0
 
@@ -35,18 +35,16 @@ pip install python-decouple #.env읽어들이기(주피터환경에서 안 될 �
 pip install statsmodels==0.13.5 # 주기적인 데이터 트렌드 추이
 pip install prophet # facebook에서 개발한 시계열 예측 라이브러리
 
-※ 허깅페이스(다양한 llm 모델과 환경을 제공하는 프레임워크)
-conda install pytorch torchvision -c pytorch # 파이토치
+※ 허깅페이스(다양한 llm 모델과 환경을 제공하는 프레임워크) - llm에서 추가할 것 추천※ ※ ※ ※ ※ ※ ※ ※ ※ ※ ※ ※ 
+pip install torch==2.6.0 torchvision==0.21.0 --index-url https://download.pytorch.org/whl/cpu # 파이토치 설치
 pip install sympy==1.13.1 fsspec
 pip install transformers
 pip install sentencepiece # 자연어의 Tokenizer 기능(구글 作)
 pip install hf_xet # 허깅페이스 hub 대용량 파일을 빠르게 업로드/다운로드 지원하는 도구
 pip install pillow
 pip install sacremoses # 아래의 영한번역에서 경고 줄이기도 하고 번역품질도 높아져
+※ ※ ※ ※ ※ ※ ※ ※ ※ ※ ※ ※ ※ ※ ※ ※ ※ ※ ※ ※ ※ ※ ※ ※ ※ ※ ※ ※ ※ ※ ※ ※ ※ ※ ※ ※ ※ ※ ※ ※ ※ ※ ※ ※ ※ ※ 
 
-pip freeze > requirements.txt
-notepad requirements.txt
-pip install -r requirements.txt #requirements.txt 에 있는 라이브러리들 설치
 
 의사결정나무모형 트리 구조 보기 ml-dl-nlp환경에서
 conda install -c conda-forge graphviz (의사결정나무 그래프를 생성하는 도구)
@@ -72,19 +70,9 @@ pip install --dry-run catboost==1.2
 pip install catboost==1.2
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+pip freeze > requirements.txt
+notepad requirements.txt
+pip install -r requirements.txt #requirements.txt 에 있는 라이브러리들 설치
 
 
 

@@ -1,0 +1,28 @@
+1. Oracle setup후, cmd창을 띄워 다음을 실행
+
+2. system계정 접속 후, scott 계정 생성, 권한 부여
+C:\~>sqlplus system/비번
+        sqlplus "/as sysdba
+SQL>create user scott identified by tiger;
+SQL>grant dba to scott;
+SQL>exit;
+
+3. scott 계정 접속 후, 데이터 확인
+C:\~>sqlplus scott/tiger
+SQL>SELECT * FROM TAB; -- 소유 테이블 확인
+
+4. 수업에 쓸 데이터 넣기
+SQL>@D:/ai_x/lecNote/04_DBMS/demo.sql;
+
+5. scott계정 접속 후, 데이터 확인
+C:\~>sqlplus scott/tiger
+SQL>SELECT * FROM TAB; 
+SQL>SELECT * FROM DEPT;
+SQL>EXIT
+
+6. SQL developer를 다운받아 압축을 푼 후, 사용
+
+
+
+
+

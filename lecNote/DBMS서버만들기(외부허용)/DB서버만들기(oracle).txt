@@ -1,6 +1,6 @@
 외부에서 oracle 허용을 위한 작업
 ✅ 1. 리스너 확인
-① C:\oracle\product\11.2.0\server\network\ADMIN\listener.ora 열기
+①C:\oraclexe\app\oracle\product\11.2.0\server\network\ADMIN\listener.ora 열기
 LISTENER =
   (ADDRESS = (PROTOCOL = TCP)(HOST = 0.0.0.0)(PORT = 1521))
 
@@ -15,7 +15,7 @@ Windows 방화벽 설정
 	TCP / 특정 로컬 포트: 3306
 	연결 허용
 	도메인, 개인, 공용 모두 체크
-	이름: MySQL 3306 등으로
+	이름: Oracle XE 1521 등으로
 
 ✅ 3. 공유기 포트 포워딩 설정
 이게 제일 중요한 부분이야. 네 컴퓨터는 공유기 안에 있으니까, 외부에서 접속하려면 공유기가 MySQL 포트를 네 컴퓨터로 넘겨줘야 해.
