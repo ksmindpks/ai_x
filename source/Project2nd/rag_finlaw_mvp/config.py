@@ -1,4 +1,4 @@
-# config.py - 정리된 설정 (스레드 안전) + API 키 검증 강화
+# config.py - 정리된 설정 (스레드 안전) + API 키 검증 강화 + 중복 로그 방지
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -7,6 +7,48 @@ from dotenv import load_dotenv
 import threading
 
 load_dotenv()
+
+# 웹 로그 함수 추가 (단순)
+_web_log_func = None
+_pending_logs = []  # 웹 로그 함수 설정 전까지 임시 저장
+
+def set_web_log_func(log_func):
+    """웹 로그 함수 설정"""
+    global _web_log_func, _pending_logs
+    _web_log_func = log_func
+    
+    # 대기 중인 로그들을 모두 전송
+    for pending_msg in _pending_logs:
+        try:
+            _web_log_func(pending_msg)
+        except:
+            pass
+    _pending_logs = []  # 전송 완료 후 비우기
+
+def config_print(message):
+    """config 전용 print 함수"""
+    global _pending_logs
+    
+    # 웹 로그로 전송 (설정되었으면 즉시, 아니면 대기열에 추가)
+    if _web_log_func:
+        try:
+            _web_log_func(message)
+        except:
+            pass
+    else:
+        # streamlit 환경에서 add_to_mgmt_log 함수 직접 찾기 시도
+        try:
+            import streamlit as st
+            if hasattr(st.session_state, 'mgmt_logs'):
+                from datetime import datetime
+                timestamp = datetime.now().strftime("%H:%M:%S")
+                st.session_state.mgmt_logs.append(f"[{timestamp}] {message}")
+                if len(st.session_state.mgmt_logs) > 50:
+                    st.session_state.mgmt_logs.pop(0)
+            else:
+                _pending_logs.append(message)
+        except:
+            _pending_logs.append(message)
 
 @dataclass
 class Config:
@@ -40,8 +82,8 @@ class Config:
     max_tokens: int = 1024
     llm_timeout: int = 60
     
-    def validate(self) -> List[str]:
-        """필수 설정 검증 - 강화된 버전"""
+    def validate(self, silent=False) -> List[str]:
+        """필수 설정 검증 - 강화된 버전 + 조용한 모드 추가"""
         errors = []
         warnings = []
         
@@ -55,14 +97,14 @@ class Config:
             if has_openai:
                 if not self.openai_api_key.startswith(('sk-', 'sk-proj-')):
                     warnings.append("OpenAI API 키 형식이 의심스럽습니다")
-                else:
-                    print("[CONFIG-OK] OpenAI API 키 검증 통과")
+                elif not silent:  # 조용한 모드가 아닐 때만 출력
+                    config_print("[CONFIG-OK] OpenAI API 키 검증 통과")
             
             if has_upstage:
                 if len(self.upstage_api_key.strip()) < 20:
                     warnings.append("Upstage API 키가 너무 짧습니다")
-                else:
-                    print("[CONFIG-OK] Upstage API 키 검증 통과")
+                elif not silent:  # 조용한 모드가 아닐 때만 출력
+                    config_print("[CONFIG-OK] Upstage API 키 검증 통과")
         
         # 2. 검색 시스템 검증 (강화)
         has_bm25 = os.path.exists(self.bm25_index_path)
@@ -77,16 +119,16 @@ class Config:
                     bm25_size = os.path.getsize(self.bm25_index_path)
                     if bm25_size < 1024:  # 1KB 미만
                         warnings.append("BM25 인덱스 파일이 너무 작습니다")
-                    else:
-                        print(f"[CONFIG-OK] BM25 인덱스 검증 통과 ({bm25_size/1024/1024:.1f}MB)")
+                    elif not silent:  # 조용한 모드가 아닐 때만 출력
+                        config_print(f"[CONFIG-OK] BM25 인덱스 검증 통과 ({bm25_size/1024/1024:.1f}MB)")
                 except Exception as e:
                     warnings.append(f"BM25 인덱스 파일 검증 실패: {e}")
             
             if has_pinecone:
                 if len(self.pinecone_index_name.strip()) < 3:
                     warnings.append("Pinecone 인덱스 이름이 너무 짧습니다")
-                else:
-                    print("[CONFIG-OK] Pinecone 설정 검증 통과")
+                elif not silent:  # 조용한 모드가 아닐 때만 출력
+                    config_print("[CONFIG-OK] Pinecone 설정 검증 통과")
         
         # 3. 파일 시스템 검증 (신규)
         if not os.access(self.project_root, os.R_OK):
@@ -102,11 +144,11 @@ class Config:
         if self.max_tokens > 4000:
             warnings.append("max_tokens가 너무 큽니다 (비용 증가 주의)")
         
-        # 5. 경고사항 출력
-        if warnings:
-            print("[CONFIG-WARNING] 설정 경고사항:")
+        # 5. 경고사항 출력 (silent 모드가 아닐 때만)
+        if warnings and not silent:
+            config_print("[CONFIG-WARNING] 설정 경고사항:")
             for warning in warnings:
-                print(f"  - {warning}")
+                config_print(f"  - {warning}")
         
         return errors
     
@@ -136,7 +178,7 @@ class Config:
     
     def is_production_ready(self) -> bool:
         """운영 환경 준비 상태 확인"""
-        errors = self.validate()
+        errors = self.validate(silent=True)  # 조용한 모드로 검증
         
         # 기본 요구사항
         if errors:
@@ -152,71 +194,68 @@ class Config:
         
         return has_both_retrievers and has_multiple_llms
 
-# 전역 설정 인스턴스 (스레드 안전)
+# 전역 설정 인스턴스 (스레드 안전) + 로그 출력 여부 플래그
 _config = None
 _config_lock = threading.Lock()
+_config_logged = False  # 로그가 이미 출력되었는지 추적
 
-def get_config():
-    """스레드 안전한 설정 인스턴스 반환 - 검증 강화"""
-    global _config
+def get_config(silent=False):
+    """스레드 안전한 설정 인스턴스 반환 - 중복 로그 방지"""
+    global _config, _config_logged
     
     if _config is None:
         with _config_lock:
             if _config is None:
                 _config = Config()
-                errors = _config.validate()
+                
+                # 첫 번째 호출에서만 로그 출력
+                should_log = not _config_logged and not silent
+                if should_log:
+                    _config_logged = True
+                
+                errors = _config.validate(silent=not should_log)
                 
                 if errors:
-                    # 오류 메시지 출력
-                    print("[CONFIG-ERROR] 설정 검증 실패:")
-                    for error in errors:
-                        print(f"  - {error}")
-                    
-                    # 웹 환경 확인
-                    try:
-                        import streamlit as st
-                        # 웹 환경에서도 심각한 오류는 예외 발생 (수정된 부분)
-                        if any("API 키" in error for error in errors):
-                            print("[CONFIG-CRITICAL] 웹 환경에서도 API 키 오류로 중단")
-                            raise RuntimeError(f"필수 설정 누락: {', '.join(errors)}")
-                        else:
-                            print("[CONFIG-WARNING] 웹 환경에서 경고만 표시")
-                    except ImportError:
-                        # CLI 환경에서는 모든 오류에 대해 예외 발생
-                        print("[CONFIG-CRITICAL] CLI 환경에서 설정 오류로 중단")
-                        raise RuntimeError(f"Config 검증 실패: {', '.join(errors)}")
+                    if should_log:
+                        # 오류 메시지 출력 (앱 중단하지 않고 경고만)
+                        config_print("[CONFIG-WARNING] 설정 검증 실패:")
+                        for error in errors:
+                            config_print(f"  - {error}")
+                        config_print("[CONFIG-INFO] 부분적 기능만 사용 가능합니다")
                 
-                # 설정 요약 출력
-                print("[CONFIG-SUMMARY] 설정 요약:")
-                print(f"  - 사용 가능한 LLM: {', '.join(_config.get_available_llms())}")
-                print(f"  - 사용 가능한 검색기: {', '.join(_config.get_available_retrievers())}")
-                print(f"  - 운영 준비 상태: {'OK' if _config.is_production_ready() else 'PARTIAL'}")
+                # 설정 요약 출력 (첫 번째 호출에서만)
+                if should_log:
+                    config_print("[CONFIG-SUMMARY] 설정 요약:")
+                    config_print(f"  - 사용 가능한 LLM: {', '.join(_config.get_available_llms())}")
+                    config_print(f"  - 사용 가능한 검색기: {', '.join(_config.get_available_retrievers())}")
+                    config_print(f"  - 운영 준비 상태: {'OK' if _config.is_production_ready() else 'PARTIAL'}")
     
     return _config
 
 def reset_config():
     """설정 인스턴스 리셋 (테스트용)"""
-    global _config
+    global _config, _config_logged
     with _config_lock:
         _config = None
+        _config_logged = False
 
 def validate_runtime_environment():
     """런타임 환경 검증 - 추가 검사"""
     try:
-        config = get_config()
+        config = get_config(silent=True)  # 조용한 모드로 가져오기
         
         # 1. 디스크 공간 확인
         import shutil
         free_space = shutil.disk_usage(config.project_root).free
         if free_space < 100 * 1024 * 1024:  # 100MB 미만
-            print("[RUNTIME-WARNING] 디스크 여유 공간 부족 (100MB 미만)")
+            config_print("[RUNTIME-WARNING] 디스크 여유 공간 부족 (100MB 미만)")
         
         # 2. 메모리 사용량 확인 (가능한 경우)
         try:
             import psutil
             memory = psutil.virtual_memory()
             if memory.percent > 90:
-                print("[RUNTIME-WARNING] 메모리 사용률 높음 (90% 초과)")
+                config_print("[RUNTIME-WARNING] 메모리 사용률 높음 (90% 초과)")
         except ImportError:
             pass
         
@@ -224,17 +263,17 @@ def validate_runtime_environment():
         try:
             import socket
             socket.gethostbyname('google.com')
-            print("[RUNTIME-OK] 네트워크 연결 정상")
+            config_print("[RUNTIME-OK] 네트워크 연결 정상")
         except Exception:
-            print("[RUNTIME-WARNING] 네트워크 연결 문제 가능성")
+            config_print("[RUNTIME-WARNING] 네트워크 연결 문제 가능성")
         
         return True
         
     except Exception as e:
-        print(f"[RUNTIME-ERROR] 런타임 환경 검증 실패: {e}")
+        config_print(f"[RUNTIME-ERROR] 런타임 환경 검증 실패: {e}")
         return False
 
-# 모듈 레벨에서 기본 검증 실행
+# 모듈 레벨에서 기본 검증 실행a
 if __name__ == "__main__":
     print("=== Config 모듈 직접 실행 ===")
     config = get_config()
@@ -260,4 +299,4 @@ else:
     try:
         get_config()
     except Exception as e:
-        print(f"[CONFIG-INIT-ERROR] 설정 초기화 실패: {e}")
+        config_print(f"[CONFIG-INIT-ERROR] 설정 초기화 실패: {e}")

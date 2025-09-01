@@ -8,8 +8,6 @@ from typing import List, Dict, Any
 
 def log_message(log_type, message, module="EMBEDDER"):
     """통합된 로그 함수 - 3단계 분류"""
-    print(f"[{module}-{log_type.upper()}] {message}")
-    
     # 웹 인터페이스로 전달 시도
     try:
         import streamlit as st
@@ -17,8 +15,12 @@ def log_message(log_type, message, module="EMBEDDER"):
             callback = st.session_state.global_log_callback
             if callable(callback):
                 callback(log_type, message, module, "evaluation")
+        else:
+            # 웹 환경이 아닐 때만 직접 출력
+            print(f"[{module}-{log_type.upper()}] {message}")
     except Exception:
-        pass
+        # 오류 시 직접 출력
+        print(f"[{module}-{log_type.upper()}] {message}")
 
 class UpstageEmbedder:
     """로그 시스템 통합된 Upstage 임베딩 서비스"""

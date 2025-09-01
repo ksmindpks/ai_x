@@ -23,6 +23,252 @@ except ImportError:
 project_root = Path(__file__).parent.absolute()
 sys.path.insert(0, str(project_root))
 
+<<<<<<< HEAD
+# ========== CONFIG 로그 동기화 함수 추가 ==========
+def add_to_mgmt_log(message):
+    """CONFIG 로그를 관리 로그에 동기화"""
+    try:
+        if hasattr(st.session_state, 'mgmt_logs'):
+            timestamp = datetime.now().strftime("%H:%M:%S")
+            st.session_state.mgmt_logs.append(f"[{timestamp}] {message}")
+            if len(st.session_state.mgmt_logs) > 50:
+                st.session_state.mgmt_logs.pop(0)
+    except:
+        pass
+
+# ========== 단순화된 로그 라우팅 시스템 ==========
+def enhanced_global_log_callback(log_type, message, module="", category="evaluation"):
+    """단순화된 로그 라우팅: 콘솔 출력 + 정답/오답/관리 로그 분류 (중복 방지)"""
+    formatted_msg = f"[{module}] {message}" if module else message
+    
+    # 중복 로그 방지: 같은 메시지가 이미 출력되었는지 확인
+    if hasattr(st.session_state, 'last_log_message') and st.session_state.last_log_message == formatted_msg:
+        return  # 중복된 메시지는 건너뛰기
+    
+    st.session_state.last_log_message = formatted_msg
+    
+    # 모든 로그는 콘솔에 출력 (한 번만)
+    print(formatted_msg)
+    
+    # 세션 상태가 초기화되지 않았으면 종료
+    if 'mgmt_logs' not in st.session_state:
+        return
+    
+    try:
+        # 임시 버퍼 초기화
+        if 'temp_question_logs' not in st.session_state:
+            st.session_state.temp_question_logs = {}
+        if 'current_question' not in st.session_state:
+            st.session_state.current_question = None
+            
+        timestamp = datetime.now().strftime("%H:%M:%S")
+        log_entry = f"[{timestamp}] {formatted_msg}"
+        
+        # 1. 문제 처리 시작 감지 (MCQ, SHORT 모드)
+        if "처리 시작" in message and ("MCQ-" in message or "SHORT-" in message):
+            question_match = re.search(r"(MCQ|SHORT)-(\d+)", message)
+            if question_match:
+                q_type, q_num = question_match.groups()
+                question_key = f"{q_type}-{q_num}"
+                
+                # 임시 버퍼 생성 및 현재 문제 설정
+                st.session_state.temp_question_logs[question_key] = [log_entry]
+                st.session_state.current_question = question_key
+                
+                # 문제별 상태도 업데이트
+                text_match = re.search(r"'(.+?)'", message)
+                if text_match:
+                    question_text = text_match.group(1).strip()
+                    if q_type == "MCQ":
+                        update_mcq_question(int(q_num), question_text, status="processing")
+                    else:
+                        update_short_question(int(q_num), question_text, status="processing")
+                return
+        
+        # 2. 정답 확정 - 정답 로그창으로 이동
+        if "정답:" in message:
+            if st.session_state.current_question and st.session_state.current_question in st.session_state.temp_question_logs:
+                # 임시 버퍼의 모든 로그를 정답 로그로 이동
+                for temp_log in st.session_state.temp_question_logs[st.session_state.current_question]:
+                    st.session_state.correct_process_logs.append(temp_log)
+                st.session_state.correct_process_logs.append(log_entry)
+                st.session_state.correct_process_logs.append("=" * 50)
+                
+                # 문제별 상태 업데이트
+                update_question_status_correct(st.session_state.current_question, message)
+                
+                # 임시 버퍼 정리
+                del st.session_state.temp_question_logs[st.session_state.current_question]
+                st.session_state.current_question = None
+                return
+            else:
+                # 임시 버퍼 없이 직접 정답 로그로
+                st.session_state.correct_process_logs.append(log_entry)
+                return
+        
+        # 3. 오답 확정 - 오답 로그창으로 이동  
+        if "오답:" in message:
+            if st.session_state.current_question and st.session_state.current_question in st.session_state.temp_question_logs:
+                # 임시 버퍼의 모든 로그를 오답 로그로 이동
+                for temp_log in st.session_state.temp_question_logs[st.session_state.current_question]:
+                    st.session_state.incorrect_process_logs.append(temp_log)
+                st.session_state.incorrect_process_logs.append(log_entry)
+                st.session_state.incorrect_process_logs.append("=" * 50)
+                
+                # 문제별 상태 업데이트
+                update_question_status_incorrect(st.session_state.current_question, message)
+                
+                # 임시 버퍼 정리
+                del st.session_state.temp_question_logs[st.session_state.current_question]
+                st.session_state.current_question = None
+                return
+            else:
+                # 임시 버퍼 없이 직접 오답 로그로
+                st.session_state.incorrect_process_logs.append(log_entry)
+                return
+        
+        # 4. 현재 처리 중인 문제 관련 로그 - 임시 버퍼에 추가
+        if st.session_state.current_question:
+            if st.session_state.current_question in st.session_state.temp_question_logs:
+                st.session_state.temp_question_logs[st.session_state.current_question].append(log_entry)
+                return
+        
+        # 5. 시스템/관리 로그 (CONFIG, 초기화, 진행상황, 통계 등) - 관리 로그로
+        management_keywords = [
+            "CONFIG", "config", "API", "키 검증", "설정", "초기화", "로드", "연결",
+            "인스턴스", "모듈", "컴포넌트", "시작:", "준비", "환경", "RETRIEVER", 
+            "EMBEDDER", "LLM", "Bridge", "Upstage", "OpenAI", "Pinecone", "BM25",
+            "평가 시작:", "평가 완료", "통계", "요약", "결과:", "실행 시간:",
+            "============", "운영", "완료:", "누적:", "패턴 분석"
+        ]
+        
+        if any(keyword in message for keyword in management_keywords):
+            st.session_state.mgmt_logs.append(log_entry)
+            if len(st.session_state.mgmt_logs) > 50:
+                st.session_state.mgmt_logs.pop(0)
+            return
+        
+        # 6. 기타 모든 로그도 관리 로그로 (누락 방지)
+        st.session_state.mgmt_logs.append(log_entry)
+        if len(st.session_state.mgmt_logs) > 50:
+            st.session_state.mgmt_logs.pop(0)
+            
+    except Exception as e:
+        print(f"[LOG-ROUTING-ERROR] {e}")
+        # 오류 시에도 관리 로그에는 추가
+        try:
+            timestamp = datetime.now().strftime("%H:%M:%S")
+            st.session_state.mgmt_logs.append(f"[{timestamp}] [ERROR] 로그 라우팅 실패: {formatted_msg}")
+        except:
+            pass
+
+def update_question_status_correct(question_key, message):
+    """정답 문제의 상태 업데이트"""
+    try:
+        q_type, q_num = question_key.split('-')
+        q_num = int(q_num)
+        
+        if q_type == "MCQ":
+            # MCQ 정답 처리
+            correct_match = re.search(r"정답: (\d+)", message)
+            if correct_match:
+                correct_num = int(correct_match.group(1))
+                predicted = correct = chr(64 + correct_num)
+                
+                for q in st.session_state.mcq_question_log:
+                    if q.get('number') == q_num:
+                        q.update({
+                            'predicted': predicted,
+                            'correct': correct,
+                            'is_correct': True,
+                            'status': 'completed'
+                        })
+                        break
+                        
+                st.session_state.mcq_stats['correct'] += 1
+                st.session_state.mcq_stats['total'] += 1
+        
+        else:  # SHORT
+            # SHORT 정답 처리
+            answer_match = re.search(r"정답: '([^']+)'", message)
+            if answer_match:
+                predicted = correct = answer_match.group(1)
+                em_score = f1_score = 1.0  # 정답이므로
+                
+                for q in st.session_state.short_question_log:
+                    if q.get('number') == q_num:
+                        q.update({
+                            'predicted': predicted,
+                            'correct': correct,
+                            'em_score': em_score,
+                            'f1_score': f1_score,
+                            'status': 'completed'
+                        })
+                        break
+                        
+                st.session_state.short_stats['correct'] += 1
+                st.session_state.short_stats['total'] += 1
+                
+    except Exception as e:
+        print(f"[CORRECT-STATUS-ERROR] {e}")
+
+def update_question_status_incorrect(question_key, message):
+    """오답 문제의 상태 업데이트"""
+    try:
+        q_type, q_num = question_key.split('-')
+        q_num = int(q_num)
+        
+        if q_type == "MCQ":
+            # MCQ 오답 처리
+            error_match = re.search(r"예측=(\d+), 정답=(\d+)", message)
+            if error_match:
+                predicted_num = int(error_match.group(1))
+                correct_num = int(error_match.group(2))
+                predicted = chr(64 + predicted_num)
+                correct = chr(64 + correct_num)
+                
+                for q in st.session_state.mcq_question_log:
+                    if q.get('number') == q_num:
+                        q.update({
+                            'predicted': predicted,
+                            'correct': correct,
+                            'is_correct': False,
+                            'status': 'completed'
+                        })
+                        break
+                        
+                st.session_state.mcq_stats['total'] += 1
+        
+        else:  # SHORT
+            # SHORT 오답 처리
+            error_match = re.search(r"예측='([^']+)', 정답='([^']+)'.*?EM=([A-Za-z]+|[0-9.]+), F1=([0-9.]+)", message)
+            if error_match:
+                predicted = error_match.group(1)
+                correct = error_match.group(2)
+                em_str = error_match.group(3)
+                em_score = 1.0 if em_str == "True" else (0.0 if em_str == "False" else float(em_str))
+                f1_score = float(error_match.group(4))
+                
+                for q in st.session_state.short_question_log:
+                    if q.get('number') == q_num:
+                        q.update({
+                            'predicted': predicted,
+                            'correct': correct,
+                            'em_score': em_score,
+                            'f1_score': f1_score,
+                            'status': 'completed'
+                        })
+                        break
+                        
+                if em_score > 0:
+                    st.session_state.short_stats['correct'] += 1
+                st.session_state.short_stats['total'] += 1
+                
+    except Exception as e:
+        print(f"[INCORRECT-STATUS-ERROR] {e}")
+
+=======
+>>>>>>> 9356c0fdba22a7ba0691db86d66ee340a4a4ae34
 # ========== 세션 상태 초기화 ==========
 def init_session_state():
     """통합 세션 상태 초기화"""
@@ -46,12 +292,37 @@ def init_session_state():
         'mgmt_logs': [],
         'evaluation_progress': {'current': 0, 'total': 0},
         'chat_history': [],
+<<<<<<< HEAD
+        'session_id': str(uuid.uuid4())[:8],
+        
+        # 임시 버퍼 (새로 추가)
+        'temp_question_logs': {},
+        'current_question': None,
+        
+        # 관리 작업 상태 추가
+        'management_tasks': {
+            '벡터 재생성': {'status': 'ready', 'last_run': None},
+            'BM25 재생성': {'status': 'ready', 'last_run': None},
+            '백업': {'status': 'ready', 'last_run': None}
+        },
+        
+        # 중복 로그 방지용
+        'last_log_message': None
+=======
         'session_id': str(uuid.uuid4())[:8]
+>>>>>>> 9356c0fdba22a7ba0691db86d66ee340a4a4ae34
     }
     
     for key, default_value in session_defaults.items():
         if key not in st.session_state:
             st.session_state[key] = default_value
+<<<<<<< HEAD
+    
+    # 글로벌 콜백 함수도 세션 상태에 등록
+    if 'global_log_callback' not in st.session_state:
+        st.session_state.global_log_callback = enhanced_global_log_callback
+=======
+>>>>>>> 9356c0fdba22a7ba0691db86d66ee340a4a4ae34
 
 # 초기화 실행
 init_session_state()
@@ -65,9 +336,12 @@ def get_rag_system():
         return st.session_state.rag_retriever, st.session_state.rag_llm, st.session_state.rag_config
     
     try:
+        # CONFIG 로그 동기화 설정 - 한 번에 import
+        from config import get_config, set_web_log_func
+        set_web_log_func(add_to_mgmt_log)
+        
         from rag.hybrid_retriever import HybridRetriever
         from rag.llm_bridge import HybridLLM
-        from config import get_config
         
         config = get_config()
         retriever = HybridRetriever(config)
@@ -83,7 +357,11 @@ def get_rag_system():
         return retriever, llm, config
         
     except Exception as e:
+<<<<<<< HEAD
+        safe_add_log("error", f"RAG 초기화 실패: {e}", "management")
+=======
         print(f"RAG 초기화 실패: {e}")
+>>>>>>> 9356c0fdba22a7ba0691db86d66ee340a4a4ae34
         return None, None, None
 
 def get_rag_available():
@@ -240,11 +518,6 @@ def update_mcq_question(question_num, question_text, choices=None, predicted=Non
             st.session_state.mcq_question_log[existing_idx].update(question_data)
         else:
             st.session_state.mcq_question_log.append(question_data)
-        
-        if status == "completed" and is_correct is not None:
-            if is_correct:
-                st.session_state.mcq_stats['correct'] += 1
-            st.session_state.mcq_stats['total'] += 1
     
     except Exception as e:
         print(f"[MCQ-UPDATE-ERROR] {e}")
@@ -273,11 +546,6 @@ def update_short_question(question_num, question_text, predicted=None, correct=N
             st.session_state.short_question_log[existing_idx].update(question_data)
         else:
             st.session_state.short_question_log.append(question_data)
-        
-        if status == "completed" and em_score is not None:
-            if em_score > 0:
-                st.session_state.short_stats['correct'] += 1
-            st.session_state.short_stats['total'] += 1
     
     except Exception as e:
         print(f"[SHORT-UPDATE-ERROR] {e}")
@@ -305,6 +573,11 @@ def safe_add_log(log_type, message, category="evaluation"):
     except Exception as e:
         print(f"[LOG-ERROR] {e}")
 
+<<<<<<< HEAD
+# ========== 로그 포맷팅 함수들 ==========
+def format_question_log(question_log, question_type):
+    """통합 문제 로그 포맷팅"""
+=======
 # ========== 로그 라우팅 시스템 ==========
 def enhanced_global_log_callback(log_type, message, module="", category="evaluation"):
     """로그 라우팅: 시스템/설정은 관리로, 평가 과정은 정답/오답으로"""
@@ -593,6 +866,7 @@ st.session_state.global_log_callback = enhanced_global_log_callback
 # ========== 로그 포매팅 함수들 ==========
 def format_question_log(question_log, question_type):
     """통합 문제 로그 포매팅"""
+>>>>>>> 9356c0fdba22a7ba0691db86d66ee340a4a4ae34
     if not question_log:
         return f"{question_type} 문제 처리 대기 중..."
     
@@ -603,7 +877,11 @@ def format_question_log(question_log, question_type):
         question_text = q.get('text', '')[:50] + ('...' if len(q.get('text', '')) > 50 else '')
         
         if q.get('status') == 'processing':
+<<<<<<< HEAD
+            log_lines.extend([f"문제 {q['number']}: {question_text}", "-> 처리 중...", ""])
+=======
             log_lines.extend([f"문제 {q['number']}: {question_text}", "→ 처리 중...", ""])
+>>>>>>> 9356c0fdba22a7ba0691db86d66ee340a4a4ae34
             continue
         
         if q.get('status') != 'completed':
@@ -618,18 +896,30 @@ def format_question_log(question_log, question_type):
                 log_lines.append(f"선택지: {choices_str}")
             
             predicted, correct = q.get('predicted', 'N/A'), q.get('correct', 'N/A')
+<<<<<<< HEAD
+            status_icon = "O" if q.get('is_correct') else "X"
+            log_lines.append(f"-> 예측: {predicted}, 정답: {correct} {status_icon}")
+=======
             status_icon = "✓" if q.get('is_correct') else "✗"
             log_lines.append(f"→ 예측: {predicted}, 정답: {correct} {status_icon}")
+>>>>>>> 9356c0fdba22a7ba0691db86d66ee340a4a4ae34
         
         else:  # SHORT
             predicted = q.get('predicted', 'N/A')[:30] + ('...' if len(q.get('predicted', '')) > 30 else '')
             correct = q.get('correct', 'N/A')[:30] + ('...' if len(q.get('correct', '')) > 30 else '')
             
             em_score, f1_score = q.get('em_score', 0), q.get('f1_score', 0)
+<<<<<<< HEAD
+            status_icon = "O" if em_score > 0 else "X"
+            
+            log_lines.extend([
+                f"-> 예측: '{predicted}' {status_icon}",
+=======
             status_icon = "✓" if em_score > 0 else "✗"
             
             log_lines.extend([
                 f"→ 예측: '{predicted}' {status_icon}",
+>>>>>>> 9356c0fdba22a7ba0691db86d66ee340a4a4ae34
                 f"   정답: '{correct}'",
                 f"   (EM={em_score:.2f}, F1={f1_score:.2f})"
             ])
@@ -675,6 +965,19 @@ def add_short_stats(log_lines, stats_data):
             ])
 
 def format_mcq_question_log():
+<<<<<<< HEAD
+    """MCQ 로그 포맷팅"""
+    return format_question_log(st.session_state.mcq_question_log, "MCQ")
+
+def format_short_question_log():
+    """단답형 로그 포맷팅"""
+    return format_question_log(st.session_state.short_question_log, "SHORT")
+
+def display_real_time_monitoring():
+    """실시간 평가 모니터링 - 초밀착 간격"""
+    
+    # 진행률 (이것도 간격 줄이기)
+=======
     """MCQ 로그 포매팅"""
     return format_question_log(st.session_state.mcq_question_log, "MCQ")
 
@@ -686,6 +989,7 @@ def display_real_time_monitoring():
     """실시간 평가 모니터링"""
     
     # 전체 진행률
+>>>>>>> 9356c0fdba22a7ba0691db86d66ee340a4a4ae34
     progress = st.session_state.evaluation_progress
     if st.session_state.evaluation_running and progress['total'] > 0:
         progress_percent = progress['current'] / progress['total']
@@ -693,6 +997,39 @@ def display_real_time_monitoring():
     elif st.session_state.evaluation_running:
         st.progress(0, "평가 준비 중...")
     
+<<<<<<< HEAD
+    # 추가 간격 제거 CSS (모니터링 전용)
+    st.markdown("""
+    <style>
+        /* 진행률 바 아래 간격 제거 */
+        .stProgress {
+            margin-bottom: 0px !important;
+        }
+        
+        /* 모니터링 섹션 전체 간격 최소화 */
+        .monitoring-section {
+            margin: 0px !important;
+            padding: 0px !important;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+    
+    # MCQ vs 단답형 (초밀착)
+    col_mcq, col_short = st.columns(2)
+    
+    with col_mcq:
+        st.markdown('<div class="log-title">선다형 (MCQ) 문제별 상태</div>', 
+                   unsafe_allow_html=True)
+        mcq_log_text = format_mcq_question_log()
+        st.text_area("MCQ 상태", value=mcq_log_text, height=200,
+                    key="mcq_monitor_area", label_visibility="hidden")
+    
+    with col_short:
+        st.markdown('<div class="log-title">단답형 문제별 상태</div>', 
+                   unsafe_allow_html=True)
+        short_log_text = format_short_question_log()
+        st.text_area("단답형 상태", value=short_log_text, height=200,
+=======
     # MCQ vs 단답형
     col_mcq, col_short = st.columns(2)
     
@@ -706,6 +1043,7 @@ def display_real_time_monitoring():
         st.markdown("**단답형 문제별 상태**")
         short_log_text = format_short_question_log()
         st.text_area("단답형 로그", value=short_log_text, height=150, 
+>>>>>>> 9356c0fdba22a7ba0691db86d66ee340a4a4ae34
                     key="short_monitor_area", label_visibility="hidden")
 
 # ========== 스레드 및 백그라운드 작업 ==========
@@ -736,7 +1074,11 @@ def create_safe_thread(target_func, args=None, name=None):
     return thread
 
 def run_evaluation_task(excel_file, mcq_limit, short_limit):
+<<<<<<< HEAD
+    """평가 실행 작업 - 엑셀 저장 기능 추가"""
+=======
     """평가 실행 작업"""
+>>>>>>> 9356c0fdba22a7ba0691db86d66ee340a4a4ae34
     try:
         retriever, llm, config = get_rag_system()
         if not all([retriever, llm, config]):
@@ -746,11 +1088,32 @@ def run_evaluation_task(excel_file, mcq_limit, short_limit):
         from rag.evaluator import UnifiedEvaluator
         evaluator = UnifiedEvaluator(retriever=retriever, llm=llm, config=config)
         
+<<<<<<< HEAD
+        # 콜백 함수 등록
+=======
+>>>>>>> 9356c0fdba22a7ba0691db86d66ee340a4a4ae34
         callback = lambda msg: enhanced_global_log_callback("progress", msg, "EVALUATOR", "evaluation")
         
         file_path = project_root / excel_file
         results = evaluator.evaluate_file(str(file_path), mcq_limit, short_limit, progress_callback=callback)
         
+<<<<<<< HEAD
+        # ★ 여기에 저장 기능 추가 ★
+        if results:
+            print("결과 저장 중...")
+            try:
+                saved_file = evaluator.save_results(results, None, str(file_path))
+                if saved_file:
+                    print(f"엑셀 파일 저장 완료: {saved_file}")
+                    # 세션 상태에 저장된 파일 경로 추가 (선택사항)
+                    st.session_state.last_saved_file = saved_file
+                else:
+                    print("엑셀 파일 저장 실패")
+            except Exception as save_error:
+                print(f"엑셀 저장 오류: {save_error}")
+        
+=======
+>>>>>>> 9356c0fdba22a7ba0691db86d66ee340a4a4ae34
         st.session_state.evaluation_running = False
         st.session_state.evaluation_completed = bool(results)
         print("평가 완료!" if results else "평가 실행 실패")
@@ -759,14 +1122,69 @@ def run_evaluation_task(excel_file, mcq_limit, short_limit):
         print(f"평가 오류: {str(e)}")
         st.session_state.evaluation_running = False
 
+<<<<<<< HEAD
+# ========== 관리 작업 관련 함수들 ==========
+def check_script_files():
+    """스크립트 파일 존재 여부 및 상태 확인"""
+    script_files = {
+        "reindex_upstage_docx.py": "벡터 재생성",
+        "pipeline_bm25_from_docx.py": "BM25 재생성", 
+        "rag_backup.py": "백업"
+    }
+    
+    file_status = {}
+    
+    for script_name, display_name in script_files.items():
+        script_path = project_root / script_name
+        
+        if script_path.exists():
+            try:
+                file_size = script_path.stat().st_size
+                if file_size > 0:
+                    file_status[display_name] = {
+                        'exists': True,
+                        'size': file_size,
+                        'readable': os.access(script_path, os.R_OK),
+                        'path': str(script_path)
+                    }
+                else:
+                    file_status[display_name] = {
+                        'exists': False,
+                        'error': '빈 파일'
+                    }
+            except Exception as e:
+                file_status[display_name] = {
+                    'exists': False,
+                    'error': f'파일 검사 실패: {str(e)}'
+                }
+        else:
+            file_status[display_name] = {
+                'exists': False,
+                'error': '파일 없음'
+            }
+    
+    return file_status
+
+def run_management_task_with_status(task_name):
+    """상태를 업데이트하는 관리 작업 실행"""
+    
+=======
 def run_management_task(task_name):
     """관리 작업 실행"""
+>>>>>>> 9356c0fdba22a7ba0691db86d66ee340a4a4ae34
     def log_mgmt(log_type, message):
         try:
             safe_add_log(log_type, message, "management")
         except:
             print(f"[MANAGEMENT] {message}")
     
+<<<<<<< HEAD
+    # 작업 시작 상태로 변경
+    st.session_state.management_tasks[task_name]['status'] = 'running'
+    st.session_state.management_tasks[task_name]['last_run'] = datetime.now()
+    
+=======
+>>>>>>> 9356c0fdba22a7ba0691db86d66ee340a4a4ae34
     try:
         log_mgmt("progress", f"{task_name} 시작...")
         
@@ -780,6 +1198,195 @@ def run_management_task(task_name):
             raise ValueError(f"알 수 없는 작업: {task_name}")
         
         script_name, timeout = script_map[task_name]
+<<<<<<< HEAD
+        script_path = project_root / script_name
+        
+        if not script_path.exists():
+            raise FileNotFoundError(f"스크립트 파일이 존재하지 않음: {script_name}")
+        
+        # 실행할 명령어 로그에 출력
+        command = [sys.executable, str(script_path)]
+        log_mgmt("info", f"실행 명령: {' '.join(command)}")
+        
+        result = subprocess.run(
+            command,
+            capture_output=True, 
+            text=True, 
+            timeout=timeout,
+            cwd=project_root
+        )
+        
+        # 표준 출력 로그에 추가
+        if result.stdout:
+            for line in result.stdout.strip().split('\n'):
+                if line.strip():
+                    log_mgmt("info", f"[STDOUT] {line}")
+        
+        # 표준 에러 로그에 추가
+        if result.stderr:
+            for line in result.stderr.strip().split('\n'):
+                if line.strip():
+                    log_mgmt("warning", f"[STDERR] {line}")
+        
+        if result.returncode == 0:
+            st.session_state.management_tasks[task_name]['status'] = 'completed'
+            log_mgmt("success", f"{task_name} 완료")
+        else:
+            st.session_state.management_tasks[task_name]['status'] = 'failed'
+            log_mgmt("failure", f"{task_name} 실패: return code {result.returncode}")
+        
+    except subprocess.TimeoutExpired:
+        st.session_state.management_tasks[task_name]['status'] = 'failed'
+        log_mgmt("failure", f"{task_name} 타임아웃 ({timeout}초 초과)")
+    except FileNotFoundError as e:
+        st.session_state.management_tasks[task_name]['status'] = 'failed'
+        log_mgmt("failure", f"{task_name} 스크립트 파일 없음: {str(e)}")
+    except Exception as e:
+        st.session_state.management_tasks[task_name]['status'] = 'failed'
+        log_mgmt("failure", f"{task_name} 오류: {e}")
+
+def create_management_interface():
+    """개선된 관리 도구 인터페이스"""
+    
+    management_tasks = [
+        ("벡터 재생성", "벡터 데이터베이스 재생성", 
+         ["DOCX 문서 -> 벡터 임베딩 -> Pinecone 업로드", "시간: 약 30분 ~ 2시간"],
+         "primary"),
+        ("BM25 재생성", "BM25 검색 인덱스 재생성",
+         ["DOCX 문서 -> 텍스트 추출 -> BM25 인덱스", "시간: 약 10분 ~ 30분"], 
+         "secondary"),
+        ("백업", "프로젝트 백업",
+         ["모든 .py 파일 압축 -> backup 폴더에 저장", "시간: 약 10초 ~ 1분"],
+         "secondary")
+    ]
+    
+    # 실행 파일 상태 확인
+    file_status = check_script_files()
+    task_names = ["벡터 재생성", "BM25 재생성", "백업"]
+    
+    button_cols = st.columns(3)
+    
+    for i, (task_name, subtitle, desc_lines, btn_type) in enumerate(management_tasks):
+        with button_cols[i]:
+            st.markdown(f"#### {task_name}")
+            st.markdown(f"**{subtitle}**")
+            
+            for line in desc_lines:
+                st.markdown(f"- {line}")
+            
+            # 작업 상태에 따른 버튼 텍스트와 활성화 상태
+            task_status = st.session_state.management_tasks[task_name]['status']
+            file_exists = file_status[task_name]['exists']
+            
+            if not file_exists:
+                btn_text = f"[파일 없음] {task_name}"
+                btn_disabled = True
+                btn_type = "secondary"
+            elif task_status == 'running':
+                btn_text = f"[실행 중...] {task_name}"
+                btn_disabled = True
+                btn_type = "secondary"
+            elif task_status == 'completed':
+                last_run = st.session_state.management_tasks[task_name]['last_run']
+                if last_run:
+                    time_str = last_run.strftime("%H:%M")
+                    btn_text = f"[완료 {time_str}] {task_name} 재실행"
+                else:
+                    btn_text = f"[완료] {task_name} 재실행"
+                btn_disabled = False
+                btn_type = "success"
+            elif task_status == 'failed':
+                btn_text = f"[실패] {task_name} 재시도"
+                btn_disabled = False
+                btn_type = "secondary"
+            else:  # ready
+                btn_text = f"{task_name} 시작"
+                btn_disabled = False
+            
+            if st.button(btn_text, type=btn_type, key=f"{task_name}_btn", 
+                        disabled=btn_disabled, use_container_width=True):
+                handle_management_button(task_name)
+            
+            # 각 버튼 바로 아래에 파일명과 상태 표시
+            script_files_map = {
+                "벡터 재생성": "reindex_upstage_docx.py",
+                "BM25 재생성": "pipeline_bm25_from_docx.py", 
+                "백업": "rag_backup.py"
+            }
+            
+            script_file = script_files_map[task_name]
+            
+            if file_status[task_name]['exists']:
+                size_mb = file_status[task_name]['size'] / 1024 / 1024
+                status_text = f"{script_file}: 파일존재 {size_mb:.2f}MB"
+            else:
+                error_msg = file_status[task_name].get('error', '파일없음')
+                status_text = f"{script_file}: {error_msg}"
+            
+            st.markdown(
+                f"<div style='text-align: center; color: #666; font-size: 0.8em; margin-top: -5px;'>"
+                f"({status_text})"
+                f"</div>", 
+                unsafe_allow_html=True
+            )
+    
+    st.markdown("---")
+    
+    # 관리 로그 (제목과 초기화 버튼) 
+    col1, col2 = st.columns([7, 1])
+    
+    with col1:
+        st.markdown("#### 관리 로그")
+    
+    with col2:
+        if st.button("로그 초기화", key=f"clear_logs_{st.session_state.session_id}"):
+            # 로그 초기화 및 작업 상태 리셋
+            for log_key in ['correct_process_logs', 'incorrect_process_logs', 'mgmt_logs']:
+                st.session_state[log_key] = []
+            
+            # 관리 작업 상태도 리셋
+            for task_name in st.session_state.management_tasks:
+                st.session_state.management_tasks[task_name] = {'status': 'ready', 'last_run': None}
+            
+            st.success("로그와 작업 상태가 초기화되었습니다.")
+            time.sleep(1)
+            st.rerun()
+    
+    # 관리 로그 표시 (타이틀에 바로 붙여서)
+    st.markdown("""
+    <style>
+        /* 관리 로그 제목과 텍스트 영역 간격 대폭 줄이기 */
+        div[data-testid="stMarkdown"] h4:has(+ div[data-testid="stTextArea"]) {
+            margin-bottom: -30px !important;
+        }
+        
+        /* 텍스트 영역 위쪽 마진 제거 */
+        div[data-testid="stTextArea"] {
+            margin-top: -10px !important;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+    
+    try:
+        mgmt_logs = st.session_state.mgmt_logs[-50:] if st.session_state.mgmt_logs else []
+        log_text = "\n".join([str(log) for log in mgmt_logs]) if mgmt_logs else "관리 로그가 없습니다."
+    except:
+        log_text = "관리 로그가 없습니다."
+    
+    st.text_area("관리 로그 내용", value=log_text, height=400, 
+                key=f"management_logs_{st.session_state.session_id}", 
+                label_visibility="hidden")
+
+def run_management_task_safe(task_name):
+    """관리 작업 스레드 시작"""
+    thread = create_safe_thread(
+        target_func=run_management_task_with_status,
+        args=(task_name,),
+        name=f"mgmt_{task_name.replace(' ', '_')}"
+    )
+    thread.start()
+
+=======
         
         result = subprocess.run(
             [sys.executable, str(project_root / script_name)], 
@@ -793,6 +1400,7 @@ def run_management_task(task_name):
     except Exception as e:
         log_mgmt("failure", f"{task_name} 오류: {e}")
 
+>>>>>>> 9356c0fdba22a7ba0691db86d66ee340a4a4ae34
 def start_evaluation_thread_safe(excel_file, mcq_limit, short_limit):
     """평가 스레드 시작"""
     st.session_state.evaluation_running = True
@@ -807,6 +1415,8 @@ def start_evaluation_thread_safe(excel_file, mcq_limit, short_limit):
     thread.start()
     return thread
 
+<<<<<<< HEAD
+=======
 def run_management_task_safe(task_name):
     """관리 작업 스레드 시작"""
     thread = create_safe_thread(
@@ -816,15 +1426,39 @@ def run_management_task_safe(task_name):
     )
     thread.start()
 
+>>>>>>> 9356c0fdba22a7ba0691db86d66ee340a4a4ae34
 # ========== UI 설정 및 스타일링 ==========
 st.set_page_config(page_title="통합 RAG 시스템", layout="wide", initial_sidebar_state="expanded")
 
 st.markdown("""
 <style>
+<<<<<<< HEAD
+    .element-container { margin-bottom: 0rem !important; }
+    .stTextArea { margin-top: 0rem !important; }
+    
+    /* Streamlit 앱 전체를 화면 맨 위로 */
+    .main {
+        padding-top: 0rem !important;
+        margin-top: 0rem !important;
+    }
+
+    /* 뷰포트 상단에 완전히 붙이기 */
+    body {
+        margin-top: 0px !important;
+        padding-top: 0px !important;
+    }
+
+    /* 브라우저 기본 마진 제거 */
+    html, body {
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+=======
     .block-container { padding-top: 1.5rem; padding-bottom: 0rem; }
     .element-container { margin-bottom: 0.3rem; }
     h1, h2, h3, h4 { margin: 0.2rem 0; line-height: 1.2; }
     .stTextArea textarea { line-height: 1.3; }
+>>>>>>> 9356c0fdba22a7ba0691db86d66ee340a4a4ae34
 </style>
 """, unsafe_allow_html=True)
 
@@ -864,6 +1498,23 @@ def create_evaluation_controls():
     with col_settings:
         create_evaluation_settings()
 
+<<<<<<< HEAD
+    # 평가 완료 후 저장된 파일 정보 표시
+    if st.session_state.evaluation_completed and hasattr(st.session_state, 'last_saved_file'):
+        st.success(f"평가 완료! 결과가 저장되었습니다: {st.session_state.last_saved_file}")
+        
+        # 파일 다운로드 버튼 추가 (선택사항)
+        if os.path.exists(st.session_state.last_saved_file):
+            with open(st.session_state.last_saved_file, 'rb') as file:
+                st.download_button(
+                    label="결과 파일 다운로드",
+                    data=file.read(),
+                    file_name=os.path.basename(st.session_state.last_saved_file),
+                    mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                )
+
+=======
+>>>>>>> 9356c0fdba22a7ba0691db86d66ee340a4a4ae34
 def create_evaluation_settings():
     """평가 설정 패널"""
     st.write("")
@@ -897,7 +1548,13 @@ def reset_evaluation_state():
         'incorrect_process_logs': [],
         'mcq_stats': {'correct': 0, 'total': 0},
         'short_stats': {'correct': 0, 'total': 0},
+<<<<<<< HEAD
+        'evaluation_progress': {'current': 0, 'total': 0},
+        'temp_question_logs': {},
+        'current_question': None
+=======
         'evaluation_progress': {'current': 0, 'total': 0}
+>>>>>>> 9356c0fdba22a7ba0691db86d66ee340a4a4ae34
     }
     
     for key, value in reset_data.items():
@@ -916,8 +1573,56 @@ def create_chat_interface():
     
     st.markdown("#### 새 질문")
     
+    # 질문 입력창과 버튼들을 완전히 정렬 (세로 중앙 + 텍스트 중앙)
+    st.markdown("""
+    <style>
+        /* 폼 컨테이너 정렬 */
+        div[data-testid="stForm"] {
+            display: flex;
+            align-items: center;
+        }
+        
+        /* 질문 레이블 숨기기 */
+        div[data-testid="stForm"] div[data-testid="stTextInput"] label {
+            display: none;
+        }
+        
+        /* 입력창 세로 중앙 정렬 및 텍스트 중앙 */
+        div[data-testid="stForm"] div[data-testid="stTextInput"] {
+            display: flex;
+            align-items: center;
+        }
+        
+        div[data-testid="stForm"] div[data-testid="stTextInput"] input {
+            height: 2.5rem;
+            display: flex;
+            align-items: center;
+            text-align: left;
+            vertical-align: middle;
+            margin: 0;
+            padding: 0 12px;
+        }
+        
+        /* 버튼들 세로 중앙 정렬 */
+        div[data-testid="stForm"] button {
+            height: 2.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+        }
+        
+        /* 컬럼 내부 정렬 */
+        div[data-testid="stForm"] > div > div {
+            display: flex;
+            align-items: center;
+            height: 2.5rem;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+    
     with st.form(key="question_form", clear_on_submit=True):
-        col_input, col_question, col_clear = st.columns([5, 1, 1])
+        col_input, col_question, col_clear = st.columns([6, 1, 1])
         
         with col_input:
             question = st.text_input(
@@ -927,11 +1632,9 @@ def create_chat_interface():
             )
         
         with col_question:
-            st.write("")
             ask_button = st.form_submit_button("질문", use_container_width=True)
             
         with col_clear:
-            st.write("")
             clear_button = st.form_submit_button("초기화", use_container_width=True)
     
     if clear_button:
@@ -966,6 +1669,70 @@ def process_question(question):
     st.rerun()
 
 def create_log_display():
+<<<<<<< HEAD
+    """정답/오답 로그 표시 시스템 - 초밀착 간격"""
+    
+    # 극도로 간격 제거하는 CSS
+    st.markdown("""
+    <style>
+        .log-title {
+            font-weight: bold;
+            margin: 0px 0px 2px 0px !important;
+            padding: 2px 0px !important;
+            border-bottom: 1px solid #e0e0e0;
+            line-height: 1.2;
+        }
+        
+        /* 제목 다음 텍스트 영역의 마진 완전 제거 */
+        .log-title + div[data-testid="stTextArea"] {
+            margin-top: -15px !important;
+        }
+        
+        /* 텍스트 영역 자체의 마진/패딩 제거 */
+        .stTextArea {
+            margin-top: 0px !important;
+            margin-bottom: 0px !important;
+        }
+        
+        /* 컬럼 간격도 줄이기 */
+        .stColumns > div {
+            padding-left: 0.25rem !important;
+            padding-right: 0.25rem !important;
+        }
+        
+        /* 모든 요소의 마진 강제 제거 */
+        .element-container {
+            margin-bottom: 0px !important;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+    
+    log_col1, log_col2 = st.columns(2)
+    
+    with log_col1:
+        st.markdown('<div class="log-title">정답 처리과정 로그</div>', 
+                   unsafe_allow_html=True)
+        try:
+            logs = st.session_state.correct_process_logs[-100:] if st.session_state.correct_process_logs else []
+            text = "\n".join([str(log) for log in logs]) if logs else "정답 처리과정 대기 중..."
+        except:
+            text = "정답 처리과정 대기 중..."
+        
+        st.text_area("정답 로그", value=text, height=300,
+                    key="correct_logs_unified", label_visibility="hidden")
+    
+    with log_col2:
+        st.markdown('<div class="log-title">오답 처리과정 로그</div>', 
+                   unsafe_allow_html=True)
+        try:
+            logs = st.session_state.incorrect_process_logs[-100:] if st.session_state.incorrect_process_logs else []
+            text = "\n".join([str(log) for log in logs]) if logs else "오답 처리과정 대기 중..."
+        except:
+            text = "오답 처리과정 대기 중..."
+        
+        st.text_area("오답 로그", value=text, height=300,
+                    key="incorrect_logs_unified", label_visibility="hidden")
+=======
     """2개창 로그 표시 시스템"""
     log_col1, log_col2 = st.columns(2)
     
@@ -1031,6 +1798,7 @@ def create_management_interface():
         for log_key in ['correct_process_logs', 'incorrect_process_logs', 'mgmt_logs']:
             st.session_state[log_key] = []
         st.success("로그가 초기화되었습니다.")
+>>>>>>> 9356c0fdba22a7ba0691db86d66ee340a4a4ae34
 
 def handle_evaluation_start(selected_file, mcq_limit, short_limit):
     """평가 시작 처리"""
@@ -1050,6 +1818,11 @@ def handle_management_button(task_name):
     try:
         run_management_task_safe(task_name)
         st.success(f"{task_name}이 시작되었습니다. 진행 상황은 로그를 확인하세요.")
+<<<<<<< HEAD
+        time.sleep(1)
+        st.rerun()
+=======
+>>>>>>> 9356c0fdba22a7ba0691db86d66ee340a4a4ae34
     except Exception as e:
         st.error(f"{task_name} 시작 실패: {e}")
 

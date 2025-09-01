@@ -1,5 +1,5 @@
 """
-evaluate.py - 웹 호출 가능한 버전 (전역 인스턴스 접근 방식 통일)
+evaluate.py - 웹 호출 가능한 버전 (중복 로그 해결)
 CLI와 웹 인터페이스 모두 지원하는 평가 함수
 """
 import os
@@ -17,25 +17,37 @@ project_root = Path(__file__).parent.absolute()
 sys.path.insert(0, str(project_root))
 
 def get_rag_instances():
-    """RAG 인스턴스 가져오기 - 웹/CLI 환경 통합"""
+    """RAG 인스턴스 가져오기 - 중복 초기화 방지"""
     try:
         # 웹 환경(Streamlit)에서 실행 중인지 확인
         import streamlit as st
-        # app.py의 get_rag_system() 사용
-        from app import get_rag_system
-        return get_rag_system()
+        
+        # 웹 환경에서는 app.py의 기존 인스턴스 재사용
+        if hasattr(st.session_state, 'rag_retriever') and hasattr(st.session_state, 'rag_llm'):
+            print("[WEB-MODE] 기존 RAG 인스턴스 재사용")
+            return (st.session_state.rag_retriever, 
+                   st.session_state.rag_llm, 
+                   st.session_state.rag_config)
+        else:
+            # 웹 환경이지만 인스턴스가 없으면 app.py의 get_rag_system() 호출
+            from app import get_rag_system
+            print("[WEB-MODE] app.py에서 RAG 인스턴스 가져오기")
+            return get_rag_system()
+            
     except ImportError:
-        # CLI 환경에서는 직접 생성
+        # CLI 환경에서는 직접 생성 (silent 모드)
         print("[CLI-MODE] Streamlit 환경이 아님 - 직접 RAG 인스턴스 생성")
         try:
             from rag.hybrid_retriever import HybridRetriever
             from rag.llm_bridge import HybridLLM
             from config import get_config
             
-            config = get_config()
+            # CLI에서는 조용한 모드로 config 가져오기 (중복 로그 방지)
+            config = get_config(silent=True)
             retriever = HybridRetriever(config)
             llm = HybridLLM(config)
             
+            print("[CLI-MODE] RAG 인스턴스 생성 완료")
             return retriever, llm, config
         except Exception as e:
             print(f"[CLI-ERROR] CLI 모드에서 RAG 생성 실패: {e}")
@@ -47,7 +59,7 @@ def get_rag_instances():
 def run_evaluation(file_path: str, mcq_limit: int = None, short_limit: int = None, 
                   progress_callback=None) -> dict:
     """
-    평가 실행 함수 - 웹과 CLI 모두에서 호출 가능 (인스턴스 접근 방식 통일)
+    평가 실행 함수 - 중복 로그 해결
     
     Args:
         file_path: 평가할 Excel 파일 경로
@@ -77,8 +89,8 @@ def run_evaluation(file_path: str, mcq_limit: int = None, short_limit: int = Non
             return None
         log("progress", "파일 검증 완료")
         
-        # 2. 통합된 RAG 인스턴스 가져오기 (수정된 부분)
-        log("progress", "RAG 인스턴스 가져오는 중...")
+        # 2. 통합된 RAG 인스턴스 가져오기 (중복 방지)
+        log("progress", "RAG 인스턴스 준비 중...")
         
         retriever, llm, config = get_rag_instances()
         
@@ -88,11 +100,13 @@ def run_evaluation(file_path: str, mcq_limit: int = None, short_limit: int = Non
         
         log("progress", "RAG 인스턴스 준비 완료")
         
-        # 3. 평가기 초기화 (기존 인스턴스 전달)
+        # 3. 평가기 초기화 (기존 인스턴스 전달, 중복 로그 방지)
         log("progress", "평가 시스템 초기화 중...")
         
         try:
             from rag.evaluator import UnifiedEvaluator
+            
+            # 기존 인스턴스를 전달하여 중복 초기화 방지
             evaluator = UnifiedEvaluator(retriever=retriever, llm=llm, config=config)
             log("progress", "평가 시스템 초기화 완료 (기존 인스턴스 재사용)")
             
@@ -188,13 +202,13 @@ def run_enhanced_evaluation(file_path: str, mcq_limit: int = None, short_limit: 
     return results is not None
 
 def validate_environment():
-    """실행 환경 검증"""
+    """실행 환경 검증 - 조용한 모드"""
     try:
-        # 필수 모듈 확인
+        # 필수 모듈 확인 (조용한 모드로)
         from config import get_config
-        config = get_config()
+        config = get_config(silent=True)  # 중복 로그 방지
         
-        errors = config.validate()
+        errors = config.validate(silent=True)  # 중복 로그 방지
         if errors:
             print("[ENV-ERROR] 설정 검증 실패:")
             for error in errors:
@@ -246,7 +260,7 @@ def main():
         logging.basicConfig(level=logging.DEBUG)
         print("[DEBUG] 디버그 모드 활성화")
     
-    # 환경 검증
+    # 환경 검증 (조용한 모드)
     print("[CLI] 환경 검증 중...")
     if not validate_environment():
         print("[CLI] 환경 검증 실패 - 실행을 중단합니다.")

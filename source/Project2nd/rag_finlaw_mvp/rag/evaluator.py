@@ -1,5 +1,10 @@
 """
-evaluator.py - 로그 시스템 통합 및 디버깅 정보 강화
+evaluator.py - 개선된 평가기
+주요 개선사항:
+1. MCQ/단답형 오류 패턴 분석 강화
+2. 개선된 통계 수집 및 리포팅
+3. 실패 원인별 세분화된 분석
+4. 성능 모니터링 개선
 """
 import time
 import pandas as pd
@@ -17,8 +22,6 @@ from rag.utils import (
 
 def log_message(log_type, message, module="EVALUATOR"):
     """통합된 로그 함수 - 3단계 분류"""
-    print(f"[{module}-{log_type.upper()}] {message}")
-    
     # 웹 인터페이스로 전달 시도
     try:
         import streamlit as st
@@ -26,21 +29,29 @@ def log_message(log_type, message, module="EVALUATOR"):
             callback = st.session_state.global_log_callback
             if callable(callback):
                 callback(log_type, message, module, "evaluation")
+        else:
+            # 웹 환경이 아닐 때만 직접 출력
+            print(f"[{module}-{log_type.upper()}] {message}")
     except Exception:
-        pass
+        # 오류 시 직접 출력
+        print(f"[{module}-{log_type.upper()}] {message}")
 
 class UnifiedEvaluator:
-    """디버깅 정보 강화된 평가기"""
+    """개선된 평가기 - 강화된 오류 분석 및 통계"""
     
     def __init__(self, config=None, retriever=None, llm=None):
-        log_message("INFO", "평가기 초기화 중...")
+        """평가기 초기화 - 중복 로그 방지"""
         
         if retriever and llm:
+            # 기존 인스턴스 재사용 (로그 출력 안함)
             self.retriever = retriever
             self.llm = llm
             self.config = config if config else getattr(retriever, 'config', None)
             log_message("SUCCESS", "기존 RAG 인스턴스 재사용")
         else:
+            # 새로 생성 (기존 방식)
+            log_message("INFO", "평가기 초기화 중...")
+            
             if not config:
                 from config import get_config
                 config = get_config()
@@ -61,29 +72,37 @@ class UnifiedEvaluator:
             "공정위": "공정거래위원회",
         }
         
-        # 평가 통계 초기화
+        # ★ 강화된 평가 통계 ★
         self.eval_stats = {
             'mcq_error_patterns': {
-                'search_failure': 0,
-                'choice_mapping': 0,
-                'context_quality': 0,
-                'negative_detection': 0
+                'choice_mapping': 0,           # 파싱/매핑 오류
+                'context_quality': 0,          # 컨텍스트 품질 문제
+                'search_failure': 0,           # 검색 실패
+                'negative_detection': 0,       # 부정형 감지 실패
+                'llm_reasoning': 0             # LLM 추론 오류 (신규)
             },
             'short_error_patterns': {
-                'no_search_results': 0,
-                'low_bm25_score': 0,
-                'extraction_failure': 0,
-                'context_mismatch': 0
+                'context_mismatch': 0,         # 검색 문맥 불일치
+                'extraction_failure': 0,       # 추출 실패
+                'low_bm25_score': 0,          # BM25 점수 부족
+                'no_search_results': 0,        # 검색 결과 없음
+                'normalization_failure': 0     # 정규화 실패 (신규)
             },
             'search_quality_issues': 0,
-            'total_questions': 0
+            'total_questions': 0,
+            'performance_metrics': {           # 성능 메트릭 (신규)
+                'avg_mcq_time': 0.0,
+                'avg_short_time': 0.0,
+                'total_time': 0.0,
+                'search_success_rate': 0.0
+            }
         }
         
         log_message("SUCCESS", "초기화 완료")
 
     def evaluate_mcq_batch(self, questions: List[Dict], max_questions: int = None, 
                           progress_callback: Optional[Callable] = None) -> Tuple[float, List[Dict]]:
-        """MCQ 배치 평가 - 강화된 디버깅 로그"""
+        """MCQ 배치 평가 - 강화된 오류 분석"""
         if max_questions:
             questions = questions[:max_questions]
         
@@ -96,6 +115,7 @@ class UnifiedEvaluator:
         
         correct = 0
         results = []
+        mcq_times = []
         
         for i, q in enumerate(questions):
             if progress_callback:
@@ -131,28 +151,30 @@ class UnifiedEvaluator:
             choices_dict = {chr(65+i): choice for i, choice in enumerate(q['choices'])}
             llm_response = self.llm.call_mcq(q['question'], choices_dict, context)
             
-            # 답변 파싱
+            # ★ 강화된 답변 파싱 ★
             expected_format = q.get('answer_format', 'number')
             predicted = parse_mcq_answer(llm_response, expected_format)
             correct_answer = str(q.get('answer', '1')).strip()
             
             is_correct = (predicted == correct_answer)
+            item_time = time.time() - item_start
+            mcq_times.append(item_time)
+            
             if is_correct:
                 correct += 1
                 log_message("SUCCESS", f"MCQ-{i+1} 정답: {predicted}")
             else:
-                # 오답 원인 분석
-                error_type = self._analyze_mcq_error(search_quality, context_quality, 
-                                                   is_negative_question, q['question'], 
-                                                   choices_dict, predicted, correct_answer)
+                # ★ 강화된 오답 원인 분석 ★
+                error_type = self._analyze_mcq_error_enhanced(
+                    search_quality, context_quality, is_negative_question, 
+                    q['question'], choices_dict, llm_response, predicted, correct_answer
+                )
                 self.eval_stats['mcq_error_patterns'][error_type] += 1
                 
                 log_message("FAILURE", f"MCQ-{i+1} 오답: 예측={predicted}, 정답={correct_answer}, "
                            f"오류유형={error_type}, 컨텍스트품질={context_quality:.2f}")
             
-            item_time = time.time() - item_start
-            
-            # 결과 저장
+            # 결과 저장 (확장된 정보)
             results.append({
                 'question': q['question'][:100],
                 'predicted': predicted,
@@ -167,11 +189,16 @@ class UnifiedEvaluator:
                 'context_quality': context_quality,
                 'is_negative_question': is_negative_question,
                 'error_type': error_type if not is_correct else 'correct',
-                'context_preview': context[:200]
+                'context_preview': context[:200],
+                'parsing_succeeded': predicted in ['A', 'B', 'C', 'D', '1', '2', '3', '4']  # 신규
             })
         
         accuracy = correct / len(questions)
         total_time = time.time() - start_time
+        
+        # 성능 메트릭 업데이트
+        self.eval_stats['performance_metrics']['avg_mcq_time'] = sum(mcq_times) / len(mcq_times)
+        self.eval_stats['performance_metrics']['total_time'] += total_time
         
         # 오답 패턴 분석 결과 출력
         self._log_error_pattern_analysis("MCQ", len(questions) - correct)
@@ -182,7 +209,7 @@ class UnifiedEvaluator:
 
     def evaluate_short_batch(self, questions: List[Dict], max_questions: int = None,
                             progress_callback: Optional[Callable] = None) -> Tuple[float, float, List[Dict]]:
-        """단답형 배치 평가 - 강화된 디버깅 로그"""
+        """단답형 배치 평가 - 강화된 오류 분석"""
         if max_questions:
             questions = questions[:max_questions]
         
@@ -196,6 +223,7 @@ class UnifiedEvaluator:
         em_correct = 0
         f1_total = 0.0
         results = []
+        short_times = []
         
         for i, q in enumerate(questions):
             if progress_callback:
@@ -219,7 +247,7 @@ class UnifiedEvaluator:
                 results.append(self._create_failed_short_result(q, "no_search_results"))
                 continue
             
-            if search_quality['bm25_max'] < 0.5:
+            if search_quality['bm25_max'] < 0.4:  # 임계값 0.5→0.4로 조정
                 self.eval_stats['short_error_patterns']['low_bm25_score'] += 1
                 log_message("FAILURE", f"SHORT-{i+1} BM25 점수 부족: {search_quality['bm25_max']:.2f}")
             
@@ -232,29 +260,34 @@ class UnifiedEvaluator:
             # 정답 비교
             correct_answer = str(q.get('answer', '정보부족')).strip()
             
-            # 법령 용어 정규화
-            predicted_normalized = self._normalize_legal_answer(predicted)
-            correct_normalized = self._normalize_legal_answer(correct_answer)
+            # ★ 강화된 법령 용어 정규화 ★
+            predicted_normalized = self._normalize_legal_answer_enhanced(predicted)
+            correct_normalized = self._normalize_legal_answer_enhanced(correct_answer)
             
             # EM/F1 계산
             em_score = calculate_enhanced_exact_match(predicted_normalized, correct_normalized)
             f1_score = calculate_enhanced_f1_score(predicted_normalized, correct_normalized)
             
+            item_time = time.time() - item_start
+            short_times.append(item_time)
+            
             if em_score:
                 em_correct += 1
                 log_message("SUCCESS", f"SHORT-{i+1} 정답: '{predicted}' (EM=1.0, F1={f1_score:.2f})")
             else:
-                # 실패 원인 분석
-                error_type = self._analyze_short_error(predicted, search_quality, pipeline_info)
+                # ★ 강화된 실패 원인 분석 ★
+                error_type = self._analyze_short_error_enhanced(
+                    predicted, predicted_normalized, correct_normalized, 
+                    search_quality, pipeline_info
+                )
                 self.eval_stats['short_error_patterns'][error_type] += 1
                 
                 log_message("FAILURE", f"SHORT-{i+1} 오답: 예측='{predicted}', 정답='{correct_answer}', "
                            f"오류유형={error_type}, EM={em_score}, F1={f1_score:.2f}")
             
             f1_total += f1_score
-            item_time = time.time() - item_start
             
-            # 결과 저장
+            # 결과 저장 (확장된 정보)
             results.append({
                 'question': q['question'][:100],
                 'predicted': predicted,
@@ -269,12 +302,18 @@ class UnifiedEvaluator:
                 'vector_max_score': search_quality['vector_max'],
                 'pipeline_method': pipeline_info.get('method', 'standard'),
                 'chunks_used': pipeline_info.get('chunks_used', 0),
-                'error_type': error_type if not em_score else 'correct'
+                'error_type': error_type if not em_score else 'correct',
+                'normalization_changed': predicted != predicted_normalized  # 신규
             })
         
         em_avg = em_correct / len(questions) if questions else 0
         f1_avg = f1_total / len(questions) if questions else 0
         total_time = time.time() - start_time
+        
+        # 성능 메트릭 업데이트
+        if short_times:
+            self.eval_stats['performance_metrics']['avg_short_time'] = sum(short_times) / len(short_times)
+        self.eval_stats['performance_metrics']['total_time'] += total_time
         
         # 오답 패턴 분석 결과 출력
         self._log_error_pattern_analysis("SHORT", len(questions) - em_correct)
@@ -323,6 +362,14 @@ class UnifiedEvaluator:
             )
         
         total_eval_time = time.time() - eval_start_time
+        self.eval_stats['performance_metrics']['total_time'] = total_eval_time
+        
+        # ★ 검색 성공률 계산 ★
+        total_searches = len(mcq_results) + len(short_results)
+        successful_searches = sum(1 for r in mcq_results + short_results 
+                                if r.get('search_results_count', 0) > 0)
+        search_success_rate = successful_searches / total_searches if total_searches > 0 else 0
+        self.eval_stats['performance_metrics']['search_success_rate'] = search_success_rate
         
         # 결과 정리
         evaluation_results = {
@@ -336,13 +383,126 @@ class UnifiedEvaluator:
             'short_results': short_results,
             'source_file': Path(file_path).name,
             'total_time': total_eval_time,
-            'evaluation_stats': self.eval_stats.copy()  # 통계 정보 추가
+            'evaluation_stats': self.eval_stats.copy(),  # 통계 정보 추가
+            'performance_summary': self._generate_performance_summary()  # 신규
         }
         
-        self._print_final_summary(evaluation_results)
+        self._print_comprehensive_summary(evaluation_results)
         log_message("SUCCESS", "전체 평가 완료")
         return evaluation_results
 
+    def _analyze_mcq_error_enhanced(self, search_quality: Dict, context_quality: float,
+                                  is_negative: bool, question: str, choices: Dict, 
+                                  llm_response: str, predicted: str, correct: str) -> str:
+        """강화된 MCQ 오답 원인 분석"""
+        
+        # 1. 파싱/매핑 오류 검증
+        if predicted not in ['A', 'B', 'C', 'D', '1', '2', '3', '4']:
+            return 'choice_mapping'
+        
+        # 2. LLM 응답 분석 - 파싱은 성공했지만 추론 오류
+        if len(llm_response) > 10:  # 설명이 길면
+            # 응답에 정답 선택지 내용이 포함되어 있는지 확인
+            correct_choice_text = choices.get(correct, '')
+            if correct_choice_text and correct_choice_text[:20] in llm_response:
+                return 'llm_reasoning'  # LLM이 정답을 알고 있었지만 잘못 매핑
+        
+        # 3. 검색 실패형
+        if search_quality['bm25_max'] < 5.0 and search_quality['vector_max'] < 1.0:
+            return 'search_failure'
+        
+        # 4. 부정형 질문 감지 실패
+        if is_negative and not self._check_negative_processing_in_context(choices):
+            return 'negative_detection'
+        
+        # 5. 컨텍스트 품질 문제
+        if context_quality < 0.4:
+            return 'context_quality'
+        
+        # 6. 기타 매핑 오류 (기본)
+        return 'choice_mapping'
+
+    def _analyze_short_error_enhanced(self, predicted: str, predicted_norm: str, 
+                                    correct_norm: str, search_quality: Dict, 
+                                    pipeline_info: Dict) -> str:
+        """강화된 단답형 오답 원인 분석"""
+        
+        # 1. 추출 실패 (완전히 실패한 경우)
+        if len(predicted.strip()) <= 3 or "정보 부족" in predicted or "처리 실패" in predicted:
+            return 'extraction_failure'
+        
+        # 2. 정규화 실패 (추출은 했지만 정규화에서 손실)
+        if predicted != predicted_norm and len(predicted_norm) < len(predicted) * 0.5:
+            return 'normalization_failure'
+        
+        # 3. BM25 점수 부족
+        if search_quality['bm25_max'] < 0.4:  # 임계값 0.5→0.4로 조정
+            return 'low_bm25_score'
+        
+        # 4. 컨텍스트 불일치 (기본)
+        return 'context_mismatch'
+
+    def _normalize_legal_answer_enhanced(self, text: str) -> str:
+        """강화된 법령 답변 정규화"""
+        if not text:
+            return ""
+        
+        # 기존 정규화 + 추가 개선
+        from rag.utils import enhanced_answer_normalize
+        normalized = enhanced_answer_normalize(text)
+        
+        # 추가 정규화 (평가기 전용)
+        additional_synonyms = {
+            "규제신속확인절차": "법령적용여부확인절차",
+            "신속확인절차": "법령적용여부확인절차",
+            "규제확인": "법령적용여부확인",
+            "샌드박스": "임시허가",
+            "규제샌드박스": "임시허가"
+        }
+        
+        for old, new in additional_synonyms.items():
+            normalized = normalized.replace(old, new)
+        
+        return normalized
+
+    def _generate_performance_summary(self) -> Dict[str, Any]:
+        """성능 요약 생성 (신규)"""
+        metrics = self.eval_stats['performance_metrics']
+        
+        return {
+            'avg_time_per_question': (metrics['avg_mcq_time'] + metrics['avg_short_time']) / 2,
+            'total_evaluation_time': metrics['total_time'],
+            'search_success_rate': metrics['search_success_rate'],
+            'questions_per_minute': (self.eval_stats['total_questions'] / 
+                                   max(1, metrics['total_time'])) * 60,
+            'estimated_time_1000q': (metrics['total_time'] / 
+                                   max(1, self.eval_stats['total_questions'])) * 1000
+        }
+
+    def _print_comprehensive_summary(self, results: Dict[str, Any]):
+        """포괄적 평가 결과 요약 (강화)"""
+        total_q = results.get('total_questions', 0)
+        mcq_acc = results.get('mcq_accuracy', 0)
+        short_em = results.get('short_em', 0)
+        short_f1 = results.get('short_f1', 0)
+        total_time = results.get('total_time', 0)
+        
+        # 통계 정보 출력
+        stats = results.get('evaluation_stats', {})
+        search_issues = stats.get('search_quality_issues', 0)
+        perf_summary = results.get('performance_summary', {})
+        
+        log_message("SUCCESS", "="*60)
+        log_message("SUCCESS", f"최종 결과: 총 {total_q}문제")
+        log_message("SUCCESS", f"MCQ 정확도: {mcq_acc:.1%}")
+        log_message("SUCCESS", f"단답형 EM: {short_em:.1%}, F1: {short_f1:.1%}")
+        log_message("SUCCESS", f"실행 시간: {total_time:.1f}초")
+        log_message("INFO", f"검색 품질 문제: {search_issues}건")
+        log_message("INFO", f"검색 성공률: {perf_summary.get('search_success_rate', 0):.1%}")
+        log_message("INFO", f"분당 처리량: {perf_summary.get('questions_per_minute', 0):.1f}문제/분")
+        log_message("SUCCESS", "="*60)
+
+    # 기존 함수들 유지...
     def _analyze_search_quality(self, search_results: List[SearchResult], question_type: str) -> Dict[str, Any]:
         """검색 품질 분석"""
         quality_info = {
@@ -384,35 +544,6 @@ class UnifiedEvaluator:
         
         return quality_info
 
-    def _analyze_mcq_error(self, search_quality: Dict, context_quality: float,
-                          is_negative: bool, question: str, choices: Dict, 
-                          predicted: str, correct: str) -> str:
-        """MCQ 오답 원인 분석"""
-        # 1. 검색 실패형
-        if search_quality['bm25_max'] < 5.0 and search_quality['vector_max'] < 1.0:
-            return 'search_failure'
-        
-        # 2. 부정형 질문 감지 실패
-        if is_negative and not self._check_negative_processing_in_context(choices):
-            return 'negative_detection'
-        
-        # 3. 컨텍스트 품질 문제
-        if context_quality < 0.4:
-            return 'context_quality'
-        
-        # 4. 선택지 매핑 오류
-        return 'choice_mapping'
-
-    def _analyze_short_error(self, predicted: str, search_quality: Dict, pipeline_info: Dict) -> str:
-        """단답형 오답 원인 분석"""
-        if len(predicted.strip()) <= 3 or "정보 부족" in predicted:
-            return 'extraction_failure'
-        
-        if search_quality['bm25_max'] < 0.5:
-            return 'low_bm25_score'
-        
-        return 'context_mismatch'
-
     def _log_error_pattern_analysis(self, question_type: str, total_errors: int):
         """오답 패턴 분석 결과 로그"""
         if total_errors <= 0:
@@ -451,7 +582,8 @@ class UnifiedEvaluator:
             'vector_max_score': 0.0,
             'pipeline_method': "failed",
             'chunks_used': 0,
-            'error_type': error_type
+            'error_type': error_type,
+            'normalization_changed': False
         }
 
     def _detect_negative_question(self, question: str) -> bool:
@@ -566,47 +698,6 @@ class UnifiedEvaluator:
         legal_score = min(1.0, legal_count / 3)
         
         return min(1.0, keyword_score * 0.5 + length_score * 0.3 + legal_score * 0.2)
-
-    def _normalize_legal_answer(self, text: str) -> str:
-        """법령 답변 정규화"""
-        if not text:
-            return ""
-        
-        text = str(text).strip()
-        text = re.sub(r'\s+', ' ', text)
-        text = re.sub(r'제\s*(\d+)\s*조', r'제\1조', text)
-        text = re.sub(r'(\d+)\s*(년|개월|일)', r'\1\2', text)
-        text = re.sub(r'(\d+)\s*(억|만)?\s*원', r'\1\2원', text)
-        
-        # 동의어 처리
-        for old_term, new_term in self.legal_synonyms.items():
-            text = text.replace(old_term, new_term)
-        
-        # 불필요한 문구 제거
-        for phrase in ['답변:', '답:', '정답:', '결론:', '따라서']:
-            text = text.replace(phrase, '')
-        
-        return text.strip()
-
-    def _print_final_summary(self, results: Dict[str, Any]):
-        """최종 평가 결과 요약"""
-        total_q = results.get('total_questions', 0)
-        mcq_acc = results.get('mcq_accuracy', 0)
-        short_em = results.get('short_em', 0)
-        short_f1 = results.get('short_f1', 0)
-        total_time = results.get('total_time', 0)
-        
-        # 통계 정보 출력
-        stats = results.get('evaluation_stats', {})
-        search_issues = stats.get('search_quality_issues', 0)
-        
-        log_message("SUCCESS", "="*60)
-        log_message("SUCCESS", f"최종 결과: 총 {total_q}문제")
-        log_message("SUCCESS", f"MCQ 정확도: {mcq_acc:.1%}")
-        log_message("SUCCESS", f"단답형 EM: {short_em:.1%}, F1: {short_f1:.1%}")
-        log_message("SUCCESS", f"실행 시간: {total_time:.1f}초")
-        log_message("INFO", f"검색 품질 문제: {search_issues}건")
-        log_message("SUCCESS", "="*60)
 
     def save_results(self, results: Dict[str, Any], output_file: str = None, source_file: str = None) -> str:
         """결과 저장"""

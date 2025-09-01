@@ -1,5 +1,9 @@
 """
-hybrid_retriever.py - 로그 시스템 통합 버전
+hybrid_retriever.py - 개선된 검색기
+주요 개선사항:
+1. BM25 임계값 조정 (0.3→0.4) - context_mismatch 감소
+2. 검색 실패 시 더 적극적인 Vector fallback
+3. 키워드 추출 개선 및 다양성 확보
 """
 import os
 import pickle
@@ -12,8 +16,6 @@ from rag.utils import SearchResult
 
 def log_message(log_type, message, module="RETRIEVER"):
     """통합된 로그 함수 - 3단계 분류"""
-    print(f"[{module}-{log_type.upper()}] {message}")
-    
     # 웹 인터페이스로 전달 시도
     try:
         import streamlit as st
@@ -21,14 +23,19 @@ def log_message(log_type, message, module="RETRIEVER"):
             callback = st.session_state.global_log_callback
             if callable(callback):
                 callback(log_type, message, module, "evaluation")
+        else:
+            # 웹 환경이 아닐 때만 직접 출력
+            print(f"[{module}-{log_type.upper()}] {message}")
     except Exception:
-        pass
+        # 오류 시 직접 출력
+        print(f"[{module}-{log_type.upper()}] {message}")
 
 class HybridRetriever:
-    """로그 시스템 통합된 하이브리드 검색기"""
+    """개선된 하이브리드 검색기 - BM25 임계값 조정 및 Vector fallback 강화"""
     
-    def __init__(self, config):
-        log_message("INFO", "하이브리드 검색기 초기화 중...")
+    def __init__(self, config, silent=False):
+        if not silent:
+            log_message("INFO", "하이브리드 검색기 초기화 중...")
         self.config = config
         
         self.embedder = get_embedder()
@@ -44,7 +51,8 @@ class HybridRetriever:
         self.search_stats = {
             'bm25_failures': 0,
             'vector_fallbacks': 0,
-            'total_queries': 0
+            'total_queries': 0,
+            'improved_fallbacks': 0  # 새로운 통계
         }
         
         success_msg = f"초기화 완료 (BM25: {self.bm25_index is not None}, Vector: {self.pinecone_index is not None})"
@@ -83,23 +91,29 @@ class HybridRetriever:
         except Exception as e:
             log_message("FAILURE", f"Pinecone 연결 실패: {e}")
 
-    def _legal_tokenize(self, text: str) -> List[str]:
-        """법령 토크나이저"""
+    def _enhanced_legal_tokenize(self, text: str) -> List[str]:
+        """향상된 법령 토크나이저 - 키워드 추출 개선"""
         tokens = []
         
-        # 조문 패턴
+        # 1. 조문 패턴 (최고 우선순위)
         articles = re.findall(r'제\s*\d+\s*조(?:제\s*\d+\s*항)?(?:제\s*\d+\s*호)?', text)
-        tokens.extend(articles * 3)  # 가중치
+        tokens.extend(articles * 5)  # 3배 → 5배로 가중치 증가
         
-        # 기관명 동의어 매핑
-        synonyms = {
-            "중소벤처기업부": ["중기부", "중소기업부"],
-            "금융위원회": ["금위", "금융위"],
-            "금융감독원": ["금감원"],
-            "공정거래위원회": ["공정위", "공거위"],
+        # 2. 기관명 동의어 매핑 (확장)
+        expanded_synonyms = {
+            "중소벤처기업부": ["중기부", "중소기업부", "중벤부", "중소벤처부"],
+            "금융위원회": ["금위", "금융위", "금융위원회"],
+            "금융감독원": ["금감원", "금융감독청"],
+            "공정거래위원회": ["공정위", "공거위", "공정거래위"],
+            "방송통신위원회": ["방통위", "방송위"],
+            "기획재정부": ["기재부", "기획재정청"],
+            "보건복지부": ["복지부", "보건부"],
+            "산업통상자원부": ["산업부", "산자부"],
+            "과학기술정보통신부": ["과기부", "과기정통부"],
+            "국토교통부": ["국토부", "국토교통청"]
         }
         
-        for standard, variants in synonyms.items():
+        for standard, variants in expanded_synonyms.items():
             if standard in text:
                 tokens.extend(variants)
             else:
@@ -108,26 +122,29 @@ class HybridRetriever:
                         tokens.extend([standard] + [v for v in variants if v != variant])
                         break
         
-        # 기본 토큰
-        korean_words = re.findall(r'[가-힣]{2,}', text)
+        # 3. 기본 토큰
+        korean_words = re.findall(r'[가-힣]{2,}', text)  # 2글자 이상으로 완화
         tokens.extend(korean_words)
         
         numbers = re.findall(r'\d+', text)
         tokens.extend(numbers)
         
-        # 법령 패턴
+        # 4. 확장된 법령 패턴
         patterns = [
-            r'\d+(?:년|개월|일)',
-            r'\d+(?:억|만)?원',
+            r'\d+(?:년|개월|일)(?:\s*(?:이내|이상|미만|전|후))?',
+            r'\d+(?:억|만)?원(?:\s*(?:이상|이하|미만))?',
             r'별지\s*(?:제\s*)?\d+\s*(?:호|번)(?:서식|양식)?',
-            r'[가-힣]+(?:위원회|청|부|처|원)',
+            r'[가-힣]+(?:위원회|청|부|처|원)(?:장관?|위원장)?',
+            r'(?:신청|허가|승인|등록|신고|접수|처리|발급|제출)(?:서|절차|방법)?',
+            r'(?:규제|법령)(?:신속|적용)(?:확인|절차)?',  # 새로 추가
+            r'(?:샌드박스|임시허가|특례)',  # 새로 추가
         ]
         
         for pattern in patterns:
             matches = re.findall(pattern, text)
             tokens.extend(matches)
         
-        # 중복 제거 (순서 보존)
+        # 5. 중복 제거 (순서 보존)
         seen = set()
         unique_tokens = []
         for token in tokens:
@@ -138,12 +155,12 @@ class HybridRetriever:
         return unique_tokens
 
     def _bm25_search(self, query: str, top_k: int) -> List[SearchResult]:
-        """BM25 검색"""
+        """BM25 검색 - 향상된 토크나이저"""
         if not self.bm25_index:
             log_message("FAILURE", "BM25 인덱스를 사용할 수 없음")
             return []
         
-        query_tokens = self._legal_tokenize(query)
+        query_tokens = self._enhanced_legal_tokenize(query)
         
         if not query_tokens:
             query_tokens = query.split()
@@ -189,7 +206,7 @@ class HybridRetriever:
         return results
 
     def _vector_search(self, query: str, top_k: int) -> List[SearchResult]:
-        """Vector 검색"""
+        """Vector 검색 - 키워드 fallback 강화"""
         if not self.pinecone_index:
             log_message("FAILURE", "Vector 검색 불가 (Pinecone 없음)")
             return []
@@ -204,11 +221,11 @@ class HybridRetriever:
             
             log_message("SUCCESS", f"Vector 검색 완료 (최고점수: {max_score:.1f})")
             
-            # 2차: 점수가 낮으면 키워드만으로 재검색
-            if max_score < 45:
-                keywords = re.findall(r'[가-힣]{3,}|\d+(?:년|개월|일)|\d+(?:억|만)?원|제\d+조', query)
+            # ★ 2차: 점수가 낮으면 키워드만으로 재검색 (임계값 45→40으로 완화) ★
+            if max_score < 40:  # 45 → 40으로 완화
+                keywords = self._extract_enhanced_keywords(query)
                 if keywords:
-                    keyword_query = " ".join(keywords[:4])
+                    keyword_query = " ".join(keywords[:5])  # 최대 5개 키워드
                     fallback_results = self._vector_search_single(keyword_query, top_k * 2)
                     
                     fallback_max = 0
@@ -218,13 +235,41 @@ class HybridRetriever:
                     
                     if fallback_max > max_score:
                         results = fallback_results
-                        log_message("INFO", "키워드 폴백 적용")
+                        self.search_stats['improved_fallbacks'] += 1
+                        log_message("INFO", f"키워드 fallback 적용 (개선: {max_score:.1f}→{fallback_max:.1f})")
             
             return results[:top_k]
             
         except Exception as e:
             log_message("FAILURE", f"Vector 검색 오류: {e}")
             return []
+
+    def _extract_enhanced_keywords(self, query: str) -> List[str]:
+        """향상된 키워드 추출 - 법령 특화"""
+        keywords = []
+        
+        # 1. 고중요도 패턴 (조문, 기관명 등)
+        high_priority = re.findall(
+            r'제\d+조|[가-힣]+(?:위원회|청|부|처|원)|' +
+            r'\d+(?:년|개월|일)|' +
+            r'\d+(?:억|만)?원|' +
+            r'별지\s*제\s*\d+\s*호', 
+            query
+        )
+        keywords.extend(high_priority)
+        
+        # 2. 중요도 명사 (3글자 이상)
+        important_nouns = re.findall(r'[가-힣]{3,}', query)
+        # 이미 포함된 것들 제외
+        important_nouns = [noun for noun in important_nouns 
+                          if not any(noun in hp for hp in high_priority)]
+        keywords.extend(important_nouns[:3])  # 최대 3개
+        
+        # 3. 숫자
+        numbers = re.findall(r'\d+', query)
+        keywords.extend(numbers[:2])  # 최대 2개
+        
+        return keywords
 
     def _vector_search_single(self, query: str, top_k: int) -> List[SearchResult]:
         """단일 Vector 검색 실행"""
@@ -260,7 +305,7 @@ class HybridRetriever:
         return results
 
     def search(self, query: str, question_type: str = "general", top_k: int = None) -> List[SearchResult]:
-        """메인 검색 함수"""
+        """메인 검색 함수 - 개선된 임계값 및 fallback"""
         
         self.search_stats['total_queries'] += 1
         query_preview = query[:50] + "..." if len(query) > 50 else query
@@ -303,14 +348,15 @@ class HybridRetriever:
         elif bm25_valid_results < len(bm25_results):
             log_message("FAILURE", f"BM25 품질 문제: {len(bm25_results)}개 중 {bm25_valid_results}개만 유효")
         
-        # BM25 실패 시 Vector 강화 모드
-        if question_type == "short" and bm25_max_score < 0.3:
-            log_message("INFO", f"BM25 실패 (최고:{bm25_max_score:.1f}), Vector 강화 모드 진입")
+        # ★ BM25 실패 시 Vector 강화 모드 (임계값 0.3→0.4로 상향) ★
+        if question_type == "short" and bm25_max_score < 0.4:  # 0.3 → 0.4로 상향
+            log_message("INFO", f"BM25 실패 (최고:{bm25_max_score:.2f}), Vector 강화 모드 진입")
             
-            vector_results = self._vector_search(query, vector_count * 3)
+            # ★ 더 적극적인 Vector 검색 ★
+            vector_results = self._vector_search(query, vector_count * 4)  # 3배 → 4배로 증가
             self.search_stats['vector_fallbacks'] += 1
             
-            final_results = self._diversify_by_source(vector_results, max_per_source=4)
+            final_results = self._diversify_by_source(vector_results, max_per_source=5)  # 4→5로 증가
             log_message("SUCCESS", f"Vector 강화 완료: {len(final_results)}개 결과")
             return final_results
         else:
@@ -331,9 +377,9 @@ class HybridRetriever:
         
         log_message("SUCCESS", f"검색 완료: {len(final_results)}개 결과")
         
-        # 주기적 통계 출력
+        # 주기적 통계 출력 (15회마다)
         if self.search_stats['total_queries'] % 15 == 0:
-            self._print_search_stats()
+            self._print_enhanced_search_stats()
         
         return final_results
 
@@ -414,15 +460,18 @@ class HybridRetriever:
         """컨텐츠 중복 판단용 키 생성"""
         return content[:150].strip()
 
-    def _print_search_stats(self):
-        """검색 통계 출력"""
+    def _print_enhanced_search_stats(self):
+        """향상된 검색 통계 출력"""
         total = self.search_stats['total_queries']
         failures = self.search_stats['bm25_failures']
         vector_fallbacks = self.search_stats['vector_fallbacks']
+        improved_fallbacks = self.search_stats['improved_fallbacks']
         
         failure_rate = (failures / total * 100) if total > 0 else 0
         vector_rate = (vector_fallbacks / total * 100) if total > 0 else 0
+        improvement_rate = (improved_fallbacks / total * 100) if total > 0 else 0
         
         log_message("INFO", f"검색 통계 - 총:{total}회")
         log_message("INFO", f"  - BM25실패:{failures}회({failure_rate:.1f}%)")
         log_message("INFO", f"  - Vector강화:{vector_fallbacks}회({vector_rate:.1f}%)")
+        log_message("INFO", f"  - 키워드개선:{improved_fallbacks}회({improvement_rate:.1f}%)")
